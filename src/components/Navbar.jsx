@@ -1,13 +1,19 @@
 import { Link } from "react-router-dom";
+import { supabase } from "../supabase";
 
 export default function Navbar() {
   return (
     <nav style={styles.nav}>
-      <div style={styles.brand}>E-Football</div>
+      <div style={styles.brand}>
+    <button onClick={() => supabase.auth.signOut().then(() => window.location.href = "/")}>
+              Log out
+            </button>
+      </div>
 
       <div style={styles.links}>
         <Link to="/dashboard" style={styles.link}>Home</Link>
         <Link to="/teams" style={styles.link}>Teams</Link>
+        <Link to="/admin" style={styles.link}>Admin</Link>
 
       </div>
     </nav>
