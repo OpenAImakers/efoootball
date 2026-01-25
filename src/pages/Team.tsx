@@ -14,13 +14,14 @@ interface Team {
   gd: number;
 }
 
+// Fixed: Moved outside the component so it has a stable reference.
+// This prevents the ESLint 'missing dependency' error and infinite loops.
+const ALL_TABLES = ["teamsranked", "teamgroup1", "teamgroup2", "teamgroup3", "teamgroup4"];
+
 export default function Teams() {
   const [groups, setGroups] = useState<{ [key: string]: Team[] }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Added 'teamsranked' back to the list
-  const allTables = ["teamsranked", "teamgroup1", "teamgroup2", "teamgroup3", "teamgroup4"];
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -29,7 +30,7 @@ export default function Teams() {
         const fetchedData: { [key: string]: Team[] } = {};
 
         await Promise.all(
-          allTables.map(async (table) => {
+          ALL_TABLES.map(async (table) => {
             const { data, error } = await supabase
               .from(table)
               .select("*")
@@ -49,7 +50,7 @@ export default function Teams() {
     };
 
     fetchAllData();
-  }, []);
+  }, []); // Empty dependency array is now valid because ALL_TABLES is external
 
   return (
     <main className="mt-5 bg-black text-white min-vh-100">
@@ -59,11 +60,13 @@ export default function Teams() {
         <h1 className="h3 fw-bold text-primary mb-4">League Standings</h1>
 
         {loading ? (
-          <div className="text-center my-5"><div className="spinner-border text-primary"></div></div>
+          <div className="text-center my-5">
+            <div className="spinner-border text-primary"></div>
+          </div>
         ) : error ? (
           <div className="alert alert-danger">{error}</div>
         ) : (
-          allTables.map((table) => (
+          ALL_TABLES.map((table) => (
             <div key={table} className="mb-5">
               <h2 className="h5 fw-bold text-uppercase border-start border-primary border-4 ps-2 mb-3">
                 {table === "teamsranked" ? "Overall Standings" : `Group ${table.slice(-1)}`}
