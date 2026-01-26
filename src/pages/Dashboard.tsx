@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 import Navbar from "../components/Navbar";
+import Matches from "./Matches";  
 
 function Home() {
   const [user, setUser] = useState(null);
@@ -153,6 +154,9 @@ function Home() {
       <div className="mt-5" style={{ padding: "20px", fontFamily: "sans-serif" }}>
         <h1>e football</h1>
         <hr />
+        <Matches />
+
+
 
         {/* Post Comment Section with @mentions */}
         {user ? (

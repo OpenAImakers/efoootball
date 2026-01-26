@@ -12,6 +12,7 @@ interface Team {
   l: number;
   points: number;
   gd: number;
+  rank: number;
 }
 
 // Fixed: Moved outside the component so it has a stable reference.
@@ -75,6 +76,7 @@ export default function Teams() {
                 <table className="table table-dark table-bordered align-middle">
                   <thead className="table-primary text-black">
                     <tr>
+                      <th>Rank </th>  
                       <th>Team Name</th>
                       <th className="text-center">W</th>
                       <th className="text-center">D</th>
@@ -86,6 +88,7 @@ export default function Teams() {
                   <tbody>
                     {groups[table]?.map((team) => (
                       <tr key={team.id}>
+                        <td className="text-center">{team.rank}</td>
                         <td>{team.name}</td>
                         <td className="text-center">{team.w}</td>
                         <td className="text-center">{team.d}</td>

@@ -8,7 +8,7 @@ function MatchScheduler() {
   // Create Match State
   const [homeTeamId, setHomeTeamId] = useState("");
   const [awayTeamId, setAwayTeamId] = useState("");
-  const [stage, setStage] = useState("Group Stage");
+  const [stage, setStage] = useState("GROUP");
 
   // Update Result State
   const [selectedMatchId, setSelectedMatchId] = useState("");
@@ -84,12 +84,14 @@ function MatchScheduler() {
       <section>
         <h3>🗓️ Schedule New Match</h3>
         <div style={{ display: "grid", gap: "10px" }}>
-          <select value={stage} onChange={(e) => setStage(e.target.value)}>
-            <option value="Group Stage">Group Stage</option>
-            <option value="Quarter Finals">Quarter Finals</option>
-            <option value="Semi Finals">Semi Finals</option>
-            <option value="Final">Final</option>
-          </select>
+                <select value={stage} onChange={(e) => setStage(e.target.value)}>
+          <option value="">All Stages</option>
+          <option value="GROUP">Group Stage</option>
+          <option value="QUARTER">Quarter Finals</option>
+          <option value="SEMI">Semi Finals</option>
+          <option value="FINAL">Final</option>
+          <option value="THIRD_PLACE">Third Place Playoff</option>
+        </select>
 
           <div style={{ display: "flex", gap: "10px" }}>
             <select style={{ flex: 1 }} value={homeTeamId} onChange={(e) => setHomeTeamId(e.target.value)}>
