@@ -58,141 +58,149 @@ return (
     <Navbar />
 
     <div className="container py-5">
-      <h1 className="h3 fw-bold text-primary mb-3 text-center">Tournament Journey</h1>
-
-      {/* Progress stepper – gives that "progressing through stages" baby feel */}
+      {/* Stepper with flowing gradient to match logo shards */}
       <div className="mb-5">
-        <ul className="stepper d-flex justify-content-between px-0" style={{ listStyle: 'none' }}>
-          <li className="stepper-step text-center flex-fill">
-            <div className="stepper-head bg-dark rounded-circle d-inline-flex align-items-center justify-content-center border border-primary border-2" style={{ width: '50px', height: '50px' }}>
-              <span className="text-primary fw-bold">1</span>
-            </div>
-            <div className="stepper-text mt-2 small text-muted">Groups</div>
+        <ul className="d-flex justify-content-between align-items-center px-0" style={{ listStyle: 'none', gap: '8px' }}>
+          {[
+            { num: '1', label: 'Groups', active: true },
+            { num: '2', label: 'Quarter', active: false },
+            { num: '3', label: 'Semi', active: false },
+            { num: '4', label: 'Final', active: false },
+            { num: '5', label: '3rd Place', active: false },
+            { num: '🏆', label: 'Standings', active: false },
+          ].map((step, idx) => (
+            <li key={idx} className="text-center flex-fill d-flex flex-column align-items-center" style={{ minWidth: '60px' }}>
+              <div
+                className="rounded-circle d-flex align-items-center justify-content-center border border-2"
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  background: step.active ? 'linear-gradient(135deg, #0d6efd, #fd7e14)' : '#212529',
+                  borderColor: '#0d6efd',
+                  color: step.active ? 'white' : '#0d6efd',
+                }}
+              >
+                <span className="fw-bold">{step.num}</span>
+              </div>
+              <div className="mt-2 small" style={{ color: step.active ? '#0d6efd' : '#6c757d' }}>
+                {step.label}
+              </div>
+              {idx < 5 && (
+                <div
+                  className="position-absolute w-100"
+                  style={{
+                    height: '3px',
+                    background: 'linear-gradient(to right, #0d6efd, #20c997, #fd7e14)',
+                    top: '22px',
+                    zIndex: -1,
+                    marginLeft: 'calc(50% + 30px)',
+                    width: 'calc(100% - 60px)',
+                  }}
+                />
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Scrollable tabs – pills style, horizontal scroll on mobile */}
+      <div className="mb-4">
+        <ul
+          className="nav nav-pills flex-nowrap overflow-auto text-nowrap border-bottom border-primary pb-3"
+          id="tournamentTabs"
+          role="tablist"
+          style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}
+        >
+          <li className="nav-item me-2" role="presentation">
+            <button
+              className="nav-link active rounded-pill px-4 py-2"
+              id="group-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#group"
+              type="button"
+              role="tab"
+              aria-controls="group"
+              aria-selected="true"
+              style={{ background: 'linear-gradient(45deg, #0d6efd, #20c997)', color: 'white' }}
+            >
+              Group Stage
+            </button>
           </li>
-          <li className="stepper-step text-center flex-fill">
-            <div className="stepper-connector bg-gradient-primary" style={{ height: '4px', marginTop: '23px' }}></div>
-            <div className="stepper-head bg-dark rounded-circle d-inline-flex align-items-center justify-content-center border border-primary border-2" style={{ width: '50px', height: '50px' }}>
-              <span className="text-primary fw-bold">2</span>
-            </div>
-            <div className="stepper-text mt-2 small text-muted">Quarter</div>
+          <li className="nav-item me-2" role="presentation">
+            <button
+              className="nav-link rounded-pill px-4 py-2"
+              id="quarter-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#quarter"
+              type="button"
+              role="tab"
+              aria-controls="quarter"
+              style={{ border: '1px solid #fd7e14', color: '#fd7e14' }}
+            >
+              Quarter-finals
+            </button>
           </li>
-          <li className="stepper-step text-center flex-fill">
-            <div className="stepper-connector bg-gradient-primary" style={{ height: '4px', marginTop: '23px' }}></div>
-            <div className="stepper-head bg-dark rounded-circle d-inline-flex align-items-center justify-content-center border border-primary border-2 opacity-75" style={{ width: '50px', height: '50px' }}>
-              <span className="text-primary fw-bold">3</span>
-            </div>
-            <div className="stepper-text mt-2 small text-muted">Semi</div>
+          <li className="nav-item me-2" role="presentation">
+            <button
+              className="nav-link rounded-pill px-4 py-2"
+              id="semi-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#semi"
+              type="button"
+              role="tab"
+              aria-controls="semi"
+              style={{ border: '1px solid #20c997', color: '#20c997' }}
+            >
+              Semi-finals
+            </button>
           </li>
-          <li className="stepper-step text-center flex-fill">
-            <div className="stepper-connector bg-gradient-primary" style={{ height: '4px', marginTop: '23px' }}></div>
-            <div className="stepper-head bg-dark rounded-circle d-inline-flex align-items-center justify-content-center border border-primary border-2 opacity-50" style={{ width: '50px', height: '50px' }}>
-              <span className="text-primary fw-bold">4</span>
-            </div>
-            <div className="stepper-text mt-2 small text-muted">Final</div>
+          <li className="nav-item me-2" role="presentation">
+            <button
+              className="nav-link rounded-pill px-4 py-2"
+              id="final-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#final"
+              type="button"
+              role="tab"
+              aria-controls="final"
+              style={{ border: '1px solid #0d6efd', color: '#0d6efd' }}
+            >
+              Final
+            </button>
           </li>
-          <li className="stepper-step text-center flex-fill">
-            <div className="stepper-connector bg-gradient-primary" style={{ height: '4px', marginTop: '23px' }}></div>
-            <div className="stepper-head bg-dark rounded-circle d-inline-flex align-items-center justify-content-center border border-primary border-2 opacity-25" style={{ width: '50px', height: '50px' }}>
-              <span className="text-primary fw-bold">5</span>
-            </div>
-            <div className="stepper-text mt-2 small text-muted">3rd Place</div>
+          <li className="nav-item me-2" role="presentation">
+            <button
+              className="nav-link rounded-pill px-4 py-2"
+              id="third-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#third"
+              type="button"
+              role="tab"
+              aria-controls="third"
+              style={{ border: '1px solid #fd7e14', color: '#fd7e14' }}
+            >
+              Third Place
+            </button>
           </li>
-          <li className="stepper-step text-center flex-fill">
-            <div className="stepper-connector bg-gradient-primary" style={{ height: '4px', marginTop: '23px' }}></div>
-            <div className="stepper-head bg-dark rounded-circle d-inline-flex align-items-center justify-content-center border border-primary border-2 opacity-25" style={{ width: '50px', height: '50px' }}>
-              <span className="text-primary fw-bold">🏆</span>
-            </div>
-            <div className="stepper-text mt-2 small text-muted">Final Standings</div>
+          <li className="nav-item" role="presentation">
+            <button
+              className="nav-link rounded-pill px-4 py-2"
+              id="results-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#results"
+              type="button"
+              role="tab"
+              aria-controls="results"
+              style={{ border: '1px solid #6610f2', color: '#6610f2' }}
+            >
+              Final Standings
+            </button>
           </li>
         </ul>
       </div>
 
-      {/* Enhanced nav-pills tabs – more modern & glowing on active */}
-      <ul className="nav nav-pills nav-fill mb-4 border-bottom border-primary pb-3" id="tournamentTabs" role="tablist">
-        <li className="nav-item" role="presentation">
-          <button
-            className="nav-link active rounded-pill shadow-sm"
-            id="group-tab"
-            data-bs-toggle="pill"
-            data-bs-target="#group"
-            type="button"
-            role="tab"
-            aria-controls="group"
-            aria-selected="true"
-          >
-            Group Stage
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className="nav-link rounded-pill shadow-sm"
-            id="quarter-tab"
-            data-bs-toggle="pill"
-            data-bs-target="#quarter"
-            type="button"
-            role="tab"
-            aria-controls="quarter"
-          >
-            Quarter-finals
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className="nav-link rounded-pill shadow-sm"
-            id="semi-tab"
-            data-bs-toggle="pill"
-            data-bs-target="#semi"
-            type="button"
-            role="tab"
-            aria-controls="semi"
-          >
-            Semi-finals
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className="nav-link rounded-pill shadow-sm"
-            id="final-tab"
-            data-bs-toggle="pill"
-            data-bs-target="#final"
-            type="button"
-            role="tab"
-            aria-controls="final"
-          >
-            Final
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className="nav-link rounded-pill shadow-sm"
-            id="third-tab"
-            data-bs-toggle="pill"
-            data-bs-target="#third"
-            type="button"
-            role="tab"
-            aria-controls="third"
-          >
-            Third Place
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className="nav-link rounded-pill shadow-sm"
-            id="results-tab"
-            data-bs-toggle="pill"
-            data-bs-target="#results"
-            type="button"
-            role="tab"
-            aria-controls="results"
-          >
-            Final Standings
-          </button>
-        </li>
-      </ul>
-
-      {/* Tab content with deeper dark theme contrast */}
+      {/* Tab content – no hover effects, solid & grounded */}
       <div className="tab-content" id="tournamentTabContent">
-        {/* Group Stage – active by default */}
         <div className="tab-pane fade show active" id="group" role="tabpanel" aria-labelledby="group-tab">
           {loading ? (
             <div className="text-center my-5">
@@ -202,112 +210,86 @@ return (
             <div className="alert alert-danger border-primary">{error}</div>
           ) : (
             ALL_TABLES.map((table) => (
-              <div key={table} className="mb-5 card bg-dark border border-primary border-opacity-50 shadow">
-                <div className="card-header bg-gradient-primary text-black fw-bold text-uppercase">
+              <div key={table} className="mb-5 bg-dark border border-primary border-opacity-50 rounded shadow-sm">
+                <div className="p-3 fw-bold text-uppercase" style={{ background: 'linear-gradient(90deg, #0d6efd33, transparent)', color: '#0d6efd' }}>
                   {table === "teamsranked" ? "Overall Standings" : `Group ${table.slice(-1)}`}
                 </div>
-                <div className="card-body p-0">
-                  <div className="table-responsive">
-                    <table className="table table-dark table-hover table-bordered mb-0 align-middle">
-                      <thead className="table-primary text-black">
-                        <tr>
-                          <th className="text-center">Rank</th>
-                          <th>Team Name</th>
-                          <th className="text-center">W</th>
-                          <th className="text-center">D</th>
-                          <th className="text-center">L</th>
-                          <th className="text-center">PTS</th>
-                          <th className="text-center">GD</th>
+                <div className="table-responsive">
+                  <table className="table table-dark table-bordered mb-0 align-middle">
+                    <thead className="bg-primary text-black">
+                      <tr>
+                        <th className="text-center">Rank</th>
+                        <th>Team Name</th>
+                        <th className="text-center">W</th>
+                        <th className="text-center">D</th>
+                        <th className="text-center">L</th>
+                        <th className="text-center">PTS</th>
+                        <th className="text-center">GD</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groups[table]?.map((team) => (
+                        <tr key={team.id}>
+                          <td className="text-center fw-bold">{team.rank}</td>
+                          <td>{team.name}</td>
+                          <td className="text-center">{team.w}</td>
+                          <td className="text-center">{team.d}</td>
+                          <td className="text-center">{team.l}</td>
+                          <td className="text-center fw-bold" style={{ color: '#fd7e14' }}>{team.points}</td>
+                          <td className="text-center">{team.gd}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {groups[table]?.map((team) => (
-                          <tr key={team.id} className="hover-glow">
-                            <td className="text-center fw-bold">{team.rank}</td>
-                            <td className="fw-medium">{team.name}</td>
-                            <td className="text-center">{team.w}</td>
-                            <td className="text-center">{team.d}</td>
-                            <td className="text-center">{team.l}</td>
-                            <td className="text-center fw-bold text-primary">{team.points}</td>
-                            <td className="text-center">{team.gd}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        {/* Quarter-finals – placeholder with progressive hint */}
-        <div className="tab-pane fade" id="quarter" role="tabpanel" aria-labelledby="quarter-tab">
-          <div className="text-center py-5">
-            <h3 className="text-primary mb-4">Quarter-finals – The Knockout Begins</h3>
-            <p className="lead text-muted">Top teams battle it out. Winners advance to the semis...</p>
-            {/* Replace with real bracket or match list later */}
-          </div>
+        {/* Other tabs – placeholders with theme-matched colors */}
+        <div className="tab-pane fade text-center py-5" id="quarter" role="tabpanel" aria-labelledby="quarter-tab">
+          <h3 style={{ color: '#fd7e14' }}>Quarter-finals – Knockout Ignites</h3>
+          <p className="lead text-muted">The real battle begins. Winners advance...</p>
         </div>
 
-        <div className="tab-pane fade" id="semi" role="tabpanel" aria-labelledby="semi-tab">
-          <div className="text-center py-5">
-            <h3 className="text-primary mb-4">Semi-finals – One Step from Glory</h3>
-            <p className="lead text-muted">High stakes. Only four remain...</p>
-          </div>
+        <div className="tab-pane fade text-center py-5" id="semi" role="tabpanel" aria-labelledby="semi-tab">
+          <h3 style={{ color: '#20c997' }}>Semi-finals – One Step from the Final</h3>
+          <p className="lead text-muted">High tension. Four teams remain...</p>
         </div>
 
-        <div className="tab-pane fade" id="final" role="tabpanel" aria-labelledby="final-tab">
-          <div className="text-center py-5">
-            <h3 className="text-primary mb-4">The Final – Destiny Awaits</h3>
-            <p className="lead text-muted">The ultimate showdown for the trophy.</p>
-          </div>
+        <div className="tab-pane fade text-center py-5" id="final" role="tabpanel" aria-labelledby="final-tab">
+          <h3 style={{ color: '#0d6efd' }}>The Grand Final – Glory Awaits</h3>
+          <p className="lead text-muted">The pinnacle of the tournament.</p>
         </div>
 
-        <div className="tab-pane fade" id="third" role="tabpanel" aria-labelledby="third-tab">
-          <div className="text-center py-5">
-            <h3 className="text-primary mb-4">Third Place Play-off</h3>
-            <p className="lead text-muted">Pride on the line – bronze medal match.</p>
-          </div>
+        <div className="tab-pane fade text-center py-5" id="third" role="tabpanel" aria-labelledby="third-tab">
+          <h3 style={{ color: '#fd7e14' }}>Third Place Play-off</h3>
+          <p className="lead text-muted">Bronze on the line – pride & prestige.</p>
         </div>
 
-        <div className="tab-pane fade" id="results" role="tabpanel" aria-labelledby="results-tab">
-          <div className="text-center py-5">
-            <h3 className="text-primary mb-4">Final Tournament Standings</h3>
-            <p className="lead text-muted">Champion crowned. Full results & rankings here...</p>
-            {/* → Add overall winner announcement, podium, full results table, etc. */}
-          </div>
+        <div className="tab-pane fade text-center py-5" id="results" role="tabpanel" aria-labelledby="results-tab">
+          <h3 style={{ color: '#6610f2' }}>Final Standings – Champion Crowned</h3>
+          <p className="lead text-muted">Full rankings, top scorer, MVP & more...</p>
         </div>
       </div>
     </div>
 
-    {/* Optional extra CSS – add to your global stylesheet or <style> tag */}
+    {/* Optional global styles – put in your CSS file */}
     <style>{`
-      .bg-gradient-primary {
-        background: linear-gradient(90deg, #0d6efd, #6610f2);
-      }
-      .nav-link.active {
-        background: linear-gradient(45deg, #0d6efd, #6610f2) !important;
-        color: white !important;
-        transform: scale(1.08);
-        transition: all 0.3s ease;
-      }
-      .nav-link:hover {
-        transform: scale(1.05);
+      .nav-pills .nav-link {
         transition: all 0.2s ease;
       }
-      .stepper-connector {
-        background: linear-gradient(to right, #0d6efd, #6610f2);
+      .nav-pills .nav-link.active {
+        background: linear-gradient(45deg, #0d6efd, #20c997, #fd7e14) !important;
+        color: white !important;
       }
-      .hover-glow:hover {
-        background-color: rgba(13, 110, 253, 0.15) !important;
-        box-shadow: 0 0 15px rgba(13, 110, 253, 0.4);
+      .overflow-auto::-webkit-scrollbar {
+        height: 6px;
       }
-      .card {
-        transition: transform 0.3s ease;
-      }
-      .card:hover {
-        transform: translateY(-5px);
+      .overflow-auto::-webkit-scrollbar-thumb {
+        background: #0d6efd;
+        border-radius: 10px;
       }
     `}</style>
   </main>
