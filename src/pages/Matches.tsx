@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
+import { useNavigate } from "react-router-dom";   // ← ADD THIS
 
 const STAGES = ["GROUP", "QUARTER", "SEMI", "FINAL", "THIRD_PLACE"];
 
@@ -10,8 +11,9 @@ export default function MatchesList() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const navigate = useNavigate();   // ← ADD THIS
+
   useEffect(() => {
-    // Moved inside to resolve dependency warning
     async function fetchData() {
       setLoading(true);
       setErrorMsg("");
@@ -48,7 +50,11 @@ export default function MatchesList() {
     }
 
     fetchData();
-  }, [groupId, stage]); // Now these are the only true dependencies
+  }, [groupId, stage]);
+
+  const handleRowClick = (matchId: number) => {
+    navigate(`/match/${matchId}/vote`);
+  };
 
   return (
     <div className="container mt-4">
@@ -89,7 +95,6 @@ export default function MatchesList() {
         </div>
       )}
 
-      {/* Loading Spinner */}
       {loading && (
         <div className="text-center my-5">
           <div className="spinner-border text-primary" role="status">
@@ -98,17 +103,16 @@ export default function MatchesList() {
         </div>
       )}
 
-      {/* Error Message */}
       {errorMsg && <div className="alert alert-danger shadow-sm">{errorMsg}</div>}
 
-      {/* Empty State */}
       {!loading && !errorMsg && matches.length === 0 && (
         <div className="alert alert-light border text-center py-5">
-          <p className="text-muted mb-0">No upcoming matches found {stage === "GROUP" ? `in Group ${groupId}` : ""}.</p>
+          <p className="text-muted mb-0">
+            No upcoming matches found {stage === "GROUP" ? `in Group ${groupId}` : ""}.
+          </p>
         </div>
       )}
 
-      {/* Results Table */}
       {!loading && matches.length > 0 && (
         <div className="table-responsive shadow-sm rounded">
           <table className="table table-hover align-middle mb-0">
@@ -122,14 +126,21 @@ export default function MatchesList() {
             </thead>
             <tbody>
               {matches.map((m) => (
-                <tr key={m.id}>
+                <tr
+                  key={m.id}
+                  onClick={() => handleRowClick(m.id)}
+                  style={{ cursor: "pointer" }}           // ← makes it look clickable
+                  className="hover-bg-light"              // optional: add hover class
+                >
                   <td className="fw-bold ps-4">{m.home_team?.name || "—"}</td>
                   <td className="text-center">
                     <span className="badge bg-light text-primary border">VS</span>
                   </td>
                   <td className="fw-bold">{m.away_team?.name || "—"}</td>
                   <td className="text-end pe-4">
-                    <span className="text-uppercase xsmall text-muted">{m.stage.replace("_", " ")}</span>
+                    <span className="text-uppercase small text-muted">
+                      {m.stage.replace("_", " ")}
+                    </span>
                   </td>
                 </tr>
               ))}

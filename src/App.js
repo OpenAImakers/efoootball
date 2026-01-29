@@ -6,6 +6,7 @@ import Teams from "./pages/Team.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Account from "./pages/Account";  
 import ProfileView from "./pages/ProfileView.tsx";
+import MatchVote from "./pages/MatchVote.tsx";   
 
 function App() {
   return (
@@ -52,6 +53,14 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route  
+      path="/match/:id/vote"
+      element={
+        <ProtectedRoute>
+          <MatchVote />
+        </ProtectedRoute>
+      }
+      />  
        </Routes>
 
       );
