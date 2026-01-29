@@ -11,3 +11,30 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.clickable-row {
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.clickable-row:hover {
+  background-color: #f0f7ff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.12);
+}
+
+.clickable-row:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+.predict-badge {
+  transition: all 0.2s ease;
+  opacity: 0.9;
+}
+
+.clickable-row:hover .predict-badge {
+  opacity: 1;
+  background-color: #d1e7dd !important;
+  transform: scale(1.08);
+}
