@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import Navbar from "../components/Navbar";
 import Matches from "./Matches"; 
-import MatchesTimer from "./MatchesTimer";
-import CommunityFeed from "./CommunityFeed"; // Import the new component
+import Tournaments from "./Tournaments";
+import CommunityFeed from "./CommunityFeed"; 
 function Home() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('matches');
@@ -43,13 +43,21 @@ function Home() {
           Community Feed
         </button>
       </li>
+            <li className="nav-item">
+        <button
+          className={`nav-link ${activeTab === 'tournaments' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tournaments')}
+        >
+          Tournaments
+        </button>
+      </li>
     </ul>
 
     {/* Content scrolls UNDER the sticky tabs */}
     <div className="tab-content mt-3">
-      <MatchesTimer targetTime={new Date("2026-02-01T18:00:00").getTime()} />
-      {activeTab === 'matches' ? <Matches /> : <CommunityFeed user={user} />}
-
+      {activeTab === 'matches' && <Matches />}
+      {activeTab === 'discussion' && <CommunityFeed user={user} />}
+      {activeTab === 'tournaments' && <Tournaments />}
     </div>
   </div>
 </>

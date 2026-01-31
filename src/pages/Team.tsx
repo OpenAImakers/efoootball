@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import Navbar from "../components/Navbar";
-
+import MatchesTimer from "./MatchesTimer";
 interface Team {
   id: string;
   name: string;
@@ -56,6 +56,7 @@ export default function Teams() {
   return (
     <main className="mt-5 bg-black text-white min-vh-100 overflow-hidden">
       <Navbar />
+      
 
       <div className="container py-5">
         {/* Stepper Section */}
@@ -148,6 +149,7 @@ export default function Teams() {
         </div>
 
         {/* Tab content */}
+           <MatchesTimer targetTime={new Date("2026-02-01T18:00:00").getTime()} />
         <div className="tab-content" id="tournamentTabContent">
           {/* GROUP STAGE TAB */}
           <div className="tab-pane fade show active" id="group" role="tabpanel" aria-labelledby="group-tab">
