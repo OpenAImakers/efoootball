@@ -16,11 +16,11 @@ const TournamentDashboard = () => {
   };
 
   return (
-    <div className="container-fluid w-100 bg-light min-vh-100 ">
+    <div className="container-fluid w-100 pt-2 mt-5 bg-light min-vh-100 ">
       <div className="row ">
         
         {/* LEFT SIDE: THE FIXED CARD */}
-        <div className="col-md-4 col-lg-3 mb-4">
+        <div className="col-md-4 col-lg-3 ">
           <div className="card shadow-sm border-0 " >
             <div className="bg-dark p-4 text-white">
               <h4 className="fw-bold">{tournament.title}</h4>
