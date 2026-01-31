@@ -7,7 +7,6 @@ function CommunityFeed({ user }: { user: any }) {
   const [commentText, setCommentText] = useState("");
   const [loading, setLoading] = useState(true);
   
-  // Reply & Slide Logic
   const [replyingTo, setReplyingTo] = useState<{id: string, username: string} | null>(null);
   const [dragX, setDragX] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -69,15 +68,17 @@ function CommunityFeed({ user }: { user: any }) {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="container-fluid vh-100 d-flex flex-column p-0">
+    /* h-100 combined with overflow-hidden ensures the screen doesn't scroll, only the feed */
+    <div className="d-flex flex-column vh-100 overflow-hidden bg-light">
 
-      {/* Message List */}
+      {/* Message List: flex-grow-1 takes all available space, overflow-auto makes only this part scroll */}
       <div 
         className="flex-grow-1 p-3 overflow-auto d-flex flex-column-reverse"
         onMouseMove={handleMove}
         onMouseUp={() => handleEnd()}
         onTouchMove={handleMove}
         onTouchEnd={() => handleEnd()}
+        style={{ WebkitOverflowScrolling: 'touch' }} // Smooth scroll for iOS
       >
         {comments.map((c) => {
           const isMe = user?.id === c.user_id;
@@ -90,22 +91,23 @@ function CommunityFeed({ user }: { user: any }) {
                 onTouchStart={(e) => handleStart(e, c.id)}
                 onMouseUp={() => handleEnd(c.id, c.profiles)}
                 onTouchEnd={() => handleEnd(c.id, c.profiles)}
-                className="border p-2"
+                className="border p-2 rounded shadow-sm"
                 style={{ 
-                  maxWidth: "80%",
+                  maxWidth: "85%",
                   transform: `translateX(${isDragging ? dragX : 0}px)`,
                   transition: isDragging ? 'none' : 'transform 0.2s',
-                  backgroundColor: isMe ? '#f8f9fa' : '#ffffff'
+                  backgroundColor: isMe ? '#DCF8C6' : '#ffffff', // Classic chat colors
+                  cursor: 'grab'
                 }}
               >
                 {!isMe && (
-                  <Link to={`/profile/${c.profiles?.username}`} className="d-block fw-bold small mb-1">
+                  <Link to={`/profile/${c.profiles?.username}`} className="d-block fw-bold small mb-1 text-decoration-none">
                     {c.profiles?.display_name || c.profiles?.username}
                   </Link>
                 )}
-                <p className="m-0">{c.content}</p>
-                <small className="text-muted d-block text-end" style={{ fontSize: '0.7rem' }}>
-                  {new Date(c.created_at).toLocaleTimeString()}
+                <p className="m-0" style={{ fontSize: '0.95rem', wordBreak: 'break-word' }}>{c.content}</p>
+                <small className="text-muted d-block text-end mt-1" style={{ fontSize: '0.65rem' }}>
+                  {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </small>
               </div>
             </div>
@@ -113,12 +115,12 @@ function CommunityFeed({ user }: { user: any }) {
         })}
       </div>
 
-      {/* Input Area */}
-      <div className="p-3 border-top">
+      {/* Input Area: Fixed at bottom */}
+      <div className="p-3 bg-white border-top pb-safe"> 
         {replyingTo && (
-          <div className="alert alert-info py-1 px-2 d-flex justify-content-between align-items-center mb-2">
-            <small>Replying to @{replyingTo.username}</small>
-            <button className="btn-close" style={{ fontSize: '0.5rem' }} onClick={() => setReplyingTo(null)}></button>
+          <div className="alert alert-secondary py-1 px-2 d-flex justify-content-between align-items-center mb-2">
+            <small className="text-truncate">Replying to <strong>@{replyingTo.username}</strong></small>
+            <button className="btn-close" style={{ width: '0.5em', height: '0.5em' }} onClick={() => setReplyingTo(null)}></button>
           </div>
         )}
         
@@ -127,14 +129,23 @@ function CommunityFeed({ user }: { user: any }) {
             <input
               type="text"
               className="form-control"
-              placeholder="Message..."
+              placeholder="Type a message..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
+              style={{ borderRadius: '20px 0 0 20px' }}
             />
-            <button className="btn btn-primary" type="submit">Send</button>
+            <button 
+              className="btn btn-primary px-4" 
+              type="submit"
+              style={{ borderRadius: '0 20px 20px 0' }}
+            >
+              Send
+            </button>
           </form>
         ) : (
-          <p className="text-center small">Please log in to participate.</p>
+          <div className="text-center py-2">
+            <p className="text-muted small m-0">Please log in to participate.</p>
+          </div>
         )}
       </div>
     </div>

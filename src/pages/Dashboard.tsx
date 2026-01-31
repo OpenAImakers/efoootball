@@ -13,31 +13,45 @@ function Home() {
   }, []);
 
   return (
-    <>
-      <Navbar />
-      <div className="mt-5 pt-3 container-fluid" >
-        
-        {/* Simplified Tabs */}
-        <ul className="nav nav-pills nav-fill mb-4 p-1 bg-light rounded shadow-sm">
-          <li className="nav-item">
-            <button className={`nav-link ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}>
-              Matches
-            </button>
-          </li>
-          <li className="nav-item">
-            <button className={`nav-link ${activeTab === 'discussion' ? 'active' : ''}`} onClick={() => setActiveTab('discussion')}>
-              Community Feed
-            </button>
-          </li>
-        </ul>
+<>
+  <Navbar />
 
-        {/* Dynamic Tab Rendering */}
-        <div className="tab-content">
-          {activeTab === 'matches' ? <Matches /> : <CommunityFeed user={user} />}
-        </div>
-        
-      </div>
-    </>
+  <div className="container-fluid">
+    {/* Secondary Navbar (Sticky Tabs) */}
+    <ul
+      className="nav nav-pills nav-fill p-1 bg-light shadow-sm"
+      style={{
+        position: "sticky",
+        top: "64px",
+        zIndex: 999
+      }}
+    >
+      <li className="nav-item">
+        <button
+          className={`nav-link ${activeTab === 'matches' ? 'active' : ''}`}
+          onClick={() => setActiveTab('matches')}
+        >
+          Matches
+        </button>
+      </li>
+
+      <li className="nav-item">
+        <button
+          className={`nav-link ${activeTab === 'discussion' ? 'active' : ''}`}
+          onClick={() => setActiveTab('discussion')}
+        >
+          Community Feed
+        </button>
+      </li>
+    </ul>
+
+    {/* Content scrolls UNDER the sticky tabs */}
+    <div className="tab-content mt-3">
+      {activeTab === 'matches' ? <Matches /> : <CommunityFeed user={user} />}
+    </div>
+  </div>
+</>
+
   );
 }
 
