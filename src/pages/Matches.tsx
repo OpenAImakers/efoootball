@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
-import MatchesTimer from "./MatchesTimer";
-
+import MatchPredictions from "./MatchPredictonsTable";
 const STAGES = ["GROUP", "QUARTER", "SEMI", "FINAL", "THIRD_PLACE"];
 
 export default function MatchesList() {
@@ -61,7 +60,6 @@ export default function MatchesList() {
     <div className="container-fluid">
       <div className="row ">
         <div className="col-lg-10 col-xl-9">
-         <MatchesTimer targetTime={new Date("2026-02-01T18:00:00").getTime()} />
 
           {/* Stage Selector */}
           <div className="d-flex justify-content-center justify-content-lg-start mb-4">
@@ -171,9 +169,8 @@ export default function MatchesList() {
                   </tbody>
                 </table>
               </div>
-
-              <div className="card-footer bg-light text-center py-3 text-muted small">
-                Click any row above to predict the outcome and see community votes
+              <div className="p-3">
+                <MatchPredictions />
               </div>
             </div>
           )}
