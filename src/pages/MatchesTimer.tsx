@@ -5,11 +5,18 @@ type Props = {
 };
 
 function MatchesTimer({ targetTime }: Props) {
-  const [timeLeft, setTimeLeft] = useState(targetTime - Date.now());
+  // Use Math.max to prevent negative values during the initial render
+  const [timeLeft, setTimeLeft] = useState(() => Math.max(0, targetTime - Date.now()));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeLeft(targetTime - Date.now());
+      const remaining = targetTime - Date.now();
+      if (remaining <= 0) {
+        clearInterval(interval);
+        setTimeLeft(0);
+      } else {
+        setTimeLeft(remaining);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -17,7 +24,7 @@ function MatchesTimer({ targetTime }: Props) {
 
   if (timeLeft <= 0) {
     return (
-      <h2 className="mb-4 mb-lg-5 text-primary fw-bold text-center text-lg-start">
+      <h2 className="mb-4 mb-lg-5 text-danger fw-bold text-center text-lg-start">
         All matches played
       </h2>
     );
@@ -30,7 +37,7 @@ function MatchesTimer({ targetTime }: Props) {
 
   return (
     <h2 className="mb-4 mb-lg-5 text-primary fw-bold text-center text-lg-start">
-      Ends in : {days}d {hours}h {minutes}m {seconds}s
+      Ends in : {days > 0 && `${days}d `}{hours}h {minutes}m {seconds}s
     </h2>
   );
 }

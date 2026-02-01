@@ -15,6 +15,12 @@ interface Team {
   rank: number;
 }
 
+// In your Page or Parent component:
+const target = new Date("2026-02-02T16:00:00").getTime();
+
+// Then render it:
+
+
 const ALL_TABLES = ["teamsranked", "teamgroup1", "teamgroup2", "teamgroup3", "teamgroup4"];
 
 export default function Teams() {
@@ -149,7 +155,7 @@ export default function Teams() {
         </div>
 
         {/* Tab content */}
-           <MatchesTimer targetTime={new Date("2026-02-01T18:00:00").getTime()} />
+           <MatchesTimer targetTime={target} />
         <div className="tab-content" id="tournamentTabContent">
           {/* GROUP STAGE TAB */}
           <div className="tab-pane fade show active" id="group" role="tabpanel" aria-labelledby="group-tab">
