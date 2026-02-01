@@ -16,7 +16,7 @@ function Home() {
 <>
   <Navbar />
 
-  <div className="container-fluid">
+  <div className="container-fluid" style={{ marginTop: '5rem' }}>
     {/* Secondary Navbar (Sticky Tabs) */}
     <ul
       className="nav nav-pills nav-fill p-1 bg-light shadow-sm"
