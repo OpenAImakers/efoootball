@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 import Matches from "./Matches"; 
 import Tournaments from "./Tournaments";
 import CommunityFeed from "./CommunityFeed"; 
-import Winner from "./Winner";
+
 function Home() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('matches');
@@ -62,12 +62,6 @@ function Home() {
     </div>
   </div>
   
-  <Winner 
-    teamName="Colo_Colo" 
-    goalsScored={28}
-    matchesWon={5} 
-    totalPoints={15}
-  />  
 </>
 
   );

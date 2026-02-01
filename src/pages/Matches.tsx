@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
+import Winner from "./Winner";
 import MatchPredictions from "./MatchPredictonsTable";
 const STAGES = ["GROUP", "QUARTER", "SEMI", "FINAL", "THIRD_PLACE"];
 
@@ -176,6 +177,12 @@ export default function MatchesList() {
           )}
         </div>
       </div>
+                        <Winner 
+    teamName="Colo_Colo" 
+    goalsScored={28}
+    matchesWon={5} 
+    totalPoints={15}
+  />  
     </div>
   );
 }
