@@ -16,7 +16,7 @@ interface Team {
 }
 
 // In your Page or Parent component:
-const target = new Date("2026-02-02T16:00:00").getTime();
+const target = new Date("2026-01-02T16:00:00").getTime();
 
 // Then render it:
 
