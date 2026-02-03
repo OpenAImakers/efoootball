@@ -74,7 +74,7 @@ const exportToPDF = () => {
     // 2. STYLED TABLE
     autoTable(doc, {
       startY: 45,
-      head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "Pts"]],
+      head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "%"]],
       body: rows.map((row) => [
         row.rank,
         row.username,
