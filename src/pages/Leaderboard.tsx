@@ -71,7 +71,6 @@ const exportToPDF = () => {
     doc.setTextColor(200, 200, 200);
     doc.text(`Updated: ${new Date().toLocaleDateString()}`, 14, 35);
 
-    // 2. STYLED TABLE
     autoTable(doc, {
       startY: 45,
       head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "%"]],
