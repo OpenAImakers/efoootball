@@ -44,24 +44,34 @@ const LeaderboardDisplay: React.FC = () => {
     setLoading(false);
   };
 
-  const exportToPDF = () => {
+const exportToPDF = () => {
     if (loading || rows.length === 0) return;
 
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Dark header background + title
-    doc.setFillColor(33, 37, 41);
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 40, "F");
-    doc.setFontSize(20);
+    // 1. BRANDED HEADER
+    // Deep Navy Background (from Skyla logo)
+    doc.setFillColor(10, 26, 94); 
+    doc.rect(0, 0, pageWidth, 40, "F");
+
+    // Title: Masters Arena
+    doc.setFontSize(22);
     doc.setTextColor(255, 255, 255);
-    doc.text("Masters Arena Leaderboard", 20, 25);
+    doc.text("Masters Arena Leaderboard", 14, 22);
 
-    // Date
-    doc.setFontSize(11);
-    doc.setTextColor(180, 180, 180);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 35);
+    // Accent Line (Cyan)
+    doc.setDrawColor(0, 181, 204);
+    doc.setLineWidth(1);
+    doc.line(14, 28, 80, 28);
 
-    // Generate table
+    // Subtitle / Date
+    doc.setFontSize(10);
+    doc.setTextColor(200, 200, 200);
+    doc.text(`Updated: ${new Date().toLocaleDateString()}`, 14, 35);
+
+    // 2. STYLED TABLE
     autoTable(doc, {
       startY: 45,
       head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "Pts"]],
@@ -82,55 +92,74 @@ const LeaderboardDisplay: React.FC = () => {
       styles: {
         fontSize: 9,
         cellPadding: 3,
-        textColor: [220, 220, 220],
-        lineColor: [80, 80, 80],
+        textColor: [40, 40, 40], // Dark gray for readability on white
+        lineColor: [0, 181, 204], // Cyan grid lines
         lineWidth: 0.1,
       },
       headStyles: {
-        fillColor: [33, 37, 41],
+        fillColor: [10, 26, 94], // Deep Navy
         textColor: [255, 255, 255],
         fontStyle: "bold",
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 18, halign: "center", fontStyle: "bold" }, 
-        1: { cellWidth: 50, halign: "left" }, 
-        4: { textColor: [34, 197, 94] }, 
-        5: { textColor: [156, 163, 175] }, 
-        6: { textColor: [239, 68, 68] }, 
-        9: { fontStyle: "bold" }, 
-        10: { textColor: [234, 179, 8], fontStyle: "bold" }, 
+        0: { cellWidth: 12, halign: "center", fontStyle: "bold" },
+        1: { fontStyle: "bold", textColor: [10, 26, 94] }, // Navy names
+        4: { textColor: [0, 150, 0], fontStyle: "bold" }, // Wins
+        10: { textColor: [245, 130, 32], fontStyle: "bold" }, // Pts in Skyla Orange
       },
       alternateRowStyles: {
-        fillColor: [45, 49, 54],
+        fillColor: [245, 250, 255], // Very light blue tint
       },
-      margin: { top: 45, left: 14, right: 14 },
       didParseCell: (data) => {
+        // GD coloring (Goal Difference)
         if (data.column.index === 9 && data.cell.section === "body") {
-          const val = parseFloat(data.cell.text[0] as string);
-          if (!isNaN(val)) {
-            if (val > 0) data.cell.styles.textColor = [34, 197, 94];
-            if (val < 0) data.cell.styles.textColor = [239, 68, 68];
-          }
+          const val = parseFloat(data.cell.text[0]);
+          if (val > 0) data.cell.styles.textColor = [0, 181, 204]; // Cyan for positive
+          if (val < 0) data.cell.styles.textColor = [239, 68, 68]; // Red for negative
         }
       },
     });
 
-    // Page footer
+// 3. SKYLA FOOTER (with Trademark Superscript)
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+      
+      // Footer Horizontal Line
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+
+      // Skyla Text
+      doc.setFontSize(10);
+      doc.setTextColor(10, 26, 94); // Navy
+      doc.setFont("helvetica", "bold");
+      doc.text("Skyla", 14, pageHeight - 10);
+      
+      // Trademark symbol (®) as superscript
+      const skylaWidth = doc.getTextWidth("Skyla");
+      doc.setFontSize(6); // Smaller font for superscript
+      doc.text("®", 14 + skylaWidth + 0.5, pageHeight - 12); // Slightly higher (y - 12 instead of 10)
+
+      // Smart Ecosystem Text
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      // Adjusted X position to account for the trademark symbol space
+      doc.text("|  smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
+
+      // Page numbers (Right aligned)
       doc.setFontSize(8);
-      doc.setTextColor(120);
       doc.text(
-        `Page ${i} of ${pageCount} • Masters Arena`,
-        doc.internal.pageSize.getWidth() / 2,
-        290,
-        { align: "center" }
+        `Page ${i} of ${pageCount}`,
+        pageWidth - 14,
+        pageHeight - 10,
+        { align: "right" }
       );
     }
 
-    doc.save(`masters-arena-leaderboard_${new Date().toISOString().split("T")[0]}.pdf`);
+    doc.save(`Masters_Leaderboard${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (
@@ -190,7 +219,7 @@ const LeaderboardDisplay: React.FC = () => {
                       <th scope="col" className="text-center">GF</th>
                       <th scope="col" className="text-center">GA</th>
                       <th scope="col" className="text-center">GD</th>
-                      <th scope="col" className="text-center pe-4">Pts</th>
+                      <th scope="col" className="text-center pe-4">%</th>
                     </tr>
                   </thead>
                   <tbody>
