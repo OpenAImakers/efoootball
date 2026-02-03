@@ -79,7 +79,9 @@ export default function Navbar() {
             <NavLink to="/dashboard" icon="bi-house-door-fill" label="Home"   currentPath={location.pathname} />
             <NavLink to="/teams"     icon="bi-people-fill"      label="Teams"  currentPath={location.pathname} />
             <NavLink to="/admin"     icon="bi-shield-lock-fill"  label="Admin"  currentPath={location.pathname} />
-            <NavLink to="/account"   icon="bi-person-fill"      label="Account" currentPath={location.pathname} />
+            <NavLink to="/leaderboard"   icon="bi-trophy-fill"      label="Leaderboard" currentPath={location.pathname} />
+             <NavLink to="/account"   icon="bi-person-fill"      label="Account" currentPath={location.pathname} />
+            
 
             {/* Logout inside the scrollable area */}
             <button

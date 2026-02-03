@@ -8,6 +8,9 @@ import Account from "./pages/Account";
 import ProfileView from "./pages/ProfileView.tsx";
 import MatchVote from "./pages/MatchVote.tsx";   
 import UpdatePassword from "./pages/UpdatePassword.js";
+import Leaderboard from "./pages/Leaderboard.tsx";  
+import Leaderboardadmin from "./pages/Leaderboardadmin.tsx";
+import Navbar from "./components/Navbar.jsx";
 
 function App() {
   return (
@@ -36,14 +39,31 @@ function App() {
         }
       />  
 
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute requiredRole={"admin"}>
-            <Admin />
-          </ProtectedRoute>
-        }
-      />    
+<Route
+  path="/admin"
+  element={
+    <ProtectedRoute requiredRole={null}>
+      {/* Add the opening brace here */}
+      {({ user, role }) =>
+        role === "admin" ? (
+          <Admin user={user} role={role} />
+        ) : role === "leaderboard" ? (
+          <Leaderboardadmin user={user} role={role} />
+        ) : (
+          <>
+            <Navbar />
+            <div style={{ padding: "40px", textAlign: "center", marginTop: "60px" }}>
+              <h2>Access Restricted</h2>
+              <p>This admin area is only for authorized administrators.</p>
+              <p>Your role: {role || "none"}</p>
+            </div>
+          </>
+        )
+      } 
+      {/* Add the closing brace here */}
+    </ProtectedRoute>
+  }
+/>
       <Route
         path="/account"
         element={
@@ -68,7 +88,16 @@ function App() {
           </ProtectedRoute>
         }
       />  
+      <Route
+        path="/leaderboard"
+        element={
+          <ProtectedRoute>
+            <Leaderboard />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
+
   );
 }
 

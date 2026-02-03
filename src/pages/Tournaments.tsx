@@ -129,10 +129,6 @@ const TournamentRegistration = () => {
       {/* Header */}
       <div className="bg-dark text-white py-4 shadow">
         <div className="container">
-          <h2 className="fw-bold mb-1 text-center text-warning">50 BOB CASH TOURNAMENT</h2>
-          <p className="text-center mb-0 fs-5">
-            16 Players • Top 3 Paid • Admin Fee Included
-          </p>
           <div className="text-center mt-2">
             <span className="badge bg-success fs-6 px-4 py-2">
               Slots: {registrations.length} / {maxSlots}
