@@ -59,7 +59,7 @@ const exportToPDF = () => {
     // Title: Masters Arena
     doc.setFontSize(22);
     doc.setTextColor(255, 255, 255);
-    doc.text("Masters Arena Leaderboard", 14, 22);
+    doc.text("KENYA EFOOTBALL RANKINGS", 14, 22);
 
     // Accent Line (Cyan)
     doc.setDrawColor(0, 181, 204);
