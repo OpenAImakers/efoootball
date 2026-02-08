@@ -16,123 +16,201 @@ interface Team {
   gf: number;
   ga: number;
   gd: number;
-  group_id?: number | null;
+}
+
+interface Match {
+  id: number;
+  home_team: { name: string };
+  away_team: { name: string };
+  played: boolean;
+  stage: string;
+  home_goals: number;
+  away_goals: number;
 }
 
 const target = new Date("2026-01-02T16:00:00").getTime();
 
-const SOURCES = [
-  { key: "tournament_two_view", label: "Kenya Efootball Knockouts" },
-  { key: "teamsranked", label: "Friendly Matches" },
-];
-
 export default function Teams() {
-  const [selectedSource, setSelectedSource] = useState<string>("tournament_two_view"); // default = Kenya Efootball
+  const [tournaments, setTournaments] = useState<{ id: number; name: string }[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState<{ id: number; name: string } | null>(null);
   const [standings, setStandings] = useState<Team[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"table" | "upcoming" | "played">("table");
 
+  // 1. Fetch the list of tournaments from your 'tournaments' table
   useEffect(() => {
-    const fetchStandings = async () => {
+    const fetchTournaments = async () => {
+      const { data } = await supabase.from("tournaments").select("id, name");
+      if (data && data.length > 0) {
+        setTournaments(data);
+        setSelectedTournament(data[0]);
+      }
+    };
+    fetchTournaments();
+  }, []);
+
+  // 2. Fetch Standings (via RPC) and Matches (via Filter)
+  useEffect(() => {
+    if (!selectedTournament) return;
+
+    const fetchData = async () => {
       setLoading(true);
-      setError(null);
-
       try {
-        const { data, error: fetchError } = await supabase
-          .from(selectedSource)
-          .select("rank, id, name, w, d, l, points, gf, ga, gd")
-          .order("rank", { ascending: true });
+        // Dynamic Standings using the SQL function we created
+        const { data: standData } = await supabase.rpc("get_standings", {
+          t_id: selectedTournament.id,
+        });
 
-        if (fetchError) throw fetchError;
+        // Matches filtered by the selected tournament ID
+        const { data: matchData } = await supabase
+          .from("matches")
+          .select(`
+            id, 
+            home_team:home_team_id(name), 
+            away_team:away_team_id(name), 
+            played, 
+            stage,
+            home_goals,
+            away_goals
+          `)
+          .eq("tournament_id", selectedTournament.id)
+          .order("id", { ascending: false });
 
-        setStandings(data || []);
-      } catch (err: any) {
-        setError("Failed to load standings");
+        setStandings(standData || []);
+        setMatches((matchData as any) || []);
+      } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStandings();
-  }, [selectedSource]);
+    fetchData();
+  }, [selectedTournament]);
 
   return (
-    <main className="mt-5 bg-black  text-white min-vh-100">
+    <main className="mt-5 bg-black text-white min-vh-100">
       <Navbar />
 
-      <div className="py-5">
-        {/* View Selector */}
-        <div className="mb-4">
+      <style>
+        {`
+          .gaming-select {
+            background: #111 !important;
+            color: #0d6efd !important;
+            border: 2px solid #0d6efd !important;
+            border-radius: 10px;
+            font-weight: bold;
+            padding: 12px;
+            box-shadow: 0 0 15px rgba(13, 110, 253, 0.2);
+            cursor: pointer;
+          }
+          .nav-pills .nav-link { color: #fff; opacity: 0.6; border-radius: 20px; }
+          .nav-pills .nav-link.active { background-color: #0d6efd !important; opacity: 1; }
+          .beaten { color: #ff4d4d !important; text-decoration: line-through; opacity: 0.5; }
+          .match-box { background: #111; border: 1px solid #222; border-radius: 12px; transition: 0.3s; }
+          .match-box:hover { border-color: #0d6efd; }
+        `}
+      </style>
+
+      <div className="container py-5">
+        {/* Dynamic Styled Dropdown */}
+        <div className="mb-4 text-center">
+          <label className="d-block small text-uppercase text-muted mb-2 tracking-widest">Select Tournament</label>
           <select
-            className="form-select bg-dark text-white border border-primary"
-            value={selectedSource}
-            onChange={(e) => setSelectedSource(e.target.value)}
+            className="form-select gaming-select mx-auto"
+            style={{ maxWidth: "450px" }}
+            value={selectedTournament?.id}
+            onChange={(e) => {
+              const t = tournaments.find((x) => x.id === parseInt(e.target.value));
+              if (t) setSelectedTournament(t);
+            }}
           >
-            {SOURCES.map((source) => (
-              <option key={source.key} value={source.key}>
-                {source.label}
-              </option>
+            {tournaments.map((t) => (
+              <option key={t.id} value={t.id}>{t.name.replace(/_/g, " ")}</option>
             ))}
           </select>
         </div>
 
         <MatchesTimer targetTime={target} />
 
-        <div className="mt-4">
-          {loading ? (
-            <div className="text-center my-5">
-              <div className="spinner-border text-primary"></div>
-            </div>
-          ) : error ? (
-            <div className="alert alert-danger bg-dark border-danger text-center">
-              {error}
-            </div>
-          ) : standings.length === 0 ? (
-            <div className="text-center py-5 text-muted">
-              No teams found in this view.
-            </div>
-          ) : (
-            <div className="bg-dark border border-primary rounded overflow-hidden">
-              <div className="p-3 fw-bold text-uppercase border-bottom border-primary">
-                {SOURCES.find((s) => s.key === selectedSource)?.label || "Standings"}
-              </div>
+        {/* Tab Navigation */}
+        <ul className="nav nav-pills justify-content-center mt-5 mb-4 gap-2">
+          <li className="nav-item">
+            <button className={`nav-link ${activeTab === "table" ? "active" : ""}`} onClick={() => setActiveTab("table")}>Standings</button>
+          </li>
+          <li className="nav-item">
+            <button className={`nav-link ${activeTab === "upcoming" ? "active" : ""}`} onClick={() => setActiveTab("upcoming")}>Upcoming</button>
+          </li>
+          <li className="nav-item">
+            <button className={`nav-link ${activeTab === "played" ? "active" : ""}`} onClick={() => setActiveTab("played")}>Results</button>
+          </li>
+        </ul>
 
-              <div className="table-responsive">
-                <table className="table table-dark mb-0 align-middle table-hover">
-                  <thead className="table-primary text-dark">
-                    <tr>
-                      <th className="text-center">Rank</th>
-                      <th>Team</th>
-                      <th className="text-center">W</th>
-                      <th className="text-center">D</th>
-                      <th className="text-center">L</th>
-                      <th className="text-center">PTS</th>
-                      <th className="text-center">GF</th>
-                      <th className="text-center">GA</th>
-                      <th className="text-center">GD</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {standings.map((team) => (
-                      <tr key={team.id}>
-                        <td className="text-center fw-bold">{team.rank}</td>
-                        <td>{team.name}</td>
-                        <td className="text-center">{team.w}</td>
-                        <td className="text-center">{team.d}</td>
-                        <td className="text-center">{team.l}</td>
-                        <td className="text-center fw-bold text-warning">{team.points}</td>
-                        <td className="text-center">{team.gf}</td>
-                        <td className="text-center">{team.ga}</td>
-                        <td className="text-center">{team.gd}</td>
+        {loading ? (
+          <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>
+        ) : (
+          <div className="mt-4">
+            {/* 1. STANDINGS TABLE */}
+            {activeTab === "table" && (
+              <div className="bg-dark border border-primary rounded-4 overflow-hidden shadow-lg">
+                <div className="table-responsive">
+                  <table className="table table-dark mb-0 align-middle table-hover">
+                    <thead className="table-primary text-dark">
+                      <tr className="text-center">
+                        <th>Rank</th><th>Team</th><th>W</th><th>D</th><th>L</th><th>PTS</th><th>GF</th><th>GA</th><th>GD</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="text-center">
+                      {standings.map((team) => (
+                        <tr key={team.id}>
+                          <td className="fw-bold">{team.rank}</td>
+                          <td className="text-start ps-4">{team.name}</td>
+                          <td>{team.w}</td><td>{team.d}</td><td>{team.l}</td>
+                          <td className="fw-bold text-warning">{team.points}</td>
+                           <td>{team.gf}</td>
+                            <td>{team.ga}</td>
+                          <td>{team.gd}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+
+            {/* 2. MATCHES (Upcoming & Played) */}
+            {(activeTab === "upcoming" || activeTab === "played") && (
+              <div className="row g-3">
+                {matches
+                  .filter((m) => (activeTab === "played" ? m.played : !m.played))
+                  .map((match) => {
+                    const homeLost = match.played && match.home_goals < match.away_goals;
+                    const awayLost = match.played && match.away_goals < match.home_goals;
+
+                    return (
+                      <div key={match.id} className="col-md-6 col-lg-4">
+                        <div className="match-box p-3 text-center">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className={`fw-bold flex-fill ${homeLost ? "beaten" : ""}`}>{match.home_team?.name}</span>
+                            <div className="mx-2">
+                              {match.played ? (
+                                <span className="badge bg-primary px-3 py-2">{match.home_goals} - {match.away_goals}</span>
+                              ) : (
+                                <span className="badge bg-secondary">VS</span>
+                              )}
+                            </div>
+                            <span className={`fw-bold flex-fill ${awayLost ? "beaten" : ""}`}>{match.away_team?.name}</span>
+                          </div>
+                          <div className="mt-2 opacity-50 small text-uppercase">{match.stage}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
   );
