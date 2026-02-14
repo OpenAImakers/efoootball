@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
+import TournamentAdmin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard.tsx";
 import Teams from "./pages/Team.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -11,6 +11,10 @@ import UpdatePassword from "./pages/UpdatePassword.js";
 import Leaderboard from "./pages/Leaderboard.tsx";  
 import Leaderboardadmin from "./pages/Leaderboardadmin.tsx";
 import Navbar from "./components/Navbar.jsx";
+import UpgradeToAdmin from "./pages/UpgradeToAdmin.tsx";
+import TournamentCreation from "./pages/TournamentCreation.tsx";
+import TournamentList from "./pages/TournamentList.tsx";
+import NoLeaderboardState from "./pages/NoLeaderboardState.tsx";
 
 function App() {
   return (
@@ -38,29 +42,68 @@ function App() {
           </ProtectedRoute>
         }
       />  
-
+            <Route
+        path="/tournament-list"
+        element={
+          <ProtectedRoute>
+            <TournamentList />
+          </ProtectedRoute>
+        }
+      /> 
+                 <Route
+  path="/leaderboard-admin"
+  element={
+    <ProtectedRoute requiredRole={null}>
+      {({ user, role }) =>
+        role === "leaderboard" ? (
+          <Leaderboardadmin user={user} role={role} />
+        ) : (
+          <div style={{ padding: "20px" }}>
+            <Navbar />
+            <NoLeaderboardState />
+          </div>
+        )
+      }
+    </ProtectedRoute>
+  }
+/>
 <Route
   path="/admin"
   element={
     <ProtectedRoute requiredRole={null}>
-      {/* Add the opening brace here */}
-      {({ user, role }) =>
-        role === "admin" ? (
-          <Admin user={user} role={role} />
-        ) : role === "leaderboard" ? (
-          <Leaderboardadmin user={user} role={role} />
-        ) : (
+      {({ user, role }) => {
+        // 1. Check if they have picked a tournament session locally
+        const hasActiveSession = localStorage.getItem("active_tournament");
+
+        // 2. Logic for Tournament Admins
+        if (role === "admin") {
+          if (hasActiveSession) {
+            // They are an admin AND they have selected a tournament to manage
+            return <TournamentAdmin user={user} role={role} />;
+          } else {
+            // They are an admin but want to pick/create a tournament
+            return (
+              <>
+                <Navbar />
+                <UpgradeToAdmin role={role} />
+              </>
+            );
+          }
+        }
+
+        // 3. Logic for Leaderboard Admins
+        if (role === "leaderboard") {
+          return <Leaderboardadmin user={user} role={role} />;
+        }
+
+        // 4. Fallback for Members/Guests
+        return (
           <>
             <Navbar />
-            <div style={{ padding: "40px", textAlign: "center", marginTop: "60px" }}>
-              <h2>Access Restricted</h2>
-              <p>This admin area is only for authorized administrators.</p>
-              <p>Your role: {role || "none"}</p>
-            </div>
+            <UpgradeToAdmin role={role} />
           </>
-        )
-      } 
-      {/* Add the closing brace here */}
+        );
+      }}
     </ProtectedRoute>
   }
 />
@@ -69,6 +112,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Account />
+          </ProtectedRoute>
+        }
+      />
+            <Route
+        path="/create-tournament"
+        element={
+          <ProtectedRoute>
+            <TournamentCreation  />
           </ProtectedRoute>
         }
       />

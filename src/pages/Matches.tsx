@@ -244,8 +244,8 @@ export default function MatchesList() {
           )}
 
           {/* Winner component – placed at bottom */}
-          <div className="mt-5">
-            <Winner teamName="Colo_Colo" goalsScored={28} matchesWon={5} totalPoints={15} />
+          <div className="mt-5 w-100">
+            <Winner />
           </div>
         </div>
       </div>

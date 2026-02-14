@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
+import { getActiveTournament } from "../Utils/TournamentSession";
 
 function TeamsManager() {
   const [tournaments, setTournaments] = useState([]);
@@ -9,37 +10,54 @@ function TeamsManager() {
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamGroup, setNewTeamGroup] = useState("1");
 
-  // Load tournaments once on mount
+  const activeSession = getActiveTournament(); // null or { id: number, name: string }
+
+  // 1. Fetch tournaments — respect active session if present
   useEffect(() => {
     async function fetchTournaments() {
-      const { data, error } = await supabase
+      setLoading(true);
+
+      let query = supabase
         .from("tournaments")
         .select("id, name")
         .order("created_at", { ascending: false });
 
+      // If there's an active session → only load that tournament
+      if (activeSession?.id) {
+        query = query.eq("id", activeSession.id);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
         console.error("Error fetching tournaments:", error);
+        setLoading(false);
         return;
       }
 
       setTournaments(data || []);
 
-      // Auto-select newest if nothing chosen yet
-      if (data?.length > 0 && selectedTournamentId === null) {
-        setSelectedTournamentId(data[0].id);
+      // Auto-select logic
+      if (data?.length > 0) {
+        // Prefer the session one if it matches
+        if (activeSession?.id && data.some(t => t.id === activeSession.id)) {
+          setSelectedTournamentId(activeSession.id);
+        } else {
+          setSelectedTournamentId(data[0].id);
+        }
       }
+
+      setLoading(false);
     }
+
     fetchTournaments();
-  }, []);
+  }, []); // runs once on mount
 
-  // Fetch teams function (callable from anywhere)
+  // 2. Refresh teams when tournament changes
   const refreshTeams = async () => {
-    if (selectedTournamentId === null) {
-      setTeams([]);
-      return;
-    }
-
+    if (!selectedTournamentId) return;
     setLoading(true);
+
     const { data, error } = await supabase
       .from("teams")
       .select("*")
@@ -47,92 +65,56 @@ function TeamsManager() {
       .order("group_id", { ascending: true })
       .order("name", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching teams:", error);
-    } else {
-      setTeams(data || []);
-    }
+    if (!error) setTeams(data || []);
     setLoading(false);
   };
 
-  // Initial fetch when tournament is first selected
   useEffect(() => {
-    if (selectedTournamentId !== null) {
-      refreshTeams();
-    }
-  }, []); // empty deps — only once on mount
+    if (selectedTournamentId) refreshTeams();
+  }, [selectedTournamentId]);
 
-  const currentTournament = tournaments.find((t) => t.id === selectedTournamentId);
-
-  const handleChange = (id, field, value) =>
+  // Handlers (unchanged)
+  const handleChange = (id, field, value) => {
     setTeams((prev) =>
       prev.map((team) => (team.id === id ? { ...team, [field]: value } : team))
     );
+  };
 
   const handleSave = async (team) => {
-    if (!window.confirm(`Save updated stats for ${team.name}?`)) return;
-
+    if (!window.confirm(`Save stats for ${team.name}?`)) return;
     const { error } = await supabase
       .from("teams")
-      .update({
-        w: parseInt(team.w) || 0,
-        l: parseInt(team.l) || 0,
-        d: parseInt(team.d) || 0,
-      })
+      .update({ w: parseInt(team.w), l: parseInt(team.l), d: parseInt(team.d) })
       .eq("id", team.id);
-
-    if (error) {
-      alert("Error updating: " + error.message);
-    } else {
-      alert("Stats updated!");
-      // Optional: refresh after save
-      refreshTeams();
-    }
+    if (error) alert(error.message);
+    else refreshTeams();
   };
 
   const handleAddTeam = async () => {
-    if (selectedTournamentId === null) {
-      return alert("Please select a tournament first.");
-    }
-    if (!newTeamName.trim()) return alert("Enter a team name");
-
+    if (!newTeamName.trim() || !selectedTournamentId) return;
     const { error } = await supabase.from("teams").insert({
       name: newTeamName.trim(),
       tournament_id: selectedTournamentId,
       group_id: parseInt(newTeamGroup),
-      w: 0,
-      l: 0,
-      d: 0,
+      w: 0, l: 0, d: 0,
     });
-
-    if (error) {
-      alert("Error adding team: " + error.message);
-    } else {
+    if (!error) {
       setNewTeamName("");
-      refreshTeams(); // ← auto refresh after add
+      refreshTeams();
+    } else {
+      alert(error.message);
     }
   };
 
   const handleDeleteTeam = async (id, name) => {
-    if (!window.confirm(`Delete ${name} and ALL its matches? This cannot be undone.`)) return;
-
-    try {
-      await supabase
-        .from("matches")
-        .delete()
-        .or(`home_team_id.eq.${id},away_team_id.eq.${id}`);
-
-      const { error } = await supabase.from("teams").delete().eq("id", id);
-
-      if (error) throw error;
-
-      alert(`${name} deleted successfully`);
-      refreshTeams(); // ← auto refresh after delete
-    } catch (err) {
-      alert("Error deleting team: " + err.message);
-    }
+    if (!window.confirm(`Delete ${name}?`)) return;
+    // Optional: clean up related matches
+    await supabase.from("matches").delete().or(`home_team_id.eq.${id},away_team_id.eq.${id}`);
+    const { error } = await supabase.from("teams").delete().eq("id", id);
+    if (!error) refreshTeams();
   };
 
+  // Group teams
   const groups = {};
   teams.forEach((team) => {
     const gid = team.group_id || "Ungrouped";
@@ -140,172 +122,141 @@ function TeamsManager() {
     groups[gid].push(team);
   });
 
+  const isLockedMode = !!activeSession?.id;
+
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <h2>Tournament Control Panel</h2>
+        <h2 className="mb-0">
+          {isLockedMode
+            ? `Managing: ${activeSession?.name || "Tournament"}`
+            : "Tournaments"}
+        </h2>
 
-        <div className="d-flex align-items-center gap-3">
+        {!isLockedMode && (
           <select
-            className="form-select"
+            className="form-select w-auto"
             value={selectedTournamentId ?? ""}
-            onChange={(e) => {
-              setSelectedTournamentId(e.target.value ? Number(e.target.value) : null);
-              // No need to refresh here — useEffect will handle on next render if needed
-            }}
+            onChange={(e) => setSelectedTournamentId(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">Select Tournament</option>
+            <option value="">Select a Tournament</option>
             {tournaments.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
           </select>
-
-          {currentTournament && (
-            <span className="badge bg-primary fs-6">
-              {teams.length} teams
-            </span>
-          )}
-
-          {/* Manual refresh button */}
-          {selectedTournamentId !== null && (
-            <button className="btn btn-outline-secondary btn-sm" onClick={refreshTeams} disabled={loading}>
-              {loading ? "Refreshing..." : "Refresh Teams"}
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      {!selectedTournamentId && (
-        <div className="alert alert-info">
-          Please select a tournament to manage teams.
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
         </div>
-      )}
-
-      {selectedTournamentId !== null && (
+      ) : !selectedTournamentId ? (
+        <div className="text-center py-5 bg-light rounded">
+          <p className="text-muted">Select a tournament to manage teams.</p>
+        </div>
+      ) : (
         <>
-          {loading ? (
-            <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+          {/* Add Team Form */}
+          <div className="card mb-4 shadow-sm border-0 bg-dark text-white">
+            <div className="card-body">
+              <h6 className="mb-3">Add Team</h6>
+              <div className="row g-2">
+                <div className="col-8">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Team name"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                  />
+                </div>
+                <div className="col-4">
+                  <button
+                    className="btn btn-primary w-100"
+                    onClick={handleAddTeam}
+                    disabled={!newTeamName.trim()}
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Add Team Section */}
-              <div className="card mb-5 shadow-sm">
-                <div className="card-body">
-                  <h5 className="card-title small fw-bold text-uppercase mb-3">
-                    Add New Team to {currentTournament?.name || "Selected Tournament"}
-                  </h5>
-                  <div className="row g-2">
-                    <div className="col-md-6">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Team Name"
-                        value={newTeamName}
-                        onChange={(e) => setNewTeamName(e.target.value)}
-                      />
+          </div>
+
+          {/* Teams by Group */}
+          <div className="row">
+            {Object.keys(groups)
+              .sort((a, b) => (a === "Ungrouped" ? 1 : a.localeCompare(b)))
+              .map((groupId) => (
+                <div key={groupId} className="col-md-6 mb-4">
+                  <div className="card border-0 shadow-sm">
+                    <div className="card-header bg-white fw-bold">
+                      Group {groupId === "Ungrouped" ? "Other" : groupId}
                     </div>
-                    <div className="col-md-3">
-                      <select
-                        className="form-select"
-                        value={newTeamGroup}
-                        onChange={(e) => setNewTeamGroup(e.target.value)}
-                      >
-                        {[1, 2, 3, 4].map((n) => (
-                          <option key={n} value={n}>
-                            Group {n}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-md-3">
-                      <button className="btn btn-dark w-100" onClick={handleAddTeam}>
-                        Add Team
-                      </button>
+                    <div className="table-responsive">
+                      <table className="table align-middle mb-0">
+                        <thead>
+                          <tr className="small text-muted">
+                            <th>Team</th>
+                            <th>W</th>
+                            <th>L</th>
+                            <th>D</th>
+                            <th className="text-end">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groups[groupId].map((team) => (
+                            <tr key={team.id}>
+                              <td className="fw-bold">{team.name}</td>
+                              {["w", "l", "d"].map((f) => (
+                                <td key={f}>
+                                  <input
+                                    type="number"
+                                    className="form-control form-control-sm px-1 text-center"
+                                    style={{ width: "45px" }}
+                                    value={team[f] ?? 0}
+                                    onChange={(e) => handleChange(team.id, f, e.target.value)}
+                                  />
+                                </td>
+                              ))}
+                              <td className="text-end">
+                                <button
+                                  className="btn btn-sm btn-link text-success p-0 me-2"
+                                  onClick={() => handleSave(team)}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-link text-danger p-0"
+                                  onClick={() => handleDeleteTeam(team.id, team.name)}
+                                >
+                                  Del
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
-              </div>
+              ))}
+          </div>
 
-              {/* Groups / Teams Display */}
-              <div className="row">
-                {Object.keys(groups)
-                  .sort()
-                  .map((groupId) => (
-                    <div key={groupId} className="col-lg-6 mb-4">
-                      <div className="card h-100 border-0 shadow-sm">
-                        <div className="card-header bg-white py-3">
-                          <h6 className="mb-0 fw-bold">
-                            GROUP {groupId} {groupId === "Ungrouped" && "(No group assigned)"}
-                          </h6>
-                        </div>
-                        <div className="table-responsive">
-                          <table className="table table-hover align-middle mb-0">
-                            <thead className="table-light">
-                              <tr className="small text-uppercase">
-                                <th>Team</th>
-                                <th style={{ width: "60px" }}>W</th>
-                                <th style={{ width: "60px" }}>L</th>
-                                <th style={{ width: "60px" }}>D</th>
-                                <th className="text-end">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {groups[groupId].map((team) => (
-                                <tr key={team.id}>
-                                  <td className="fw-bold">{team.name}</td>
-                                  {["w", "l", "d"].map((f) => (
-                                    <td key={f}>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        className="form-control form-control-sm text-center px-1"
-                                        value={team[f]}
-                                        onChange={(e) =>
-                                          handleChange(team.id, f, e.target.value)
-                                        }
-                                      />
-                                    </td>
-                                  ))}
-                                  <td className="text-end">
-                                    <div className="btn-group btn-group-sm">
-                                      <button
-                                        className="btn btn-outline-secondary"
-                                        onClick={() => handleSave(team)}
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        className="btn btn-outline-danger"
-                                        onClick={() =>
-                                          handleDeleteTeam(team.id, team.name)
-                                        }
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              {teams.length === 0 && (
-                <div className="text-center py-5 text-muted">
-                  <p>No teams in this tournament yet.</p>
-                </div>
-              )}
-            </>
-          )}
+          <hr
+            style={{
+              border: "none",
+              height: "4px",
+              backgroundColor: "#111",
+              margin: "30px 0",
+              borderRadius: "4px",
+            }}
+          />
         </>
       )}
     </div>
