@@ -15,6 +15,8 @@ function MatchScheduler() {
   const [awayTeamId, setAwayTeamId] = useState("");
   const [stage, setStage] = useState("GROUP");
   const [stagegroup, setStagegroup] = useState("");
+  // --- ADDED ROUND STATE ---
+  const [round, setRound] = useState(1); 
 
   // Update Result State
   const [selectedMatchId, setSelectedMatchId] = useState("");
@@ -37,7 +39,6 @@ function MatchScheduler() {
         .select("id, name")
         .order("created_at", { ascending: false });
 
-      // If active session exists → lock to that tournament only
       if (activeSession?.id) {
         query = query.eq("id", activeSession.id);
       }
@@ -54,7 +55,6 @@ function MatchScheduler() {
       setTournaments(data || []);
 
       if (data?.length > 0) {
-        // Prefer session-locked tournament if available
         if (activeSession?.id && data.some(t => t.id === activeSession.id)) {
           setSelectedTournamentId(activeSession.id);
         } else {
@@ -80,14 +80,12 @@ function MatchScheduler() {
     async function fetchData() {
       setLoading(true);
 
-      // Teams
       const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
         .select("id, name")
         .eq("tournament_id", selectedTournamentId)
         .order("name");
 
-      // Matches (with joined team names)
       const { data: matchesData, error: matchesError } = await supabase
         .from("matches")
         .select(`
@@ -96,8 +94,9 @@ function MatchScheduler() {
           away_team:away_team_id(name), 
           played, 
           stage,
+          round,
           group_id
-        `)
+        `) // --- ADDED round TO SELECT ---
         .eq("tournament_id", selectedTournamentId)
         .order("id", { ascending: false });
 
@@ -124,13 +123,15 @@ function MatchScheduler() {
     const awayName = teams.find(t => t.id === awayTeamId)?.name || "?";
     const stageText = stage === "GROUP" ? `Group ${stagegroup || "?"}` : stage;
 
-    if (!window.confirm(`Schedule:\n${homeName} vs ${awayName}\n${stageText}`)) return;
+    // --- ADDED ROUND TO CONFIRMATION ---
+    if (!window.confirm(`Schedule:\n${homeName} vs ${awayName}\nStage: ${stageText}\nRound: ${round}`)) return;
 
     const { error } = await supabase.from("matches").insert({
       tournament_id: selectedTournamentId,
       home_team_id: homeTeamId,
       away_team_id: awayTeamId,
       stage,
+      round, // --- ADDED ROUND TO INSERT ---
       played: false,
       group_id: stagegroup || null,
     });
@@ -145,13 +146,14 @@ function MatchScheduler() {
     setAwayTeamId("");
     setStage("GROUP");
     setStagegroup("");
+    setRound(1); // Reset round
 
     // Refresh matches
     const { data } = await supabase
       .from("matches")
       .select(`
         id, home_team:home_team_id(name), away_team:away_team_id(name), 
-        played, stage, group_id
+        played, stage, round, group_id
       `)
       .eq("tournament_id", selectedTournamentId)
       .order("id", { ascending: false });
@@ -181,12 +183,11 @@ function MatchScheduler() {
     setHomeGoals(0);
     setAwayGoals(0);
 
-    // Refresh
     const { data } = await supabase
       .from("matches")
       .select(`
         id, home_team:home_team_id(name), away_team:away_team_id(name), 
-        played, stage, group_id
+        played, stage, round, group_id
       `)
       .eq("tournament_id", selectedTournamentId)
       .order("id", { ascending: false });
@@ -196,7 +197,6 @@ function MatchScheduler() {
 
   const handleDeleteMatch = async () => {
     if (!matchToDeleteId) return alert("Select a match to delete.");
-
     if (!window.confirm("Delete this match permanently?")) return;
 
     const { error } = await supabase
@@ -212,12 +212,11 @@ function MatchScheduler() {
     alert("Match deleted.");
     setMatchToDeleteId("");
 
-    // Refresh
     const { data } = await supabase
       .from("matches")
       .select(`
         id, home_team:home_team_id(name), away_team:away_team_id(name), 
-        played, stage, group_id
+        played, stage, round, group_id
       `)
       .eq("tournament_id", selectedTournamentId)
       .order("id", { ascending: false });
@@ -250,12 +249,9 @@ function MatchScheduler() {
         {isLockedMode ? `Match Scheduler – ${currentName}` : "Match Scheduler"}
       </h2>
 
-      {/* Tournament Selector – hidden when locked */}
       {!isLockedMode && (
         <div className="mb-4">
-          <label htmlFor="tournamentSelect" className="form-label fw-bold">
-            Select Tournament
-          </label>
+          <label htmlFor="tournamentSelect" className="form-label fw-bold">Select Tournament</label>
           <select
             id="tournamentSelect"
             className="form-select"
@@ -264,30 +260,31 @@ function MatchScheduler() {
           >
             <option value="">— Choose one —</option>
             {tournaments.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
+              <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
-          <small className="text-muted d-block mt-1">
-            Managing: {currentName}
-          </small>
         </div>
       )}
 
       {selectedTournamentId ? (
         <>
-          {/* CREATE MATCH */}
           <div className="mb-5 card p-4 shadow-sm">
             <h5 className="mb-3">Schedule New Match</h5>
             <div className="row g-3">
+              {/* --- UPDATED STAGE SELECTOR --- */}
               <div className="col-md-4">
+                <label className="form-label small fw-bold">Stage</label>
                 <select
                   className="form-select"
                   value={stage}
                   onChange={(e) => setStage(e.target.value)}
                 >
                   <option value="GROUP">Group Stage</option>
+                  <option value="OPENING_ROUND">Opening Round</option>
+                  <option value="WINNERS_BRACKET">Winners Bracket</option>
+                  <option value="LOSERS_BRACKET">Losers Bracket</option>
+                  <option value="GRAND_FINAL">Grand Final</option>
+                  <option value="GRAND_FINAL_RESET">Grand Final Reset</option>
                   <option value="QUARTER">Quarter Finals</option>
                   <option value="SEMI">Semi Finals</option>
                   <option value="FINAL">Final</option>
@@ -295,7 +292,22 @@ function MatchScheduler() {
                 </select>
               </div>
 
+              {/* --- NEW ROUND SELECTOR (1-30) --- */}
               <div className="col-md-4">
+                <label className="form-label small fw-bold">Round</label>
+                <select
+                  className="form-select"
+                  value={round}
+                  onChange={(e) => setRound(Number(e.target.value))}
+                >
+                  {Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
+                    <option key={num} value={num}>Round {num}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-md-4">
+                <label className="form-label small fw-bold">Group (If Applicable)</label>
                 <select
                   className="form-select"
                   value={stagegroup}
@@ -310,18 +322,14 @@ function MatchScheduler() {
               </div>
 
               <div className="col-12">
-                <div className="d-flex align-items-center gap-3 flex-wrap">
+                <div className="d-flex align-items-center gap-3 flex-wrap mt-2">
                   <select
                     className="form-select flex-grow-1"
                     value={homeTeamId}
                     onChange={(e) => setHomeTeamId(e.target.value)}
                   >
                     <option value="">Home Team</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
+                    {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
 
                   <span className="fw-bold fs-5">VS</span>
@@ -332,11 +340,7 @@ function MatchScheduler() {
                     onChange={(e) => setAwayTeamId(e.target.value)}
                   >
                     <option value="">Away Team</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
+                    {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -360,7 +364,7 @@ function MatchScheduler() {
               <option value="">Select unplayed match</option>
               {matches.filter((m) => !m.played).map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.home_team?.name} vs {m.away_team?.name} ({m.stage || "—"})
+                  {m.home_team?.name} vs {m.away_team?.name} ({m.stage} - R{m.round})
                 </option>
               ))}
             </select>
@@ -373,7 +377,7 @@ function MatchScheduler() {
                   className="form-control text-center"
                   style={{ width: "90px" }}
                   value={homeGoals}
-                  onChange={(e) => setHomeGoals(e.target.value)}
+                  onChange={(e) => setHomeGoals(Number(e.target.value))}
                   placeholder="Home"
                 />
                 <span className="fw-bold fs-4">-</span>
@@ -383,7 +387,7 @@ function MatchScheduler() {
                   className="form-control text-center"
                   style={{ width: "90px" }}
                   value={awayGoals}
-                  onChange={(e) => setAwayGoals(e.target.value)}
+                  onChange={(e) => setAwayGoals(Number(e.target.value))}
                   placeholder="Away"
                 />
                 <button className="btn btn-primary" onClick={handleUpdateResult}>
@@ -396,9 +400,6 @@ function MatchScheduler() {
           {/* DELETE MATCH */}
           <div className="card p-4 shadow-sm">
             <h5 className="mb-3 text-danger">Delete Match</h5>
-            <p className="text-muted small mb-3">
-              Only unplayed matches can be removed.
-            </p>
             <select
               className="form-select mb-3"
               value={matchToDeleteId}
@@ -407,11 +408,10 @@ function MatchScheduler() {
               <option value="">Select unplayed match</option>
               {matches.filter((m) => !m.played).map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.home_team?.name} vs {m.away_team?.name} ({m.stage || "—"})
+                  {m.home_team?.name} vs {m.away_team?.name} ({m.stage} - R{m.round})
                 </option>
               ))}
             </select>
-
             <button
               className="btn btn-danger w-100"
               onClick={handleDeleteMatch}
@@ -422,9 +422,7 @@ function MatchScheduler() {
           </div>
         </>
       ) : (
-        <div className="alert alert-info">
-          No tournaments available to manage.
-        </div>
+        <div className="alert alert-info">No tournaments available to manage.</div>
       )}
     </div>
   );
