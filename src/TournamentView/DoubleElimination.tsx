@@ -159,7 +159,7 @@ export default function DoubleEliminationLayout({
                   <tr key={team.id}>
                     <td className="ps-4 fw-bold">#{team.rank}</td>
                     <td className="fw-bold text-info">{team.name}</td>
-                    <td className="text-center fw-bold text-muted">{team.w + team.d + team.l}</td>
+                    <td className="text-center">{team.w + team.d + team.l}</td>
                     <td className="text-center">{team.w}</td>
                     <td className="text-center">{team.d}</td>
                     <td className="text-center">{team.l}</td>
