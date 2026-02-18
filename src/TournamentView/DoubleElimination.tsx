@@ -144,6 +144,7 @@ export default function DoubleEliminationLayout({
                 <tr>
                   <th className="ps-4">RANK</th>
                   <th>TEAM</th>
+                  <th className="text-center">MP</th>
                   <th className="text-center">W</th>
                   <th className="text-center">D</th>
                   <th className="text-center">L</th>
@@ -158,6 +159,7 @@ export default function DoubleEliminationLayout({
                   <tr key={team.id}>
                     <td className="ps-4 fw-bold">#{team.rank}</td>
                     <td className="fw-bold text-info">{team.name}</td>
+                    <td className="text-center fw-bold text-muted">{team.w + team.d + team.l}</td>
                     <td className="text-center">{team.w}</td>
                     <td className="text-center">{team.d}</td>
                     <td className="text-center">{team.l}</td>
@@ -230,7 +232,6 @@ export default function DoubleEliminationLayout({
         .match-team { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
         .team-name { color: #fff; font-weight: 600; font-size: 0.95rem; max-width: 75%; transition: 0.3s; }
         
-        /* SCORE COLORS */
         .score { font-weight: 900; font-size: 1.2rem; min-width: 25px; text-align: right; transition: 0.3s; }
         .score-win { color: #28a745; }
         .score-loss { color: #dc3545; }
@@ -239,7 +240,6 @@ export default function DoubleEliminationLayout({
 
         .match-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 8px 0; }
         
-        /* UPDATED: Removed text-decoration (strikethrough) */
         .beaten-team .team-name {
           color: #555 !important;
         }

@@ -194,7 +194,7 @@ export default function MatchesList() {
                           {isMainTournament && <th className="text-end pe-4 py-3">Stage</th>}
                         </tr>
                       </thead>
-                      <tbody>
+                    <tbody>
                         {matches.map((m) => (
                           <tr
                             key={m.id}
@@ -229,9 +229,10 @@ export default function MatchesList() {
                     </table>
                   </div>
 
-                  <div className="p-3">
-                    <MatchPredictions />
-                  </div>
+
+          <div className="p-3">
+            <MatchPredictions tournamentId={Number(selectedTournamentId)} />
+          </div>
                 </div>
               )}
             </>

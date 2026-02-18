@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react"; // Added useCallback
 import { supabase } from "../supabase";
 
 interface MatchStat {
@@ -10,27 +10,34 @@ interface MatchStat {
   total: number;
 }
 
-export default function PredictionsSummary() {
+interface PredictionsSummaryProps {
+  tournamentId: number;
+}
+
+export default function PredictionsSummary({ tournamentId }: PredictionsSummaryProps) {
   const [stats, setStats] = useState<MatchStat[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSummary();
-  }, []);
-
-  const fetchSummary = async () => {
+  // Wrapped in useCallback to stabilize the function reference
+  const fetchSummary = useCallback(async () => {
+    if (!tournamentId) return;
+    
+    setLoading(true);
     const { data, error } = await supabase
       .from("match_votes")
       .select(`
         predicted_winner,
-        matches (
+        matches!inner (
+          tournament_id,
           stage,
           home_team:home_team_id(name),
           away_team:away_team_id(name)
         )
-      `);
+      `)
+      .eq("matches.tournament_id", tournamentId);
 
     if (error || !data) {
+      setStats([]);
       setLoading(false);
       return;
     }
@@ -39,7 +46,7 @@ export default function PredictionsSummary() {
 
     data.forEach((v: any) => {
       const match = v.matches;
-      if (!match) return; // Skip if match data is missing
+      if (!match) return; 
       
       const matchName = `${match.home_team.name} vs ${match.away_team.name}`;
       
@@ -52,13 +59,20 @@ export default function PredictionsSummary() {
       }
 
       const pick = v.predicted_winner as "home" | "away" | "draw";
-      summaryMap[matchName][pick]++;
-      summaryMap[matchName].total++;
+      // Using 'in' check to avoid ESLint property issues
+      if (pick in summaryMap[matchName]) {
+        summaryMap[matchName][pick]++;
+        summaryMap[matchName].total++;
+      }
     });
 
     setStats(Object.values(summaryMap));
     setLoading(false);
-  };
+  }, [tournamentId]); // fetchSummary updates if tournamentId changes
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]); // Now fetchSummary is a valid dependency
 
   const getPercent = (count: number, total: number) => 
     total === 0 ? 0 : Math.round((count / total) * 100);
@@ -85,7 +99,7 @@ export default function PredictionsSummary() {
             </thead>
             <tbody>
               {stats.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-4 text-muted">No votes yet.</td></tr>
+                <tr><td colSpan={5} className="text-center py-4 text-muted">No votes yet for this tournament.</td></tr>
               ) : (
                 stats.map((s, idx) => (
                   <tr key={idx} className="border-bottom">

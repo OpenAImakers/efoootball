@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { useNavigate } from 'react-router-dom';
 
 interface Tournament {
   id: number;
@@ -16,7 +15,6 @@ const TournamentList = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTournaments();
@@ -47,37 +45,45 @@ const TournamentList = () => {
 
   return (
     <div style={{ 
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
+      background: '#020617', 
       minHeight: '100vh', 
-      padding: '40px 20px',
-      color: '#f8fafc'
+      padding: '60px 20px',
+      color: '#f8fafc',
+      fontFamily: 'system-ui, sans-serif'
     }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Header & Search */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' }}>
-          <div>
-            <h1 style={{ fontSize: '32px', fontWeight: '800', background: 'linear-gradient(to right, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Active Arenas
-            </h1>
-            <p style={{ color: '#94a3b8', margin: 0 }}>Join a tournament and start competing.</p>
-          </div>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <h1 style={{ 
+            fontSize: '48px', 
+            fontWeight: '900', 
+            letterSpacing: '-1px',
+            marginBottom: '10px',
+            background: 'linear-gradient(to right, #38bdf8, #818cf8)', 
+            WebkitBackgroundClip: 'text', 
+            WebkitTextFillColor: 'transparent' 
+          }}>
+            TOURNAMENTS
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '18px', marginBottom: '30px' }}>Select an arena and dominate the field.</p>
           
           <input 
             type="text" 
-            placeholder="Search tournaments..." 
+            placeholder="Search arenas..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
-              padding: '12px 20px',
-              borderRadius: '12px',
-              border: '1px solid #334155',
-              backgroundColor: '#1e293b',
+              padding: '16px 24px',
+              borderRadius: '100px',
+              border: '2px solid #1e293b',
+              backgroundColor: '#0f172a',
               color: 'white',
               width: '100%',
-              maxWidth: '300px',
+              maxWidth: '500px',
               outline: 'none',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              fontSize: '16px',
+              transition: 'border-color 0.3s'
             }}
           />
         </div>
@@ -87,68 +93,105 @@ const TournamentList = () => {
             <div className="spinner-border text-info" role="status"></div>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', backgroundColor: '#1e293b', borderRadius: '16px', border: '1px dashed #334155' }}>
-            <p style={{ color: '#94a3b8' }}>No tournaments found matching your search.</p>
+          <div style={{ textAlign: 'center', padding: '60px', backgroundColor: '#0f172a', borderRadius: '16px', border: '1px dashed #334155' }}>
+            <p style={{ color: '#94a3b8' }}>No tournaments active at the moment.</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+          /* Poster Grid - increased minmax for larger cards */
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+            gap: '40px' 
+          }}>
             {filtered.map((t) => (
               <div
                 key={t.id}
                 style={{
-                  backgroundColor: '#1e293b',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  border: '1px solid #334155',
-                  transition: 'transform 0.2s, border-color 0.2s',
-                  cursor: 'pointer',
+                  backgroundColor: '#0f172a',
+                  borderRadius: '24px',
+                  height: '450px', // Tall Poster Height
+                  border: '1px solid #1e293b',
                   position: 'relative',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-end',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
                 }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-5px)';
-                  e.currentTarget.style.borderColor = '#38bdf8';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = '#334155';
-                }}
-                onClick={() => navigate(`/tournament/${t.id}`)}
               >
+                {/* Visual Background Element (The "Poster" Art) */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: `radial-gradient(circle at 50% 0%, ${t.is_active ? '#0d9488' : '#312e81'} 0%, transparent 70%)`,
+                  opacity: 0.4
+                }} />
+
                 {/* Status Badge */}
                 <div style={{ 
-                  position: 'absolute', top: '15px', right: '15px',
-                  padding: '4px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold',
+                  position: 'absolute', top: '24px', right: '24px',
+                  padding: '6px 14px', borderRadius: '100px', fontSize: '12px', fontWeight: '800',
                   textTransform: 'uppercase', letterSpacing: '1px',
-                  backgroundColor: t.is_active ? '#065f46' : '#374151',
-                  color: t.is_active ? '#34d399' : '#94a3b8'
-                }}>
-                  {t.is_active ? '● Live' : 'Closed'}
-                </div>
-
-                <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#f1f5f9' }}>{t.name}</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    FORMAT: <span style={{ color: '#cbd5e1' }}>{t.tournament_type?.replace('_', ' ').toUpperCase()}</span>
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    CREATED: <span style={{ color: '#cbd5e1' }}>{new Date(t.created_at).toLocaleDateString()}</span>
-                  </span>
-                </div>
-
-                <button style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#3b82f6',
+                  backgroundColor: t.is_active ? '#14b8a6' : '#334155',
                   color: 'white',
-                  fontWeight: '700',
-                  transition: 'background 0.2s'
+                  zIndex: 2
                 }}>
-                  ENTER ARENA
-                </button>
+                  {t.is_active ? 'ACTIVE' : 'ARCHIVED'}
+                </div>
+
+                {/* Poster Content Area */}
+                <div style={{ 
+                  padding: '32px', 
+                  background: 'linear-gradient(to top, #0f172a 20%, transparent 100%)',
+                  zIndex: 2,
+                  borderTop: '1px solid rgba(255,255,255,0.05)'
+                }}>
+                  <span style={{ 
+                    fontSize: '12px', 
+                    fontWeight: 'bold', 
+                    color: '#38bdf8', 
+                    letterSpacing: '2px',
+                    display: 'block',
+                    marginBottom: '8px'
+                  }}>
+                    {t.tournament_type?.replace('_', ' ').toUpperCase()}
+                  </span>
+                  
+                  <h3 style={{ 
+                    fontSize: '28px', 
+                    fontWeight: '800', 
+                    marginBottom: '16px', 
+                    color: '#f1f5f9',
+                    lineHeight: '1.1' 
+                  }}>
+                    {t.name.toUpperCase()}
+                  </h3>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '14px', color: '#64748b' }}>
+                      Est. {new Date(t.created_at).getFullYear()}
+                    </span>
+                    <div style={{ width: '40px', height: '2px', background: '#334155' }} />
+                  </div>
+                </div>
+
+                {/* Decorative Side Text */}
+                <div style={{
+                    position: 'absolute',
+                    left: '20px',
+                    top: '100px',
+                    writingMode: 'vertical-rl',
+                    transform: 'rotate(180deg)',
+                    color: 'rgba(255,255,255,0.03)',
+                    fontSize: '40px',
+                    fontWeight: '900',
+                    pointerEvents: 'none'
+                }}>
+                    TOURNAMENT
+                </div>
               </div>
             ))}
           </div>
