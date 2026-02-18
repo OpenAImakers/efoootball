@@ -11,13 +11,10 @@ export default function DoubleEliminationLayout({
   teams: Team[] 
 }) {
   const [matches, setMatches] = useState<any[]>([]);
-  const [, setLoading] = useState(true);
 
-  // 1. Fetch matches for this specific tournament
   useEffect(() => {
     async function fetchMatches() {
       if (!tournament?.id) return;
-      
       const { data, error } = await supabase
         .from("matches")
         .select(`
@@ -34,31 +31,81 @@ export default function DoubleEliminationLayout({
         .order("round", { ascending: true });
 
       if (!error) setMatches(data || []);
-      setLoading(false);
     }
-
     fetchMatches();
   }, [tournament?.id]);
 
-  // 2. Reusable sub-component to show matches for a specific stage
-  const MatchList = ({ stageKey }: { stageKey: string }) => {
-    const filtered = matches.filter(m => m.stage === stageKey);
-    
-    if (filtered.length === 0) {
-      return <p className="text-muted mt-3">No matches scheduled for this stage.</p>;
-    }
+  // Specialized Match Card Component
+  const MatchCard = ({ match }: { match: any }) => {
+    const isPlayed = match.played;
+    const homeGoals = match.home_goals ?? 0;
+    const awayGoals = match.away_goals ?? 0;
+
+    // Logic for Score Colors
+    const getScoreClass = (current: number, opponent: number) => {
+      if (!isPlayed) return "score-pending";
+      if (current > opponent) return "score-win";
+      if (current < opponent) return "score-loss";
+      return "score-draw";
+    };
 
     return (
-      <div className="mt-3">
-        {filtered.map((match) => (
-          <div key={match.id} className="card bg-dark border-secondary mb-2">
-            <div className="card-body d-flex justify-content-between align-items-center py-2 px-3">
-              <div className="text-white small fw-bold" style={{width: '30px'}}>R{match.round}</div>
-              <div className="text-end flex-grow-1 pe-3 text-white">{match.home_team?.name}</div>
-              <div className="badge bg-secondary px-3 py-2 mx-2" style={{minWidth: '70px'}}>
-                {match.played ? `${match.home_goals} - ${match.away_goals}` : "VS"}
+      <div className="match-card-anime">
+        <div className={`match-team home ${isPlayed && homeGoals < awayGoals ? 'beaten-team' : ''}`}>
+          <span className="team-name text-truncate">{match.home_team?.name || "TBD"}</span>
+          <span className={`score ${getScoreClass(homeGoals, awayGoals)}`}>
+            {isPlayed ? homeGoals : "-"}
+          </span>
+        </div>
+        <div className="match-divider"></div>
+        <div className={`match-team away ${isPlayed && awayGoals < homeGoals ? 'beaten-team' : ''}`}>
+          <span className="team-name text-truncate">{match.away_team?.name || "TBD"}</span>
+          <span className={`score ${getScoreClass(awayGoals, homeGoals)}`}>
+            {isPlayed ? awayGoals : "-"}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  // Flexible Match List Component
+  const MatchList = ({ stageKey, useRounds = true }: { stageKey: string, useRounds?: boolean }) => {
+    const filteredMatches = matches.filter(m => m.stage === stageKey);
+
+    if (filteredMatches.length === 0) {
+      return <p className="text-muted mt-5 text-center anime-fade-in">No matches scheduled yet.</p>;
+    }
+
+    if (!useRounds) {
+      return (
+        <div className="container mt-3 pb-5">
+          <div className="row justify-content-center g-3">
+            {filteredMatches.map(match => (
+              <div key={match.id} className="col-12 col-md-8 col-lg-6">
+                <MatchCard match={match} />
               </div>
-              <div className="text-start flex-grow-1 ps-3 text-white">{match.away_team?.name}</div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    const groupedRounds: { [key: number]: any[] } = {};
+    filteredMatches.forEach(m => {
+        if (!groupedRounds[m.round]) groupedRounds[m.round] = [];
+        groupedRounds[m.round].push(m);
+    });
+    const roundNumbers = Object.keys(groupedRounds).sort((a, b) => Number(a) - Number(b));
+
+    return (
+      <div className="horizontal-scroll-container d-flex pb-4 px-3 gap-4">
+        {roundNumbers.map((round) => (
+          <div key={round} className="round-column flex-shrink-0">
+            <h5 className="round-label text-center mb-3">ROUND {round}</h5>
+            <div className="d-flex flex-column gap-3">
+              {groupedRounds[Number(round)].map((match) => (
+                <MatchCard key={match.id} match={match} />
+              ))}
             </div>
           </div>
         ))}
@@ -67,98 +114,156 @@ export default function DoubleEliminationLayout({
   };
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row">
+    <div className="container-fluid px-0 bg-black min-vh-100">
+      <ul className="nav nav-pills justify-content-center gap-2 py-3 border-bottom border-secondary sticky-top bg-black" style={{zIndex: 1000}}>
+        <li className="nav-item">
+          <button className="nav-link active" data-bs-toggle="pill" data-bs-target="#teams-list">STANDINGS</button>
+        </li>
+        <li className="nav-item">
+          <button className="nav-link" data-bs-toggle="pill" data-bs-target="#opening">OPENING</button>
+        </li>
+        <li className="nav-item">
+          <button className="nav-link" data-bs-toggle="pill" data-bs-target="#winners">WINNERS</button>
+        </li>
+        <li className="nav-item">
+          <button className="nav-link" data-bs-toggle="pill" data-bs-target="#losers">LOSERS</button>
+        </li>
+        <li className="nav-item">
+          <button className="nav-link" data-bs-toggle="pill" data-bs-target="#grandfinal">GRAND FINAL</button>
+        </li>
+        <li className="nav-item">
+          <button className="nav-link" data-bs-toggle="pill" data-bs-target="#reset">RESET</button>
+        </li>
+      </ul>
 
-        {/* LEFT SIDE TABS */}
-        <div className="col-md-3 mb-3">
-          <div className="nav flex-column nav-pills me-3 gap-2" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-            <button className="nav-link active" id="teams-tab" data-bs-toggle="pill" data-bs-target="#teams-list" type="button" role="tab">
-              Tournament Teams
-            </button>
-            <button className="nav-link" data-bs-toggle="pill" data-bs-target="#opening" type="button" role="tab">
-              Opening Round 
-            </button>
-            <button className="nav-link" data-bs-toggle="pill" data-bs-target="#winners" type="button" role="tab">
-              Winners Bracket
-            </button>
-            <button className="nav-link" data-bs-toggle="pill" data-bs-target="#losers" type="button" role="tab">
-              Losers Bracket
-            </button>
-            <button className="nav-link" data-bs-toggle="pill" data-bs-target="#grandfinal" type="button" role="tab">
-              Grand Final
-            </button>
-            <button className="nav-link" data-bs-toggle="pill" data-bs-target="#reset" type="button" role="tab">
-              Grand Final Reset
-            </button>
+      <div className="tab-content pt-4">
+        <div className="tab-pane fade show active px-2" id="teams-list">
+          <div className="table-responsive w-100 border border-secondary rounded-4 overflow-hidden shadow-lg">
+            <table className="table table-dark table-hover mb-0 align-middle text-nowrap">
+              <thead className="bg-primary text-white">
+                <tr>
+                  <th className="ps-4">RANK</th>
+                  <th>TEAM</th>
+                  <th className="text-center">W</th>
+                  <th className="text-center">D</th>
+                  <th className="text-center">L</th>
+                  <th className="text-center">GF</th>
+                  <th className="text-center">GA</th>
+                  <th className="text-center">GD</th>
+                  <th className="text-center pe-4 text-warning">PTS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teams.map((team) => (
+                  <tr key={team.id}>
+                    <td className="ps-4 fw-bold">#{team.rank}</td>
+                    <td className="fw-bold text-info">{team.name}</td>
+                    <td className="text-center">{team.w}</td>
+                    <td className="text-center">{team.d}</td>
+                    <td className="text-center">{team.l}</td>
+                    <td className="text-center">{team.gf}</td>
+                    <td className="text-center">{team.ga}</td>
+                    <td className={`text-center fw-bold ${team.gd >= 0 ? 'text-success' : 'text-danger'}`}>
+                      {team.gd > 0 ? `+${team.gd}` : team.gd}
+                    </td>
+                    <td className="text-center pe-4 fw-bold text-warning">{team.points}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* RIGHT SIDE CONTENT */}
-        <div className="col-md-9">
-          <div className="tab-content mt-1" id="v-pills-tabContent">
+        <div className="tab-pane fade" id="opening">
+            <h4 className="text-center text-primary mb-4 fw-bold tracking-widest">QUALIFIERS</h4>
+            <MatchList stageKey="OPENING_ROUND" useRounds={false} />
+        </div>
 
-            {/* TEAMS TABLE */}
-            <div className="tab-pane fade show active" id="teams-list" role="tabpanel">
-              <h4>Participating Teams</h4>
-              <div className="table-responsive bg-dark border border-secondary rounded-3">
-                <table className="table table-dark table-hover mb-0 align-middle">
-                  <thead className="table-secondary text-dark">
-                    <tr>
-                      <th className="ps-3">Team Name</th>
-                      <th className="text-center">W</th>
-                      <th className="text-center">L</th>
-                      <th className="text-center">D</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teams.map((team) => (
-                      <tr key={team.id}>
-                        <td className="ps-3 fw-bold">{team.name}</td>
-                        <td className="text-center text-success">{team.w}</td>
-                        <td className="text-center text-danger">{team.l}</td>
-                        <td className="text-center text-info">{team.d}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        <div className="tab-pane fade" id="winners">
+            <MatchList stageKey="WINNERS_BRACKET" />
+        </div>
 
-            {/* MATCH TABS */}
-            <div className="tab-pane fade" id="opening" role="tabpanel">
-              <h4>Opening Round</h4>
-              <MatchList stageKey="OPENING_ROUND" />
-            </div>
+        <div className="tab-pane fade" id="losers">
+            <MatchList stageKey="LOSERS_BRACKET" />
+        </div>
 
-            <div className="tab-pane fade" id="winners" role="tabpanel">
-              <h4>Winners Bracket</h4>
-              <MatchList stageKey="WINNERS_BRACKET" />
-            </div>
+        <div className="tab-pane fade" id="grandfinal">
+            <h4 className="text-center text-warning mb-4 fw-bold tracking-widest">🏆 GRAND FINAL</h4>
+            <MatchList stageKey="GRAND_FINAL" useRounds={false} />
+        </div>
 
-            <div className="tab-pane fade" id="losers" role="tabpanel">
-              <h4>Losers Bracket</h4>
-              <MatchList stageKey="LOSERS_BRACKET" />
-            </div>
-
-            <div className="tab-pane fade" id="grandfinal" role="tabpanel">
-              <h4>Grand Final</h4>
-              <MatchList stageKey="GRAND_FINAL" />
-            </div>
-
-            <div className="tab-pane fade" id="reset" role="tabpanel">
-              <h4>Grand Final Reset</h4>
-              <MatchList stageKey="GRAND_FINAL_RESET" />
-            </div>
-
-          </div>
+        <div className="tab-pane fade" id="reset">
+            <h4 className="text-center text-danger mb-4 fw-bold tracking-widest">FINAL RESET</h4>
+            <MatchList stageKey="GRAND_FINAL_RESET" useRounds={false} />
         </div>
       </div>
 
       <style>{`
-        .nav-pills .nav-link { color: #adb5bd; text-align: left; border: 1px solid transparent; }
-        .nav-pills .nav-link.active { background-color: #0d6efd !important; border-color: #0d6efd; }
-        .nav-pills .nav-link:hover:not(.active) { background-color: #212529; color: #fff; }
+        .horizontal-scroll-container {
+          overflow-x: auto;
+          scrollbar-width: thin;
+          scrollbar-color: #0d6efd #111;
+          min-height: 400px;
+        }
+        .round-column { width: 320px; }
+        .round-label {
+          color: #0d6efd;
+          font-weight: 800;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          border-bottom: 2px solid #0d6efd;
+          padding-bottom: 8px;
+        }
+        .match-card-anime {
+          background: linear-gradient(145deg, #1a1a1a 0%, #000 100%);
+          border-left: 5px solid #0d6efd;
+          border-radius: 10px;
+          padding: 14px;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+        }
+        .match-card-anime:hover {
+          transform: translateY(-5px) scale(1.02);
+          border-left-color: #ffc107;
+          box-shadow: 0 8px 25px rgba(13, 110, 253, 0.25);
+        }
+        .match-team { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+        .team-name { color: #fff; font-weight: 600; font-size: 0.95rem; max-width: 75%; transition: 0.3s; }
+        
+        /* SCORE COLORS */
+        .score { font-weight: 900; font-size: 1.2rem; min-width: 25px; text-align: right; transition: 0.3s; }
+        .score-win { color: #28a745; }
+        .score-loss { color: #dc3545; }
+        .score-draw { color: #ffffff; }
+        .score-pending { color: #0d6efd; }
+
+        .match-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 8px 0; }
+        
+        /* UPDATED: Removed text-decoration (strikethrough) */
+        .beaten-team .team-name {
+          color: #555 !important;
+        }
+
+        .nav-pills .nav-link { 
+          color: #666; 
+          font-weight: 800; 
+          border-radius: 0;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          border-bottom: 4px solid transparent;
+          transition: 0.3s ease;
+          padding: 12px 15px;
+          font-size: 0.85rem;
+        }
+        .nav-pills .nav-link.active { 
+          background: none !important; 
+          color: #0d6efd !important; 
+          border-bottom: 4px solid #0d6efd;
+        }
+        .nav-pills .nav-link:hover:not(.active) { color: #fff; }
+        .tracking-widest { letter-spacing: 4px; }
+        .anime-fade-in { animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );
