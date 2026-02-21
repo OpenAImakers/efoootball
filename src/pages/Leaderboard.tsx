@@ -44,7 +44,7 @@ const LeaderboardDisplay: React.FC = () => {
     setLoading(false);
   };
 
-const exportToPDF = () => {
+  const exportToPDF = () => {
     if (loading || rows.length === 0) return;
 
     const doc = new jsPDF();
@@ -52,21 +52,17 @@ const exportToPDF = () => {
     const pageHeight = doc.internal.pageSize.getHeight();
 
     // 1. BRANDED HEADER
-    // Deep Navy Background (from Skyla logo)
     doc.setFillColor(10, 26, 94); 
     doc.rect(0, 0, pageWidth, 40, "F");
 
-    // Title: Masters Arena
     doc.setFontSize(22);
     doc.setTextColor(255, 255, 255);
     doc.text("KENYA EFOOTBALL RANKINGS", 14, 22);
 
-    // Accent Line (Cyan)
     doc.setDrawColor(0, 181, 204);
     doc.setLineWidth(1);
     doc.line(14, 28, 80, 28);
 
-    // Subtitle / Date
     doc.setFontSize(10);
     doc.setTextColor(200, 200, 200);
     doc.text(`Updated: ${new Date().toLocaleDateString()}`, 14, 35);
@@ -74,8 +70,8 @@ const exportToPDF = () => {
     autoTable(doc, {
       startY: 45,
       head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "%"]],
-      body: rows.map((row) => [
-        row.rank,
+      body: rows.map((row, index) => [
+        index + 1, // FRONTEND RANK FOR PDF
         row.username,
         row.tournaments_played,
         row.mp,
@@ -91,64 +87,55 @@ const exportToPDF = () => {
       styles: {
         fontSize: 9,
         cellPadding: 3,
-        textColor: [40, 40, 40], // Dark gray for readability on white
-        lineColor: [0, 181, 204], // Cyan grid lines
+        textColor: [40, 40, 40],
+        lineColor: [0, 181, 204],
         lineWidth: 0.1,
       },
       headStyles: {
-        fillColor: [10, 26, 94], // Deep Navy
+        fillColor: [10, 26, 94],
         textColor: [255, 255, 255],
         fontStyle: "bold",
         halign: "center",
       },
       columnStyles: {
         0: { cellWidth: 12, halign: "center", fontStyle: "bold" },
-        1: { fontStyle: "bold", textColor: [10, 26, 94] }, // Navy names
-        4: { textColor: [0, 150, 0], fontStyle: "bold" }, // Wins
-        10: { textColor: [245, 130, 32], fontStyle: "bold" }, // Pts in Skyla Orange
+        1: { fontStyle: "bold", textColor: [10, 26, 94] },
+        4: { textColor: [0, 150, 0], fontStyle: "bold" },
+        10: { textColor: [245, 130, 32], fontStyle: "bold" },
       },
       alternateRowStyles: {
-        fillColor: [245, 250, 255], // Very light blue tint
+        fillColor: [245, 250, 255],
       },
       didParseCell: (data) => {
-        // GD coloring (Goal Difference)
         if (data.column.index === 9 && data.cell.section === "body") {
           const val = parseFloat(data.cell.text[0]);
-          if (val > 0) data.cell.styles.textColor = [0, 181, 204]; // Cyan for positive
-          if (val < 0) data.cell.styles.textColor = [239, 68, 68]; // Red for negative
+          if (val > 0) data.cell.styles.textColor = [0, 181, 204];
+          if (val < 0) data.cell.styles.textColor = [239, 68, 68];
         }
       },
     });
 
-// 3. SKYLA FOOTER (with Trademark Superscript)
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      
-      // Footer Horizontal Line
       doc.setDrawColor(220, 220, 220);
       doc.setLineWidth(0.2);
       doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
 
-      // Skyla Text
       doc.setFontSize(10);
-      doc.setTextColor(10, 26, 94); // Navy
+      doc.setTextColor(10, 26, 94);
       doc.setFont("helvetica", "bold");
       doc.text("Skyla", 14, pageHeight - 10);
       
-      // Trademark symbol (®) as superscript
       const skylaWidth = doc.getTextWidth("Skyla");
-      doc.setFontSize(6); // Smaller font for superscript
-      doc.text("®", 14 + skylaWidth + 0.5, pageHeight - 12); // Slightly higher (y - 12 instead of 10)
+      doc.setFontSize(6);
+      doc.text("®", 14 + skylaWidth + 0.5, pageHeight - 12);
 
-      // Smart Ecosystem Text
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100, 100, 100);
-      // Adjusted X position to account for the trademark symbol space
-      doc.text("|  smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
+      doc.text("|   smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
 
-      // Page numbers (Right aligned)
       doc.setFontSize(8);
       doc.text(
         `Page ${i} of ${pageCount}`,
@@ -167,20 +154,21 @@ const exportToPDF = () => {
       <div className="flex-grow-1 d-flex flex-column pt-4 pb-5" style={{ marginTop: "52px" }}>
         <div className="container flex-grow-1 d-flex flex-column">
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h2 className="fw-bold text-white mb-0">Masters Arena</h2>
+           <h2 className="fw-bold mb-0 text-uppercase tracking-tighter" style={{
+    fontSize: "2rem",
+    background: "linear-gradient(to right, #000000 20%, #BB0000 40%, #BB0000 60%, #006600 80%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    filter: "drop-shadow(0px 2px 2px rgba(255,255,255,0.1))",
+    letterSpacing: "1px"
+}}>
+  Kenya eFootball Rankings
+</h2>
             <div className="d-flex gap-2">
-              <button
-                className="btn btn-outline-light btn-sm px-3"
-                onClick={fetchLeaderboard}
-                disabled={loading}
-              >
+              <button className="btn btn-outline-light btn-sm px-3" onClick={fetchLeaderboard} disabled={loading}>
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
-              <button
-                className="btn btn-outline-success btn-sm px-3"
-                onClick={exportToPDF}
-                disabled={loading || rows.length === 0}
-              >
+              <button className="btn btn-outline-success btn-sm px-3" onClick={exportToPDF} disabled={loading || rows.length === 0}>
                 Download PDF
               </button>
             </div>
@@ -222,9 +210,9 @@ const exportToPDF = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => (
+                    {rows.map((row, index) => (
                       <tr key={row.username} className="border-bottom border-secondary">
-                        <td className="ps-4 text-center fw-bold fs-5">{row.rank}</td>
+                        <td className="ps-4 text-center fw-bold fs-5">{index + 1}</td>
                         <td className="ps-3 fw-semibold text-info">{row.username}</td>
                         <td className="text-center">{row.tournaments_played}</td>
                         <td className="text-center">{row.mp}</td>
