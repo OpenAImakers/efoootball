@@ -2,10 +2,10 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { useEffect, useState } from "react";
 import { Team } from "../pages/Team"; 
 import { supabase } from "../supabase";
+import Bracket from "../BracketViews/DoubleElimination";
 
 export default function DoubleEliminationLayout({ 
   tournament, 
-  teams 
 }: { 
   tournament: any, 
   teams: Team[] 
@@ -138,42 +138,7 @@ export default function DoubleEliminationLayout({
 
       <div className="tab-content pt-4">
         <div className="tab-pane fade show active px-2" id="teams-list">
-          <div className="table-responsive w-100 border border-secondary rounded-4 overflow-hidden shadow-lg">
-            <table className="table table-dark table-hover mb-0 align-middle text-nowrap">
-              <thead className="bg-primary text-white">
-                <tr>
-                  <th className="ps-4">RANK</th>
-                  <th>TEAM</th>
-                  <th className="text-center">MP</th>
-                  <th className="text-center">W</th>
-                  <th className="text-center">D</th>
-                  <th className="text-center">L</th>
-                  <th className="text-center">GF</th>
-                  <th className="text-center">GA</th>
-                  <th className="text-center">GD</th>
-                  <th className="text-center pe-4 text-warning">PTS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teams.map((team) => (
-                  <tr key={team.id}>
-                    <td className="ps-4 fw-bold">#{team.rank}</td>
-                    <td className="fw-bold text-info">{team.name}</td>
-                    <td className="text-center">{team.w + team.d + team.l}</td>
-                    <td className="text-center">{team.w}</td>
-                    <td className="text-center">{team.d}</td>
-                    <td className="text-center">{team.l}</td>
-                    <td className="text-center">{team.gf}</td>
-                    <td className="text-center">{team.ga}</td>
-                    <td className={`text-center fw-bold ${team.gd >= 0 ? 'text-success' : 'text-danger'}`}>
-                      {team.gd > 0 ? `+${team.gd}` : team.gd}
-                    </td>
-                    <td className="text-center pe-4 fw-bold text-warning">{team.points}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Bracket />
         </div>
 
         <div className="tab-pane fade" id="opening">
