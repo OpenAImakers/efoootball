@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import { supabase } from "../supabase";
+import { getActiveLeaderboard } from "../Utils/LeaderboardSession";
 
 interface Team {
   id: string | number;
@@ -11,7 +12,6 @@ interface Team {
   l: number;
   goals: number;
   against: number;
-  // add created_at?: string; etc. if needed
 }
 
 const LeaderboardForm: React.FC = () => {
@@ -20,6 +20,9 @@ const LeaderboardForm: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
+
+  // Pull session info for Exit/Header purposes
+  const activeSession = getActiveLeaderboard();
 
   const initialForm: Omit<Team, "id"> = {
     username: "",
@@ -36,6 +39,12 @@ const LeaderboardForm: React.FC = () => {
   const notify = (type: string, text: string) => {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 3000);
+  };
+
+  // Logic to clear session and redirect
+  const handleExitLeaderboard = () => {
+    localStorage.removeItem("active_leaderboard");
+    window.location.href = "/admin";
   };
 
   const fetchTeams = useCallback(async () => {
@@ -100,24 +109,21 @@ const LeaderboardForm: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const payload = { ...formData };
-
       let error: any = null;
 
       if (selectedId) {
         ({ error } = await supabase
           .from("tournament_stats")
-          .update(payload)
+          .update(formData)
           .eq("id", selectedId));
       } else {
-        ({ error } = await supabase.from("tournament_stats").insert([payload]));
+        ({ error } = await supabase.from("tournament_stats").insert([formData]));
       }
 
       if (error) throw error;
 
-      notify("success", selectedId ? "Stats updated successfully!" : "Added successfully!");
+      notify("success", selectedId ? "Stats updated!" : "Added successfully!");
       
-      // Reset form only for new entries (common pattern)
       if (!selectedId) {
         setFormData(initialForm);
         setSelectedId(null);
@@ -135,9 +141,20 @@ const LeaderboardForm: React.FC = () => {
     <div style={{ width: "100%" }}>
       <Navbar />
 
-      <div className="container-fluid px-0" style={{ marginTop: "75px" }}>
-        <div className="card border-0 shadow-sm rounded-0" style={{ width: "100%" }}>
-          <div className="card-header bg-dark text-white py-3">
+      {/* SESSION HEADER - Integrated for Exit purposes */}
+      <div className="bg-dark text-white py-2 px-4 d-flex justify-content-between align-items-center shadow-sm" style={{ marginTop: '70px' }}>
+        <div className="d-flex align-items-center gap-2">
+          <span className="badge bg-primary">ACTIVE SESSION</span>
+          <span className="fw-bold">{activeSession?.name || "Leaderboard Admin"}</span>
+        </div>
+        <button onClick={handleExitLeaderboard} className="btn btn-sm btn-outline-danger" style={{ fontWeight: 600 }}>
+          Exit Leaderboard
+        </button>
+      </div>
+
+      <div className="container-fluid px-0">
+        <div className="card border-0 shadow-sm rounded-0">
+          <div className="card-header bg-secondary text-white py-3">
             <div className="d-flex justify-content-between align-items-center">
               <h5 className="mb-0 fw-bold">
                 {selectedId ? `Editing: ${formData.username}` : "Manage Leaderboard"}
@@ -158,24 +175,19 @@ const LeaderboardForm: React.FC = () => {
 
           <div className="card-body p-4">
             {message && (
-              <div
-                className={`alert alert-${message.type} py-2 mb-4 text-center animate__animated animate__fadeIn`}
-              >
+              <div className={`alert alert-${message.type} py-2 mb-4 text-center`}>
                 {message.text}
               </div>
             )}
 
             {loadingTeams ? (
               <div className="text-center my-5">
-                <div className="spinner-border text-primary" role="status" style={{ width: "3rem", height: "3rem" }}>
-                  <span className="visually-hidden">Loading teams...</span>
-                </div>
-                <p className="mt-3 text-muted">Loading existing teams...</p>
+                <div className="spinner-border text-primary" role="status"></div>
+                <p className="mt-3 text-muted">Loading global stats...</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit}>
                 <div className="row g-4">
-                  {/* Select existing + Name + Played */}
                   <div className="col-12 col-lg-4">
                     <label className="small fw-bold text-muted mb-2 text-uppercase">Existing Teams</label>
                     <select
@@ -186,15 +198,13 @@ const LeaderboardForm: React.FC = () => {
                     >
                       <option value="">-- Create New Entry --</option>
                       {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.username}
-                        </option>
+                        <option key={t.id} value={t.id}>{t.username}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="col-12 col-lg-5">
-                    <label className="small fw-bold text-muted mb-2 text-uppercase">Team / User Name</label>
+                    <label className="small fw-bold text-muted mb-2 text-uppercase">Team Name</label>
                     <input
                       type="text"
                       className="form-control form-control-lg border-2"
@@ -209,7 +219,6 @@ const LeaderboardForm: React.FC = () => {
                     <label className="small fw-bold text-muted mb-2 text-uppercase">Tournaments Played</label>
                     <input
                       type="number"
-                      min="0"
                       className="form-control form-control-lg border-2"
                       value={formData.tournaments_played}
                       onChange={handleNumberChange("tournaments_played")}
@@ -217,7 +226,6 @@ const LeaderboardForm: React.FC = () => {
                     />
                   </div>
 
-                  {/* Stats grid */}
                   <div className="col-12">
                     <div className="row g-3 text-center">
                       {[
@@ -232,7 +240,6 @@ const LeaderboardForm: React.FC = () => {
                             <label className={`d-block small fw-bold text-${color}`}>{label}</label>
                             <input
                               type="number"
-                              min="0"
                               className="form-control form-control-plaintext text-center fw-bold fs-4"
                               value={formData[key as keyof typeof formData]}
                               onChange={handleNumberChange(key as keyof typeof formData)}
@@ -248,18 +255,9 @@ const LeaderboardForm: React.FC = () => {
                     <button
                       type="submit"
                       className={`btn btn-lg w-100 fw-bold py-3 ${selectedId ? "btn-success" : "btn-primary"}`}
-                      disabled={submitting || loadingTeams}
+                      disabled={submitting}
                     >
-                      {submitting ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
-                          {selectedId ? "Updating..." : "Saving..."}
-                        </>
-                      ) : selectedId ? (
-                        "UPDATE LEADERBOARD"
-                      ) : (
-                        "SAVE TO LEADERBOARD"
-                      )}
+                      {submitting ? "PROCESSING..." : selectedId ? "UPDATE LEADERBOARD" : "SAVE TO LEADERBOARD"}
                     </button>
                   </div>
                 </div>

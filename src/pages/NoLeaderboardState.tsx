@@ -27,7 +27,7 @@ const NoLeaderboardState: React.FC = () => {
         You haven't created any leaderboard yet.
       </p>
       <button 
-        onClick={() => window.location.href = '#'}
+        onClick={() => window.location.href = '/leaderboard-create'}
         style={{
           marginTop: '15px',
           padding: '8px 16px',
@@ -40,6 +40,21 @@ const NoLeaderboardState: React.FC = () => {
         }}
       >
         Create Leaderboard
+      </button>
+            <button 
+        onClick={() => window.location.href = '/leaderboard-list'}
+        style={{
+          marginTop: '15px',
+          padding: '8px 16px',
+          backgroundColor: '#10b981', // Green for Leaderboards
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontWeight: '600'
+        }}
+      >
+        Manage Leaderboard
       </button>
     </div>
   );
