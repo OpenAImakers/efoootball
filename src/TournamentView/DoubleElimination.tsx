@@ -6,6 +6,7 @@ import Bracket from "../BracketViews/DoubleElimination";
 
 export default function DoubleEliminationLayout({ 
   tournament, 
+  teams // Ensure teams is utilized if needed by other components
 }: { 
   tournament: any, 
   teams: Team[] 
@@ -35,13 +36,12 @@ export default function DoubleEliminationLayout({
     fetchMatches();
   }, [tournament?.id]);
 
-  // Specialized Match Card Component
+  // Specialized Match Card Component (Used in List Views)
   const MatchCard = ({ match }: { match: any }) => {
     const isPlayed = match.played;
     const homeGoals = match.home_goals ?? 0;
     const awayGoals = match.away_goals ?? 0;
 
-    // Logic for Score Colors
     const getScoreClass = (current: number, opponent: number) => {
       if (!isPlayed) return "score-pending";
       if (current > opponent) return "score-win";
@@ -68,7 +68,7 @@ export default function DoubleEliminationLayout({
     );
   };
 
-  // Flexible Match List Component
+  // Flexible Match List Component (Used in Tab Views)
   const MatchList = ({ stageKey, useRounds = true }: { stageKey: string, useRounds?: boolean }) => {
     const filteredMatches = matches.filter(m => m.stage === stageKey);
 
@@ -137,8 +137,9 @@ export default function DoubleEliminationLayout({
       </ul>
 
       <div className="tab-content pt-4">
+        {/* PASSING REAL DATA TO BRACKET HERE */}
         <div className="tab-pane fade show active px-2" id="teams-list">
-          <Bracket />
+          <Bracket matches={matches} />
         </div>
 
         <div className="tab-pane fade" id="opening">
