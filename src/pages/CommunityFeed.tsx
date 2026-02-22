@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 import { Link } from "react-router-dom";
 
-// HELPER: Generates a consistent background color based on a string (username)
+// ──────────────────────────────────────────────
+//  Helpers (avatar) unchanged – keeping them here
+// ──────────────────────────────────────────────
 const getAvatarColor = (name: string) => {
   const colors = ["#007bff", "#6610f2", "#6f42c1", "#e83e8c", "#dc3545", "#fd7e14", "#ffc107", "#28a745", "#20c997", "#17a2b8"];
   let hash = 0;
@@ -12,7 +14,6 @@ const getAvatarColor = (name: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// HELPER: Renders either the profile pic or the first letter
 const renderAvatar = (profile: any, size: number) => {
   const name = profile?.display_name || profile?.username || "?";
   const firstLetter = name.charAt(0).toUpperCase();
@@ -31,11 +32,11 @@ const renderAvatar = (profile: any, size: number) => {
   return (
     <div
       className="rounded-circle d-flex align-items-center justify-content-center border text-white fw-bold shadow-sm"
-      style={{ 
-        width: `${size}px`, 
-        height: `${size}px`, 
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
         fontSize: `${size / 2.2}px`,
-        backgroundColor: getAvatarColor(name)
+        backgroundColor: getAvatarColor(name),
       }}
     >
       {firstLetter}
@@ -47,9 +48,11 @@ function CommunityFeed({ user }: { user: any }) {
   const [comments, setComments] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [commentText, setCommentText] = useState("");
-  const [loading, setLoading] = useState(true);
-  
-  const [replyingTo, setReplyingTo] = useState<{id: string, username: string} | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // optional local preview
+  const [uploading, setUploading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
+
   const [dragX, setDragX] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const startX = useRef(0);
@@ -67,11 +70,16 @@ function CommunityFeed({ user }: { user: any }) {
         content, 
         created_at, 
         user_id, 
+        images,
         profiles (username, display_name, profile_pic)
       `)
       .order("created_at", { ascending: false });
 
-    if (!error) setComments(data || []);
+    if (error) {
+      console.error("Fetch comments error:", error);
+    } else {
+      setComments(data || []);
+    }
     setLoading(false);
   };
 
@@ -85,33 +93,96 @@ function CommunityFeed({ user }: { user: any }) {
     if (data) setProfiles(data);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Optional: basic validation
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`; // can add folders → `comments/${fileName}`
+
+    setUploading(true);
+
+    const { error: uploadError } = await supabase.storage
+      .from("images")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    setUploading(false);
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      alert("Failed to upload image: " + uploadError.message);
+      return null;
+    }
+
+    // For **public** bucket you can build URL manually (most reliable & fast)
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  };
+
   const postComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !commentText.trim()) return;
+    if (!user || (!commentText.trim() && !selectedFile)) return;
 
-    const contentToSend = replyingTo 
+    let imageUrl: string | null = null;
+
+    if (selectedFile) {
+      imageUrl = await uploadImage(selectedFile);
+      if (!imageUrl && selectedFile) {
+        // upload failed but user still wants to post text?
+        // you can decide: return or continue
+      }
+    }
+
+    const contentToSend = replyingTo
       ? `Replying to @${replyingTo.username}: ${commentText.trim()}`
       : commentText.trim();
 
-    const { error } = await supabase
-      .from("comments")
-      .insert({ user_id: user.id, content: contentToSend });
+    const { error } = await supabase.from("comments").insert({
+      user_id: user.id,
+      content: contentToSend,
+      images: imageUrl, // ← single url
+      // if later you want array → images: imageUrl ? [imageUrl] : null
+    });
 
     if (!error) {
       setCommentText("");
+      setSelectedFile(null);
+      setPreviewUrl(null);
       setReplyingTo(null);
       fetchComments();
+    } else {
+      console.error("Post error:", error);
+      alert("Failed to post comment");
     }
   };
 
+  // ──────────────────────────────────────────────
+  //  Drag-to-reply logic (unchanged)
+  // ──────────────────────────────────────────────
   const handleStart = (e: any, id: string) => {
-    startX.current = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    startX.current = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
     setActiveId(id);
   };
 
   const handleMove = (e: any) => {
     if (activeId === null) return;
-    const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    const currentX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
     const diff = currentX - startX.current;
     if (diff > 0 && diff < 100) setDragX(diff);
   };
@@ -124,14 +195,17 @@ function CommunityFeed({ user }: { user: any }) {
     setActiveId(null);
   };
 
+  const [loading, setLoading] = useState(true);
   if (loading) return <div className="p-4 text-center">Loading...</div>;
 
   return (
     <div className="d-flex flex-column vh-100 overflow-hidden bg-light">
 
-      {/* --- TOP SCROLLABLE PROFILES --- */}
-      <div className="bg-white border-bottom py-2 px-2 overflow-auto d-flex gap-3 shadow-sm"
-           style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+      {/* TOP SCROLLABLE PROFILES – unchanged */}
+      <div
+        className="bg-white border-bottom py-2 px-2 overflow-auto d-flex gap-3 shadow-sm"
+        style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+      >
         {profiles.map((p, index) => (
           <Link
             key={index}
@@ -149,33 +223,33 @@ function CommunityFeed({ user }: { user: any }) {
         ))}
       </div>
 
-      {/* --- MESSAGE LIST --- */}
-      <div 
+      {/* MESSAGE LIST */}
+      <div
         className="flex-grow-1 p-3 overflow-auto d-flex flex-column-reverse"
         onMouseMove={handleMove}
         onMouseUp={() => handleEnd()}
         onTouchMove={handleMove}
         onTouchEnd={() => handleEnd()}
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        style={{ WebkitOverflowScrolling: "touch" }}
       >
         {comments.map((c) => {
           const isMe = user?.id === c.user_id;
           const isDragging = activeId === c.id;
 
           return (
-            <div key={c.id} className={`d-flex mb-3 ${isMe ? 'justify-content-end' : 'justify-content-start'}`}>
-              <div 
+            <div key={c.id} className={`d-flex mb-3 ${isMe ? "justify-content-end" : "justify-content-start"}`}>
+              <div
                 onMouseDown={(e) => handleStart(e, c.id)}
                 onTouchStart={(e) => handleStart(e, c.id)}
                 onMouseUp={() => handleEnd(c.id, c.profiles)}
                 onTouchEnd={() => handleEnd(c.id, c.profiles)}
                 className="border p-2 rounded shadow-sm"
-                style={{ 
+                style={{
                   maxWidth: "85%",
                   transform: `translateX(${isDragging ? dragX : 0}px)`,
-                  transition: isDragging ? 'none' : 'transform 0.2s',
-                  backgroundColor: isMe ? '#DCF8C6' : '#ffffff',
-                  cursor: 'grab'
+                  transition: isDragging ? "none" : "transform 0.2s",
+                  backgroundColor: isMe ? "#DCF8C6" : "#ffffff",
+                  cursor: "grab",
                 }}
               >
                 {!isMe && (
@@ -183,16 +257,39 @@ function CommunityFeed({ user }: { user: any }) {
                     <Link to={`/profile/${c.profiles?.username}`}>
                       {renderAvatar(c.profiles, 28)}
                     </Link>
-                    <Link to={`/profile/${c.profiles?.username}`} className="fw-bold small text-decoration-none text-primary">
+                    <Link
+                      to={`/profile/${c.profiles?.username}`}
+                      className="fw-bold small text-decoration-none text-primary"
+                    >
                       {c.profiles?.display_name || c.profiles?.username}
                     </Link>
                   </div>
                 )}
-                <p className="m-0 px-1" style={{ fontSize: '0.95rem', wordBreak: 'break-word' }}>
+
+                <p className="m-0 px-1" style={{ fontSize: "0.95rem", wordBreak: "break-word" }}>
                   {c.content}
                 </p>
-                <small className="text-muted d-block text-end mt-1" style={{ fontSize: '0.65rem' }}>
-                  {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                {/* ─── IMAGE DISPLAY ─── */}
+                {c.images && (
+                  <div className="mt-2">
+                    <img
+                      src={c.images}
+                      alt="Comment attachment"
+                      style={{
+                        maxWidth: "100%",
+                        borderRadius: "8px",
+                        display: "block",
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none"; // hide broken images
+                      }}
+                    />
+                  </div>
+                )}
+
+                <small className="text-muted d-block text-end mt-1" style={{ fontSize: "0.65rem" }}>
+                  {new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </small>
               </div>
             </div>
@@ -200,28 +297,76 @@ function CommunityFeed({ user }: { user: any }) {
         })}
       </div>
 
-      {/* --- INPUT AREA --- */}
-      <div className="p-3 bg-white border-top pb-safe"> 
+      {/* INPUT AREA – enhanced with image picker */}
+      <div className="p-3 bg-white border-top pb-safe">
         {replyingTo && (
           <div className="alert alert-secondary py-1 px-2 d-flex justify-content-between align-items-center mb-2">
-            <small className="text-truncate">Replying to <strong>@{replyingTo.username}</strong></small>
-            <button className="btn-close" style={{ width: '0.5em', height: '0.5em' }} onClick={() => setReplyingTo(null)}></button>
+            <small className="text-truncate">
+              Replying to <strong>@{replyingTo.username}</strong>
+            </small>
+            <button
+              className="btn-close"
+              style={{ width: "0.5em", height: "0.5em" }}
+              onClick={() => setReplyingTo(null)}
+            />
           </div>
         )}
-        
+
         {user ? (
-          <form onSubmit={postComment} className="input-group">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Type a message..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              style={{ borderRadius: '20px 0 0 20px' }}
-            />
-            <button className="btn btn-primary px-4" type="submit" style={{ borderRadius: '0 20px 20px 0' }}>
-              Send
-            </button>
+          <form onSubmit={postComment} className="d-flex flex-column gap-2">
+            {/* Preview (nice to have) */}
+            {previewUrl && (
+              <div className="position-relative" style={{ maxWidth: "180px" }}>
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  style={{ maxHeight: "120px", borderRadius: "8px", objectFit: "cover" }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger position-absolute top-0 end-0"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            <div className="input-group">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Type a message..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                style={{ borderRadius: "20px 0 0 20px" }}
+                disabled={uploading}
+              />
+
+              {/* Image picker button */}
+              <label className="btn btn-outline-secondary px-3 d-flex align-items-center mb-0">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                  disabled={uploading}
+                />
+                📷
+              </label>
+
+              <button
+                className="btn btn-primary px-4"
+                type="submit"
+                disabled={uploading || (!commentText.trim() && !selectedFile)}
+                style={{ borderRadius: "0 20px 20px 0" }}
+              >
+                {uploading ? "Uploading..." : "Send"}
+              </button>
+            </div>
           </form>
         ) : (
           <div className="text-center py-2">
