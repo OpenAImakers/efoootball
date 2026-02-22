@@ -1,34 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../supabase"; 
-import Navbar from "../components/Navbar"; 
+import { supabase } from "../supabase";
+import Navbar from "../components/Navbar";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<{ username: string | null; display_name: string | null } | null>(null);
+  const [, setProfile] = useState<{
+    username: string | null;
+    display_name: string | null;
+    profile_pic: string | null;
+  } | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Tab State
-  const [activeTab, setActiveTab] = useState("overview");
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+
+  // Styling Constants (Player Dashboard Theme)
+  const colors = {
+    darkBlue: "#0B0E14",
+    cardBg: "#161B22",
+    accentOrange: "#FF8C00",
+    textGray: "#8B949E",
+    border: "#30363D"
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
         const { data: { user }, error: authError } = await supabase.auth.getUser();
+
         if (authError || !user) {
-          setError("Please log in to view your profile.");
+          setError("Access Denied. Please log in.");
           return;
         }
 
         const { data, error: profileError } = await supabase
           .from("profiles")
-          .select("username, display_name")
+          .select("username, display_name, profile_pic")
           .eq("id", user.id)
           .single();
 
@@ -37,6 +50,8 @@ export default function ProfilePage() {
         setProfile(data);
         setUsername(data?.username || "");
         setDisplayName(data?.display_name || "");
+        setProfilePic(data?.profile_pic || null);
+
       } catch (err: any) {
         setError(err.message || "Failed to load profile.");
       } finally {
@@ -49,16 +64,58 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    setSaving(true);
     try {
-      const { error } = await supabase.from("profiles").update({
-        username: username.trim() || null,
-        display_name: displayName.trim() || null,
-      }).eq("id", user.id);
+      setSaving(true);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          username: username.trim() || null,
+          display_name: displayName.trim() || null,
+          profile_pic: profilePic
+        })
+        .eq("id", user.id);
 
       if (error) throw error;
-      setProfile((prev) => ({ ...prev, username: username.trim(), display_name: displayName.trim() }));
-      alert("Changes Saved.");
+      alert("Dashboard updated.");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleProfilePicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File too large (Max 2MB)");
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      setSaving(true);
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      const publicUrl = data.publicUrl;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ profile_pic: publicUrl })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+      setProfilePic(publicUrl);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -67,144 +124,109 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="mt-5 bg-light min-vh-100">
+    <main style={{ backgroundColor: colors.darkBlue, minHeight: "100vh", color: "white" }}>
       <Navbar />
 
-      <div className="container py-5">
-        <h1 className="mb-4 fw-black text-uppercase italic" style={{ letterSpacing: '-1px' }}>Profile Terminal</h1>
+      <div className="container mt-5 py-5">
+        <div className="d-flex align-items-center mb-4">
+          <div style={{ width: "4px", height: "30px", backgroundColor: colors.accentOrange, marginRight: "12px" }}></div>
+          <h2 className="fw-bold m-0" style={{ letterSpacing: "1px", textTransform: "uppercase" }}>Player Profile</h2>
+        </div>
 
         {loading ? (
-          <div className="text-center my-5 p-5 bg-white border rounded shadow-sm">
-            <div className="spinner-grow text-primary mb-3" role="status"></div>
-            <p className="text-muted fw-bold small">INITIALIZING INTERFACE...</p>
+          <div className="text-center py-5">
+            <div className="spinner-border text-warning" role="status"></div>
           </div>
         ) : error ? (
-          <div className="alert alert-danger border-0 shadow-sm">{error}</div>
+          <div className="alert border-0 shadow" style={{ backgroundColor: "#2d1b1b", color: "#ff8484" }}>{error}</div>
         ) : (
-          <>
-            {/* --- PRO DASHBOARD COMPONENT --- */}
-            <div className="w-100 bg-white border rounded shadow-sm overflow-hidden mb-5">
-              
-              {/* Dark Header */}
-              <div className="p-4 bg-dark text-white d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="text-uppercase small fw-bold text-primary mb-1" style={{ letterSpacing: '2px' }}>Collective Strength</div>
-                  <h2 className="display-5 fw-bold mb-0">-- <span className="fs-6 opacity-25">PTS</span></h2>
+          <div className="row g-4">
+            
+            {/* LEFT COLUMN: Identity Card */}
+            <div className="col-md-4">
+              <div className="card border-0 p-4 h-100 shadow" style={{ backgroundColor: colors.cardBg, borderRadius: "15px" }}>
+                <div className="text-center">
+                  <div className="position-relative d-inline-block">
+                    {profilePic ? (
+                      <img
+                        src={profilePic}
+                        alt="Profile"
+                        className="rounded-circle border border-3"
+                        style={{ width: "150px", height: "150px", objectFit: "cover", borderColor: colors.accentOrange + " !important" }}
+                      />
+                    ) : (
+                      <div className="rounded-circle d-flex align-items-center justify-content-center border border-3 mx-auto shadow"
+                           style={{ width: "150px", height: "150px", fontSize: "4rem", backgroundColor: colors.accentOrange, borderColor: "white" }}>
+                        {(displayName || username || "?").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <label className="position-absolute bottom-0 end-0 bg-warning rounded-circle p-2 shadow" style={{ cursor: "pointer" }}>
+                      <input type="file" hidden onChange={handleProfilePicUpload} />
+                      📸
+                    </label>
+                  </div>
+                  <h4 className="mt-3 fw-bold mb-0 text-white">{displayName || username}</h4>
+                  <p style={{ color: colors.textGray }}>@{username}</p>
                 </div>
-                <div className="text-end">
-                  <div className="dropdown">
-                    <button className="btn btn-sm btn-outline-light dropdown-toggle border-secondary fw-bold" type="button" data-bs-toggle="dropdown">
-                      GLOBAL REGION
-                    </button>
-                    <ul className="dropdown-menu dropdown-menu-end">
-                      <li><button className="dropdown-item small disabled">COMING SOON</button></li>
-                    </ul>
+                
+                <hr style={{ borderColor: colors.border }} />
+                
+                <div className="mt-2">
+                  <small className="text-uppercase fw-bold" style={{ color: colors.accentOrange, fontSize: "0.75rem" }}>Account Status</small>
+                  <div className="d-flex align-items-center mt-1">
+                    <span className="p-1 bg-success rounded-circle me-2"></span>
+                    <span className="small text-white">--</span>
                   </div>
                 </div>
-              </div>
-
-              {/* Navigation Pills */}
-              <div className="bg-white border-bottom px-3 py-2">
-                <ul className="nav nav-pills nav-fill gap-2">
-                  {['overview', 'matches', 'achievements'].map((tab) => (
-                    <li className="nav-item" key={tab}>
-                      <button 
-                        className={`nav-link py-2 fw-bold text-uppercase border ${activeTab === tab ? 'active border-primary' : 'bg-light border-transparent'}`}
-                        onClick={() => setActiveTab(tab)}
-                        style={{ fontSize: '0.7rem', letterSpacing: '1px' }}
-                      >
-                        {tab}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Interactive Content Grid */}
-              <div className="bg-white">
-                {activeTab === 'overview' ? (
-                  <div className="row g-0 h-100">
-                    <div className="col-6 col-md-3 border-end border-bottom p-4">
-                      <label className="d-block text-muted small fw-bold text-uppercase mb-2">Rank</label>
-                      <div className="h4 fw-bold mb-1">--</div>
-                      <span className="badge bg-light text-muted border fw-normal">COMING SOON</span>
-                    </div>
-                    <div className="col-6 col-md-3 border-end border-bottom p-4">
-                      <label className="d-block text-muted small fw-bold text-uppercase mb-2">Roles</label>
-                      <div className="h4 fw-bold mb-1">--</div>
-                      <span className="badge bg-light text-muted border fw-normal">COMING SOON</span>
-                    </div>
-                    <div className="col-6 col-md-3 border-end border-bottom p-4">
-                      <label className="d-block text-muted small fw-bold text-uppercase mb-2">Cups</label>
-                      <div className="h4 fw-bold mb-1">--</div>
-                      <span className="badge bg-light text-muted border fw-normal">COMING SOON</span>
-                    </div>
-                    <div className="col-6 col-md-3 border-bottom p-4">
-                      <label className="d-block text-muted small fw-bold text-uppercase mb-2">Net Worth</label>
-                      <div className="h4 fw-bold mb-1">--</div>
-                      <span className="badge bg-light text-muted border fw-normal">COMING SOON</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-5 text-center bg-light">
-                    <div className="py-4">
-                      <h5 className="fw-bold text-muted mb-1 text-uppercase">Module Locked</h5>
-                      <p className="small text-muted mb-0">Statistical data for <strong>{activeTab}</strong> is coming soon.</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Status Footer */}
-              <div className="p-3 px-4 bg-light d-flex justify-content-between align-items-center">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="bg-primary rounded-circle" style={{ width: '10px', height: '10px' }}></div>
-                  <span className="small fw-bold text-uppercase">Account: {profile?.display_name || "LINKED"}</span>
-                </div>
-                <button className="btn btn-dark btn-sm px-4 fw-bold" onClick={() => alert("History Module: Coming Soon")}>HISTORY</button>
               </div>
             </div>
 
-            {/* --- SETTINGS CARD --- */}
-            <div className="card p-4 border-0 shadow-sm rounded-3">
-              <h5 className="fw-bold mb-4 text-uppercase">Identity Settings</h5>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label small fw-bold text-muted text-uppercase">Display Name</label>
+            {/* RIGHT COLUMN: Settings Form */}
+            <div className="col-md-8">
+              <div className="card border-0 p-4 h-100 shadow" style={{ backgroundColor: colors.cardBg, borderRadius: "15px" }}>
+                <h5 className="mb-4 text-white">Dashboard Settings</h5>
+                
+                <div className="mb-3">
+                  <label className="small text-uppercase fw-bold mb-2" style={{ color: colors.textGray }}>Display Name</label>
                   <input
-                    className="form-control border-light bg-light p-2 px-3"
+                    className="form-control border-0 text-white px-3 py-2"
+                    style={{ backgroundColor: colors.darkBlue, borderRadius: "8px" }}
                     value={displayName}
+                    placeholder="Enter player name"
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Set Display Name"
-                    disabled={saving}
                   />
                 </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-bold text-muted text-uppercase">Username</label>
+
+                <div className="mb-4">
+                  <label className="small text-uppercase fw-bold mb-2" style={{ color: colors.textGray }}>System Username</label>
                   <div className="input-group">
-                    <span className="input-group-text bg-light border-light text-muted">@</span>
+                    <span className="input-group-text border-0 text-white" style={{ backgroundColor: colors.border }}>@</span>
                     <input
-                      className="form-control border-light bg-light p-2 px-3"
+                      className="form-control border-0 text-white px-3 py-2"
+                      style={{ backgroundColor: colors.darkBlue }}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="username"
-                      disabled={saving}
                     />
                   </div>
                 </div>
-                <div className="col-12 mt-4">
+
+                <div className="mt-auto">
                   <button
-                    className="btn btn-primary px-5 py-2 fw-bold text-uppercase"
-                    style={{ fontSize: '0.8rem', letterSpacing: '1px' }}
+                    className="btn w-100 fw-bold py-2 shadow-sm"
+                    style={{ backgroundColor: colors.accentOrange, color: "black", borderRadius: "8px", transition: "0.3s" }}
                     onClick={handleSaveProfile}
                     disabled={saving}
                   >
-                    {saving ? "Updating..." : "Push Changes"}
+                    {saving ? "SYNCING..." : "UPDATE DASHBOARD"}
                   </button>
+                  <p className="text-center small mt-3" style={{ color: colors.textGray }}>
+                    Your identity is public to other players in the feed.
+                  </p>
                 </div>
               </div>
             </div>
-          </>
+
+          </div>
         )}
       </div>
     </main>
