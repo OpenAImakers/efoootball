@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Auth from "./pages/Auth";
 import TournamentAdmin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard.tsx";
@@ -18,19 +18,27 @@ import TournamentList from "./pages/TournamentList.tsx";
 import NoLeaderboardState from "./pages/NoLeaderboardState.tsx";
 import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
+
 function App() {
+  // Detect PWA vs browser
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+
   return (
     <Routes>
-       <Route path="/" element={<Advert />} />
+      {/* PWA starts at /auth, browser starts at / (Advert) */}
+      <Route
+        path="/"
+        element={isStandalone ? <Navigate to="/auth" /> : <Advert />}
+      />
       <Route path="/auth" element={<Auth />} />
-      
-      {/* Password Update Route 
-          Keep this public so the email link can reach it without redirection loops 
-      */}
+
+      {/* Password Update Route */}
       <Route path="/update-password" element={<UpdatePassword />} />
 
-      
-            <Route
+      {/* Other existing routes unchanged */}
+      <Route
         path="/leaderboard-list"
         element={
           <ProtectedRoute>
@@ -38,7 +46,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/dashboard"
         element={
@@ -54,61 +61,52 @@ function App() {
             <Teams />
           </ProtectedRoute>
         }
-      />  
-            <Route
+      />
+      <Route
         path="/tournament-list"
         element={
           <ProtectedRoute>
             <TournamentList />
           </ProtectedRoute>
         }
-      /> 
-
-<Route
-  path="/leaderboard-admin"
-  element={
-    <ProtectedRoute>
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <Navbar />
-        <div style={{ flex: 1, marginTop: "65px" }}>
-          <NoLeaderboardState />
-        </div>
-      </div>
-    </ProtectedRoute>
-  }
-/>
-        
-<Route
-  path="/admin"
-  element={
-    <ProtectedRoute requiredRole={null}>
-      {({ user }) => {
-        // We prioritize session keys over role checks
-        const hasActiveTournament = localStorage.getItem("active_tournament");
-        const hasActiveLeaderboard = localStorage.getItem("active_leaderboard");
-
-        // 1. If a Tournament Session is active, show Tournament Admin
-        if (hasActiveTournament) {
-          return <TournamentAdmin user={user} />;
+      />
+      <Route
+        path="/leaderboard-admin"
+        element={
+          <ProtectedRoute>
+            <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+              <Navbar />
+              <div style={{ flex: 1, marginTop: "65px" }}>
+                <NoLeaderboardState />
+              </div>
+            </div>
+          </ProtectedRoute>
         }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requiredRole={null}>
+            {({ user }) => {
+              const hasActiveTournament = localStorage.getItem("active_tournament");
+              const hasActiveLeaderboard = localStorage.getItem("active_leaderboard");
 
-        // 2. If a Leaderboard Session is active, show Leaderboard Admin
-        if (hasActiveLeaderboard) {
-          return <LeaderboardForm />;
+              if (hasActiveTournament) {
+                return <TournamentAdmin user={user} />;
+              }
+              if (hasActiveLeaderboard) {
+                return <LeaderboardForm />;
+              }
+              return (
+                <>
+                  <Navbar />
+                  <UpgradeToAdmin />
+                </>
+              );
+            }}
+          </ProtectedRoute>
         }
-
-        // 3. Fallback: No active session? 
-        // Show the selection screen so they can use their passkey/select a session
-        return (
-          <>
-            <Navbar />
-            <UpgradeToAdmin />
-          </>
-        );
-      }}
-    </ProtectedRoute>
-  }
-/>
+      />
       <Route
         path="/account"
         element={
@@ -117,20 +115,19 @@ function App() {
           </ProtectedRoute>
         }
       />
-            <Route
+      <Route
         path="/create-tournament"
         element={
           <ProtectedRoute>
-            <TournamentCreation  />
+            <TournamentCreation />
           </ProtectedRoute>
         }
       />
-                  <Route
+      <Route
         path="/Leaderboard-create"
         element={
           <ProtectedRoute>
-            
-            <LeaderboardCreation  />
+            <LeaderboardCreation />
           </ProtectedRoute>
         }
       />
@@ -142,14 +139,14 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route  
+      <Route
         path="/match/:id/vote"
         element={
           <ProtectedRoute>
             <MatchVote />
           </ProtectedRoute>
         }
-      />  
+      />
       <Route
         path="/leaderboard"
         element={
@@ -159,7 +156,6 @@ function App() {
         }
       />
     </Routes>
-
   );
 }
 

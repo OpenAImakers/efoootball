@@ -3,13 +3,12 @@ import { Link } from "react-router-dom";
 
 const LandingPage = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallOverlay, setShowInstallOverlay] = useState(true); // always show first
+  const [showInstallOverlay, setShowInstallOverlay] = useState(true);
+  const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches;
-
-    if (isStandalone) {
+    // Check if already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
       setShowInstallOverlay(false);
       return;
     }
@@ -21,140 +20,177 @@ const LandingPage = () => {
     };
 
     window.addEventListener("beforeinstallprompt", handler);
-
-    return () =>
-      window.removeEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      alert("App is ready for manual installation via browser menu.");
+      return;
+    }
 
+    setIsInstalling(true);
     deferredPrompt.prompt();
+    
     const choiceResult = await deferredPrompt.userChoice;
-
     if (choiceResult.outcome === "accepted") {
       setShowInstallOverlay(false);
     }
-
+    
+    setIsInstalling(false);
     setDeferredPrompt(null);
   };
 
   return (
     <div style={styles.container}>
-
-
-      {/* Install Overlay */}
       {showInstallOverlay && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Install Required</h2>
+            <div style={styles.iconCircle}>
+              <span style={{ fontSize: "2rem" }}>🚀</span>
+            </div>
+            
+            <h2 style={styles.modalTitle}>Finalizing Setup</h2>
             <p style={styles.modalText}>
-              For the best experience, install the app.
+              To access high-performance features and offline mode, 
+              please add the app to your home screen.
             </p>
 
+            <div style={styles.featureList}>
+              <div style={styles.featureItem}>✓ Faster Load Times</div>
+              <div style={styles.featureItem}>✓ Full Screen Mode</div>
+            </div>
+
             <button
-              style={styles.installBtn}
+              style={{
+                ...styles.installBtn,
+                ...(isInstalling ? styles.installBtnActive : {}),
+                animation: !isInstalling ? "pulse 2s infinite" : "none"
+              }}
               onClick={handleInstallClick}
+              disabled={isInstalling}
             >
-              Install App
+              {isInstalling ? "Opening Prompt..." : "Install & Launch"}
             </button>
 
             <Link to="/auth" style={styles.browserBtn}>
-              Continue in Browser
+              Proceed with limited web version
             </Link>
+
           </div>
         </div>
       )}
+
+      {/* CSS for Pulse Animation */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+          }
+        `}
+      </style>
     </div>
   );
 };
 
 const styles = {
   container: {
-    background: "linear-gradient(135deg, #0f172a, #0b1120)",
+    background: "#0f172a",
     minHeight: "100vh",
     width: "100%",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    padding: "40px 20px",
-    position: "relative",
   },
-
-  content: {
-    textAlign: "center",
-    maxWidth: "500px",
-  },
-
-  title: {
-    color: "#3b82f6",
-    fontSize: "2.8rem",
-    fontWeight: "bold",
-    marginBottom: "15px",
-  },
-
-  subtitle: {
-    color: "#94a3b8",
-    fontSize: "1.1rem",
-    lineHeight: "1.6",
-  },
-
   overlay: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.97)",
-    backdropFilter: "blur(8px)",
+    backgroundColor: "rgba(7, 10, 18, 0.98)",
+    backdropFilter: "blur(12px)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
-    padding: "20px",
   },
-
   modal: {
     backgroundColor: "#1e293b",
-    padding: "45px 35px",
-    borderRadius: "22px",
-    border: "1px solid #3b82f6",
-    width: "100%",
-    maxWidth: "380px",
+    padding: "40px 30px",
+    borderRadius: "28px",
+    border: "1px solid rgba(59, 130, 246, 0.3)",
+    width: "90%",
+    maxWidth: "400px",
     textAlign: "center",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
   },
-
+  iconCircle: {
+    width: "70px",
+    height: "70px",
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: "50%",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    margin: "0 auto 20px",
+    border: "1px solid #3b82f6",
+  },
   modalTitle: {
-    color: "#f97316",
-    fontSize: "1.6rem",
-    marginBottom: "10px",
+    color: "#fff",
+    fontSize: "1.8rem",
+    fontWeight: "800",
+    marginBottom: "12px",
   },
-
   modalText: {
-    color: "#cbd5e1",
+    color: "#94a3b8",
     fontSize: "0.95rem",
+    lineHeight: "1.5",
+    marginBottom: "20px",
+  },
+  featureList: {
+    textAlign: "left",
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    padding: "15px",
+    borderRadius: "12px",
     marginBottom: "25px",
   },
-
+  featureItem: {
+    color: "#3b82f6",
+    fontSize: "0.85rem",
+    fontWeight: "bold",
+    marginBottom: "5px",
+  },
   installBtn: {
     background: "linear-gradient(135deg, #f97316, #ea580c)",
     border: "none",
-    padding: "16px",
-    borderRadius: "12px",
+    padding: "18px",
+    borderRadius: "14px",
     color: "white",
-    fontWeight: "bold",
-    fontSize: "1rem",
+    fontWeight: "800",
+    fontSize: "1.1rem",
     width: "100%",
     cursor: "pointer",
-    marginBottom: "18px",
-    transition: "0.3s ease",
+    marginBottom: "15px",
+    transition: "all 0.3s ease",
   },
-
+  installBtnActive: {
+    opacity: 0.7,
+    cursor: "not-allowed",
+  },
   browserBtn: {
     display: "block",
-    color: "#3b82f6",
-    fontSize: "0.9rem",
+    color: "#64748b",
+    fontSize: "0.85rem",
     textDecoration: "none",
-    marginTop: "5px",
+    marginBottom: "20px",
   },
+  securityTag: {
+    color: "#4ade80",
+    fontSize: "0.75rem",
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+  }
 };
 
 export default LandingPage;
