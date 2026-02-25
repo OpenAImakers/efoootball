@@ -7,7 +7,6 @@ const LandingPage = () => {
   const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setShowInstallOverlay(false);
       return;
@@ -31,12 +30,11 @@ const LandingPage = () => {
 
     setIsInstalling(true);
     deferredPrompt.prompt();
-    
     const choiceResult = await deferredPrompt.userChoice;
     if (choiceResult.outcome === "accepted") {
       setShowInstallOverlay(false);
     }
-    
+
     setIsInstalling(false);
     setDeferredPrompt(null);
   };
@@ -47,9 +45,9 @@ const LandingPage = () => {
         <div style={styles.overlay}>
           <div style={styles.modal}>
             <div style={styles.iconCircle}>
-              <span style={{ fontSize: "2rem" }}>🚀</span>
+              <span style={{ fontSize: "3rem" }}>🚀</span>
             </div>
-            
+
             <h2 style={styles.modalTitle}>Finalizing Setup</h2>
             <p style={styles.modalText}>
               To access high-performance features and offline mode, 
@@ -59,6 +57,8 @@ const LandingPage = () => {
             <div style={styles.featureList}>
               <div style={styles.featureItem}>✓ Faster Load Times</div>
               <div style={styles.featureItem}>✓ Full Screen Mode</div>
+              <div style={styles.featureItem}>✓ Offline Access</div>
+              <div style={styles.featureItem}>✓ Smooth Animations</div>
             </div>
 
             <button
@@ -81,12 +81,11 @@ const LandingPage = () => {
         </div>
       )}
 
-      {/* CSS for Pulse Animation */}
       <style>
         {`
           @keyframes pulse {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
-            70% { transform: scale(1.02); box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }
+            70% { transform: scale(1.03); box-shadow: 0 0 0 20px rgba(249, 115, 22, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
           }
         `}
@@ -103,6 +102,7 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+    padding: "20px",
   },
   overlay: {
     position: "fixed",
@@ -113,64 +113,66 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
+    padding: "20px",
   },
   modal: {
     backgroundColor: "#1e293b",
-    padding: "40px 30px",
-    borderRadius: "28px",
-    border: "1px solid rgba(59, 130, 246, 0.3)",
-    width: "90%",
-    maxWidth: "400px",
+    padding: "50px 40px",
+    borderRadius: "32px",
+    border: "1px solid rgba(59, 130, 246, 0.4)",
+    width: "95%",
+    maxWidth: "500px",
     textAlign: "center",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+    boxShadow: "0 30px 70px -10px rgba(0,0,0,0.6)",
   },
   iconCircle: {
-    width: "70px",
-    height: "70px",
+    width: "90px",
+    height: "90px",
     backgroundColor: "rgba(59, 130, 246, 0.1)",
     borderRadius: "50%",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    margin: "0 auto 20px",
-    border: "1px solid #3b82f6",
+    margin: "0 auto 25px",
+    border: "2px solid #3b82f6",
   },
   modalTitle: {
     color: "#fff",
-    fontSize: "1.8rem",
+    fontSize: "2.2rem",
     fontWeight: "800",
-    marginBottom: "12px",
+    marginBottom: "15px",
   },
   modalText: {
-    color: "#94a3b8",
-    fontSize: "0.95rem",
-    lineHeight: "1.5",
-    marginBottom: "20px",
+    color: "#cbd5e1",
+    fontSize: "1.1rem",
+    lineHeight: "1.7",
+    marginBottom: "25px",
   },
   featureList: {
     textAlign: "left",
     backgroundColor: "rgba(15, 23, 42, 0.5)",
-    padding: "15px",
-    borderRadius: "12px",
-    marginBottom: "25px",
+    padding: "20px",
+    borderRadius: "16px",
+    marginBottom: "30px",
   },
   featureItem: {
     color: "#3b82f6",
-    fontSize: "0.85rem",
-    fontWeight: "bold",
-    marginBottom: "5px",
+    fontSize: "1rem",
+    fontWeight: "600",
+    marginBottom: "8px",
+    cursor: "default",
   },
   installBtn: {
     background: "linear-gradient(135deg, #f97316, #ea580c)",
     border: "none",
-    padding: "18px",
-    borderRadius: "14px",
+    padding: "20px",
+    borderRadius: "16px",
     color: "white",
     fontWeight: "800",
-    fontSize: "1.1rem",
+    fontSize: "1.3rem",
     width: "100%",
     cursor: "pointer",
-    marginBottom: "15px",
+    marginBottom: "20px",
     transition: "all 0.3s ease",
   },
   installBtnActive: {
@@ -179,18 +181,18 @@ const styles = {
   },
   browserBtn: {
     display: "block",
-    color: "#64748b",
-    fontSize: "0.85rem",
-    textDecoration: "none",
-    marginBottom: "20px",
+    color: "#3b82f6",
+    fontSize: "1rem",
+    textDecoration: "underline",
+    marginBottom: "15px",
   },
-  securityTag: {
-    color: "#4ade80",
-    fontSize: "0.75rem",
-    fontWeight: "bold",
-    textTransform: "uppercase",
-    letterSpacing: "1px",
-  }
+  linkBtn: {
+    display: "block",
+    color: "#94a3b8",
+    fontSize: "0.95rem",
+    textDecoration: "underline",
+    marginBottom: "10px",
+  },
 };
 
 export default LandingPage;
