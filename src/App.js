@@ -11,6 +11,7 @@ import UpdatePassword from "./pages/UpdatePassword.js";
 import Leaderboard from "./pages/Leaderboard.tsx";  
 import LeaderboardForm from "./pages/Leaderboardadmin.tsx";
 import Navbar from "./components/Navbar.jsx";
+import Advert from "./components/Advert.jsx";
 import UpgradeToAdmin from "./pages/UpgradeToAdmin.tsx";
 import TournamentCreation from "./pages/TournamentCreation.tsx";
 import TournamentList from "./pages/TournamentList.tsx";
@@ -20,7 +21,8 @@ import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Auth />} />
+       <Route path="/" element={<Advert />} />
+      <Route path="/auth" element={<Auth />} />
       
       {/* Password Update Route 
           Keep this public so the email link can reach it without redirection loops 
