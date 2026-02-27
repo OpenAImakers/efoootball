@@ -93,7 +93,7 @@ export default function MatchesList() {
   return (
     <div className="container-fluid px-3 px-md-4 py-4">
       <div className="row">
-        <div className="col-12 col-lg-11 col-xl-10">
+        <div>
           {/* Tournament Selector */}
           <div className="mb-4">
             <label className="form-label fw-bold">Select Tournament</label>
