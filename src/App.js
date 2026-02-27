@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import Auth from "./pages/Auth";
 import TournamentAdmin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard.tsx";
@@ -19,12 +20,24 @@ import NoLeaderboardState from "./pages/NoLeaderboardState.tsx";
 import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 
+
+
 function App() {
   // Detect PWA vs browser
   const isStandalone =
     window.matchMedia("(display-mode: standalone)").matches ||
     window.navigator.standalone === true;
+useEffect(() => {
+  const loader = document.getElementById("splash-loader");
+  if (loader) {
+    loader.style.opacity = "0";
+    loader.style.transition = "opacity 0.6s ease";
 
+    setTimeout(() => {
+      loader.style.display = "none";
+    }, 600);
+  }
+}, []);
   return (
     <Routes>
       {/* PWA starts at /auth, browser starts at / (Advert) */}
