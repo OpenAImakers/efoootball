@@ -8,14 +8,12 @@ interface League {
 }
 
 export default function MatchesList() {
-  // Store the master list of all matches
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [selectedLeague, setSelectedLeague] = useState<number | string | "global">("global");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
-  // 1. Initial Fetch: Get EVERYTHING at once
   useEffect(() => {
     const initApp = async () => {
       setLoading(true);
@@ -23,7 +21,6 @@ export default function MatchesList() {
         const data = await fetchGlobalMatches();
         setAllMatches(data);
 
-        // Extract unique leagues from the master list
         const leagueMap: Record<string, League> = {};
         data.forEach((m) => {
           if (m.league?.name && !leagueMap[m.league.name]) {
@@ -44,81 +41,136 @@ export default function MatchesList() {
     initApp();
   }, []);
 
-  // 2. Client-side Filtering: Instant tab switching
   const displayedMatches = useMemo(() => {
     if (selectedLeague === "global") return allMatches;
     return allMatches.filter(m => (m.league?.id || m.league?.name) === selectedLeague);
   }, [selectedLeague, allMatches]);
 
-  // Only show full loading for the very first visit
-  if (loading) return <div className="text-center mt-5 text-warning p-5">Loading Sports Data...</div>;
-  if (error) return <div className="alert alert-danger m-3">Error: {error}</div>;
+  if (loading) return (
+    <div className="d-flex justify-content-center align-items-center min-vh-100 bg-white">
+      <div className="spinner-border text-primary" role="status" />
+    </div>
+  );
 
   return (
-    <div className="container-fluid py-3" style={{  minHeight: "100vh" }}>
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-3 px-2">
-        <h6 className="text-uppercase fw-bold m-0" style={{ color: "#00ff00", letterSpacing: "1px" }}>
-          {selectedLeague === "global" ? "All Leagues" : leagues.find(l => l.id === selectedLeague)?.name}
-        </h6>
-        <span className="badge" style={{ backgroundColor: "#333", color: "#FFA500" }}>Live</span>
-      </div>
-
-      {/* Tabs - Now Instant */}
-      <div className="d-flex gap-2 flex-wrap mb-3" style={{ maxHeight: '120px', overflowY: 'auto' }}>
-        <button 
-          className={`btn btn-sm ${selectedLeague === "global" ? "btn-warning" : "btn-outline-secondary text-dark"}`}
-          onClick={() => setSelectedLeague("global")}
-        >All</button>
-        {leagues.map((league) => (
-          <button
-            key={league.id}
-            className={`btn btn-sm ${selectedLeague === league.id ? "btn-warning" : "btn-outline-secondary text-dark"}`}
-            onClick={() => setSelectedLeague(league.id)}
-          >{league.name}</button>
-        ))}
-      </div>
-
-      {/* Match List */}
-      <div className="d-flex flex-column gap-2">
-        {displayedMatches.length === 0 ? (
-          <p className="text-center text-muted mt-4">No scheduled matches for this selection.</p>
-        ) : (
-          displayedMatches.map((match) => (
-            <div key={match.id} className="p-3 d-flex align-items-center justify-content-between shadow-sm"
-              style={{ backgroundColor: "#1e1e1e", borderRadius: "8px", borderLeft: "4px solid #FFA500" }}>
+    <div className="min-vh-100 bg-light d-flex flex-column" style={{ overflow: "hidden" }}>
+      <div className="container-fluid py-4 flex-grow-1" style={{ height: "100vh" }}>
+        <div className="row g-3 h-100">
+          
+          {/* LEFT: Leagues Sidebar */}
+          <div className="col-lg-3 col-xl-2 h-100">
+            <div className="card border-0 shadow-sm rounded-3 h-100 d-flex flex-column">
+              <div className="card-header bg-white py-3 border-bottom">
+                <h6 className="mb-0 fw-bold text-uppercase small text-muted">Leagues</h6>
+              </div>
               
-              <div className="text-center" style={{ minWidth: "65px" }}>
-                <div className="fw-bold text-light small">
-                  {new Date(match.event_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              <div className="flex-grow-1 overflow-auto">
+                <div className="list-group list-group-flush">
+                  <button
+                    onClick={() => setSelectedLeague("global")}
+                    className={`list-group-item list-group-item-action border-0 py-3 px-3 small fw-bold ${selectedLeague === "global" ? "bg-primary text-white" : "text-dark"}`}
+                  >
+                    All Events
+                  </button>
+                  {leagues.map((league) => (
+                    <button
+                      key={league.id}
+                      onClick={() => setSelectedLeague(league.id)}
+                      className={`list-group-item list-group-item-action border-0 py-2 px-3 small ${selectedLeague === league.id ? "bg-primary-subtle text-primary border-end border-primary border-3" : "text-secondary"}`}
+                    >
+                      {league.name}
+                    </button>
+                  ))}
                 </div>
-                <div style={{ fontSize: "0.65rem", color: "#888" }}>{match.league?.name}</div>
-              </div>
-
-              <div className="flex-grow-1 px-3 border-start border-secondary ms-2">
-                <div className="text-light fw-semibold small">{match.home_team}</div>
-                <div className="text-light fw-semibold small">{match.away_team}</div>
-              </div>
-
-              <div className="d-flex gap-1">
-                <OddBox label="1" value={match.odds_home} />
-                <OddBox label="X" value={match.odds_draw} />
-                <OddBox label="2" value={match.odds_away} />
               </div>
             </div>
-          ))
-        )}
+          </div>
+
+          {/* RIGHT: Match Cards Area */}
+          <div className="col-lg-9 col-xl-10 h-100 d-flex flex-column">
+            <div className="card border-0 shadow-sm rounded-3 h-100 d-flex flex-column">
+              {/* Table Header Alignment */}
+              <div className="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                <div className="flex-grow-1">
+                  <h6 className="mb-0 fw-bold">
+                     {selectedLeague === "global" ? "Upcoming Matches" : leagues.find(l => l.id === selectedLeague)?.name}
+                  </h6>
+                </div>
+                <div className="d-flex gap-2 text-center" style={{ width: "210px" }}>
+                  <div className="fw-bold small text-muted" style={{ width: "65px" }}>1</div>
+                  <div className="fw-bold small text-muted" style={{ width: "65px" }}>X</div>
+                  <div className="fw-bold small text-muted" style={{ width: "65px" }}>2</div>
+                </div>
+              </div>
+
+              <div className="card-body p-0 overflow-auto flex-grow-1 bg-white">
+                {error ? (
+                  <div className="alert alert-danger m-3">{error}</div>
+                ) : (
+                  <div className="d-flex flex-column">
+                    {displayedMatches.map((match) => (
+                      <div key={match.id} className="match-row d-flex align-items-center px-3 py-2 border-bottom transition-all">
+                        
+                        {/* Time Section */}
+                        <div className="py-1" style={{ width: "80px" }}>
+                          <div className="fw-bold text-dark small">
+                            {new Date(match.event_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                          <div className="text-muted" style={{ fontSize: "0.65rem" }}>
+                            {new Date(match.event_date).toLocaleDateString([], { month: "short", day: "numeric" })}
+                          </div>
+                        </div>
+
+                        {/* Teams Section */}
+                        <div className="flex-grow-1 px-3">
+                          <div className="d-flex flex-column">
+                            <span className="fw-semibold text-dark h6 mb-0" style={{ fontSize: "0.9rem" }}>{match.home_team}</span>
+                            <span className="fw-semibold text-dark h6 mb-0" style={{ fontSize: "0.9rem" }}>{match.away_team}</span>
+                          </div>
+                        </div>
+
+                        {/* Odds Grid */}
+                        <div className="d-flex gap-2">
+                          <OddBox value={match.odds_home} />
+                          <OddBox value={match.odds_draw} />
+                          <OddBox value={match.odds_away} />
+                        </div>
+                      </div>
+                    ))}
+                    {displayedMatches.length === 0 && (
+                      <div className="text-center py-5 text-muted small">No matches found for this league.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      <style>{`
+        .match-row:hover { background-color: #fcfcfc; }
+        .match-row { border-left: 3px solid transparent; }
+        .match-row:hover { border-left: 3px solid #0d6efd; }
+        .odd-button:hover { background-color: #e9ecef !important; border-color: #0d6efd !important; color: #0d6efd !important; }
+        .transition-all { transition: all 0.15s ease-in-out; }
+      `}</style>
     </div>
   );
 }
 
-function OddBox({ label, value }: { label: string; value: any }) {
+function OddBox({ value }: { value: any }) {
   return (
-    <div className="text-center d-flex flex-column justify-content-center"
-      style={{ width: "42px", height: "42px", backgroundColor: "#2a2a2a", borderRadius: "4px", border: "1px solid #333" }}>
-      <span style={{ fontSize: "0.55rem", color: "#888" }}>{label}</span>
-      <span style={{ fontSize: "0.8rem", color: "#FFA500", fontWeight: "bold" }}>{value ?? "-"}</span>
-    </div>
+    <button className="btn p-0 d-flex align-items-center justify-content-center border rounded-2 odd-button transition-all"
+      style={{ 
+        width: "65px", 
+        height: "45px", 
+        backgroundColor: "#f8f9fa",
+        fontSize: "0.9rem",
+        fontWeight: "700"
+      }}>
+      {value ?? "-"}
+    </button>
   );
 }
