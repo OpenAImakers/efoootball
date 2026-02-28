@@ -19,40 +19,78 @@ function Home() {
 
   <div className="container-fluid" style={{ marginTop: '5rem' }}>
     {/* Secondary Navbar (Sticky Tabs) */}
-    <ul
-      className="nav nav-pills nav-fill p-1 bg-light shadow-sm"
+ <ul
+  className="nav nav-pills nav-fill p-1 shadow-lg"
+  style={{
+    position: "sticky",
+    top: "64px",
+    zIndex: 999,
+    backgroundColor: "rgba(30, 30, 30, 0.85)",
+    backdropFilter: "blur(10px)",
+    borderRadius: "0 0 16px 16px",
+    borderBottom: "1px solid #333",
+  }}
+>
+  <li className="nav-item">
+    <button
+      className={`nav-link py-2 fw-bold transition-all ${
+        activeTab === "matches" ? "active" : "text-secondary"
+      }`}
       style={{
-        position: "sticky",
-        top: "64px",
-        zIndex: 999
+        fontSize: "0.85rem",
+        letterSpacing: "0.5px",
+        backgroundColor: activeTab === "matches" ? "#FFA500" : "transparent",
+        color: activeTab === "matches" ? "#000" : "#bbb",
+        border: "none",
+        borderRadius: "10px",
+        transition: "all 0.3s ease",
       }}
+      onClick={() => setActiveTab("matches")}
     >
-      <li className="nav-item">
-        <button
-          className={`nav-link ${activeTab === 'matches' ? 'active' : ''}`}
-          onClick={() => setActiveTab('matches')}
-        >
-          Matches
-        </button>
-      </li>
+      Matches
+    </button>
+  </li>
 
-      <li className="nav-item">
-        <button
-          className={`nav-link ${activeTab === 'discussion' ? 'active' : ''}`}
-          onClick={() => setActiveTab('discussion')}
-        >
-          Community Feed
-        </button>
-      </li>
-            <li className="nav-item">
-        <button
-          className={`nav-link ${activeTab === 'tournaments' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tournaments')}
-        >
-          Tournaments
-        </button>
-      </li>
-    </ul>
+  <li className="nav-item">
+    <button
+      className={`nav-link py-2 fw-bold transition-all ${
+        activeTab === "discussion" ? "active" : "text-secondary"
+      }`}
+      style={{
+        fontSize: "0.85rem",
+        letterSpacing: "0.5px",
+        backgroundColor: activeTab === "discussion" ? "#FFA500" : "transparent",
+        color: activeTab === "discussion" ? "#000" : "#bbb",
+        border: "none",
+        borderRadius: "10px",
+        transition: "all 0.3s ease",
+      }}
+      onClick={() => setActiveTab("discussion")}
+    >
+      Feed
+    </button>
+  </li>
+
+  <li className="nav-item">
+    <button
+      className={`nav-link py-2 fw-bold transition-all ${
+        activeTab === "tournaments" ? "active" : "text-secondary"
+      }`}
+      style={{
+        fontSize: "0.85rem",
+        letterSpacing: "0.5px",
+        backgroundColor: activeTab === "tournaments" ? "#FFA500" : "transparent",
+        color: activeTab === "tournaments" ? "#000" : "#bbb",
+        border: "none",
+        borderRadius: "10px",
+        transition: "all 0.3s ease",
+      }}
+      onClick={() => setActiveTab("tournaments")}
+    >
+      Leagues
+    </button>
+  </li>
+</ul>
 
     {/* Content scrolls UNDER the sticky tabs */}
     <div className="tab-content mt-3">
