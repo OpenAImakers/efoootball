@@ -1,12 +1,14 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 import { Link } from "react-router-dom";
 
 // ──────────────────────────────────────────────
-//  Helpers (avatar) unchanged – keeping them here
+//  Helpers
 // ──────────────────────────────────────────────
 const getAvatarColor = (name: string) => {
-  const colors = ["#007bff", "#6610f2", "#6f42c1", "#e83e8c", "#dc3545", "#fd7e14", "#ffc107", "#28a745", "#20c997", "#17a2b8"];
+  const colors = ["#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#0891b2"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -37,6 +39,7 @@ const renderAvatar = (profile: any, size: number) => {
         height: `${size}px`,
         fontSize: `${size / 2.2}px`,
         backgroundColor: getAvatarColor(name),
+        border: "2px solid #fff"
       }}
     >
       {firstLetter}
@@ -44,13 +47,17 @@ const renderAvatar = (profile: any, size: number) => {
   );
 };
 
+// ──────────────────────────────────────────────
+//  Main Component
+// ──────────────────────────────────────────────
 function CommunityFeed({ user }: { user: any }) {
   const [comments, setComments] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [commentText, setCommentText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // optional local preview
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
 
   const [dragX, setDragX] = useState(0);
@@ -66,20 +73,13 @@ function CommunityFeed({ user }: { user: any }) {
     const { data, error } = await supabase
       .from("comments")
       .select(`
-        id, 
-        content, 
-        created_at, 
-        user_id, 
-        images,
+        id, content, created_at, user_id, images,
         profiles (username, display_name, profile_pic)
       `)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Fetch comments error:", error);
-    } else {
-      setComments(data || []);
-    }
+    if (error) console.error("Fetch error:", error);
+    else setComments(data || []);
     setLoading(false);
   };
 
@@ -89,20 +89,12 @@ function CommunityFeed({ user }: { user: any }) {
       .select("username, display_name, profile_pic")
       .not("username", "is", null)
       .order("created_at", { ascending: false });
-
     if (data) setProfiles(data);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Optional: basic validation
-    if (!file.type.startsWith("image/")) {
-      alert("Please select an image file");
-      return;
-    }
-
+    if (!file || !file.type.startsWith("image/")) return;
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
@@ -110,28 +102,11 @@ function CommunityFeed({ user }: { user: any }) {
   const uploadImage = async (file: File): Promise<string | null> => {
     const fileExt = file.name.split(".").pop();
     const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`; // can add folders → `comments/${fileName}`
-
     setUploading(true);
-
-    const { error: uploadError } = await supabase.storage
-      .from("images")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-
+    const { error: uploadError } = await supabase.storage.from("images").upload(fileName, file);
     setUploading(false);
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      alert("Failed to upload image: " + uploadError.message);
-      return null;
-    }
-
-    // For **public** bucket you can build URL manually (most reliable & fast)
-    const { data: urlData } = supabase.storage.from("images").getPublicUrl(filePath);
-
+    if (uploadError) return null;
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(fileName);
     return urlData.publicUrl;
   };
 
@@ -140,14 +115,7 @@ function CommunityFeed({ user }: { user: any }) {
     if (!user || (!commentText.trim() && !selectedFile)) return;
 
     let imageUrl: string | null = null;
-
-    if (selectedFile) {
-      imageUrl = await uploadImage(selectedFile);
-      if (!imageUrl && selectedFile) {
-        // upload failed but user still wants to post text?
-        // you can decide: return or continue
-      }
-    }
+    if (selectedFile) imageUrl = await uploadImage(selectedFile);
 
     const contentToSend = replyingTo
       ? `Replying to @${replyingTo.username}: ${commentText.trim()}`
@@ -156,8 +124,7 @@ function CommunityFeed({ user }: { user: any }) {
     const { error } = await supabase.from("comments").insert({
       user_id: user.id,
       content: contentToSend,
-      images: imageUrl, // ← single url
-      // if later you want array → images: imageUrl ? [imageUrl] : null
+      images: imageUrl,
     });
 
     if (!error) {
@@ -166,15 +133,9 @@ function CommunityFeed({ user }: { user: any }) {
       setPreviewUrl(null);
       setReplyingTo(null);
       fetchComments();
-    } else {
-      console.error("Post error:", error);
-      alert("Failed to post comment");
     }
   };
 
-  // ──────────────────────────────────────────────
-  //  Drag-to-reply logic (unchanged)
-  // ──────────────────────────────────────────────
   const handleStart = (e: any, id: string) => {
     startX.current = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
     setActiveId(id);
@@ -195,185 +156,242 @@ function CommunityFeed({ user }: { user: any }) {
     setActiveId(null);
   };
 
-  const [loading, setLoading] = useState(true);
-  if (loading) return <div className="p-4 text-center">Loading...</div>;
+  if (loading) return <div className="p-5 text-center fw-light text-muted">Updating feed...</div>;
 
   return (
-    <div className="d-flex flex-column vh-100 overflow-hidden bg-light">
-
-      {/* TOP SCROLLABLE PROFILES – unchanged */}
+    <div className="d-flex flex-column vh-100 bg-white position-relative overflow-hidden">
+      
+      {/* TOP USERS BAR */}
       <div
-        className="bg-white border-bottom py-2 px-2 overflow-auto d-flex gap-3 shadow-sm"
-        style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+        className="bg-white border-bottom py-3 px-3 overflow-auto d-flex gap-4"
+        style={{ whiteSpace: "nowrap", flexShrink: 0, zIndex: 10 }}
       >
         {profiles.map((p, index) => (
-          <Link
-            key={index}
-            to={`/profile/${p.username}`}
-            className="text-center text-decoration-none text-dark"
-            style={{ minWidth: "70px" }}
-          >
-            <div className="mx-auto mb-1 d-flex justify-content-center">
-              {renderAvatar(p, 55)}
-            </div>
-            <small className="d-block text-truncate" style={{ fontSize: "0.7rem" }}>
+          <Link key={index} to={`/profile/${p.username}`} className="text-center text-decoration-none" style={{ minWidth: "65px" }}>
+            <div className="mx-auto mb-2 d-flex justify-content-center">{renderAvatar(p, 58)}</div>
+            <small className="d-block text-dark fw-medium text-truncate" style={{ fontSize: "0.72rem" }}>
               {p.display_name || p.username}
             </small>
           </Link>
         ))}
       </div>
 
-      {/* MESSAGE LIST */}
+      {/* CHAT AREA */}
       <div
-        className="flex-grow-1 p-3 overflow-auto d-flex flex-column-reverse"
+        className="flex-grow-1 p-4 overflow-auto d-flex flex-column-reverse feed-container"
         onMouseMove={handleMove}
         onMouseUp={() => handleEnd()}
         onTouchMove={handleMove}
         onTouchEnd={() => handleEnd()}
-        style={{ WebkitOverflowScrolling: "touch" }}
       >
         {comments.map((c) => {
           const isMe = user?.id === c.user_id;
           const isDragging = activeId === c.id;
 
           return (
-            <div key={c.id} className={`d-flex mb-3 ${isMe ? "justify-content-end" : "justify-content-start"}`}>
+            <div key={c.id} className={`d-flex mb-4 ${isMe ? "justify-content-end" : "justify-content-start"}`}>
               <div
                 onMouseDown={(e) => handleStart(e, c.id)}
                 onTouchStart={(e) => handleStart(e, c.id)}
                 onMouseUp={() => handleEnd(c.id, c.profiles)}
                 onTouchEnd={() => handleEnd(c.id, c.profiles)}
-                className="border p-2 rounded shadow-sm"
+                className={`msg-bubble ${isMe ? "msg-me" : "msg-them"}`}
                 style={{
-                  maxWidth: "85%",
                   transform: `translateX(${isDragging ? dragX : 0}px)`,
-                  transition: isDragging ? "none" : "transform 0.2s",
-                  backgroundColor: isMe ? "#DCF8C6" : "#ffffff",
-                  cursor: "grab",
                 }}
               >
                 {!isMe && (
-                  <div className="d-flex align-items-center gap-2 mb-1">
-                    <Link to={`/profile/${c.profiles?.username}`}>
-                      {renderAvatar(c.profiles, 28)}
-                    </Link>
-                    <Link
-                      to={`/profile/${c.profiles?.username}`}
-                      className="fw-bold small text-decoration-none text-primary"
-                    >
-                      {c.profiles?.display_name || c.profiles?.username}
-                    </Link>
+                  <div className="fw-bold small text-uppercase mb-1" style={{ fontSize: '0.65rem', letterSpacing: '0.05em', color: getAvatarColor(c.profiles?.username || "") }}>
+                    {c.profiles?.display_name || c.profiles?.username}
                   </div>
                 )}
-
-                <p className="m-0 px-1" style={{ fontSize: "0.95rem", wordBreak: "break-word" }}>
-                  {c.content}
-                </p>
-
-                {/* ─── IMAGE DISPLAY ─── */}
-                {c.images && (
-                  <div className="mt-2">
-                    <img
-                      src={c.images}
-                      alt="Comment attachment"
-                      style={{
-                        maxWidth: "100%",
-                        borderRadius: "8px",
-                        display: "block",
-                      }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none"; // hide broken images
-                      }}
-                    />
-                  </div>
-                )}
-
-                <small className="text-muted d-block text-end mt-1" style={{ fontSize: "0.65rem" }}>
+                <p className="m-0 lh-sm" style={{ fontSize: "0.92rem", fontWeight: 400 }}>{c.content}</p>
+                {c.images && <img src={c.images} alt="attachment" className="mt-3 img-fluid rounded-4 shadow-sm" />}
+                <div className={`mt-2 opacity-50 fw-light`} style={{ fontSize: "0.6rem", textAlign: isMe ? "right" : "left" }}>
                   {new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </small>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* INPUT AREA – enhanced with image picker */}
-      <div className="p-3 bg-white border-top pb-safe">
-        {replyingTo && (
-          <div className="alert alert-secondary py-1 px-2 d-flex justify-content-between align-items-center mb-2">
-            <small className="text-truncate">
-              Replying to <strong>@{replyingTo.username}</strong>
-            </small>
-            <button
-              className="btn-close"
-              style={{ width: "0.5em", height: "0.5em" }}
-              onClick={() => setReplyingTo(null)}
-            />
-          </div>
-        )}
-
-        {user ? (
-          <form onSubmit={postComment} className="d-flex flex-column gap-2">
-            {/* Preview (nice to have) */}
-            {previewUrl && (
-              <div className="position-relative" style={{ maxWidth: "180px" }}>
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  style={{ maxHeight: "120px", borderRadius: "8px", objectFit: "cover" }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger position-absolute top-0 end-0"
-                  onClick={() => {
-                    setSelectedFile(null);
-                    setPreviewUrl(null);
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            <div className="input-group">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Type a message..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                style={{ borderRadius: "20px 0 0 20px" }}
-                disabled={uploading}
-              />
-
-              {/* Image picker button */}
-              <label className="btn btn-outline-secondary px-3 d-flex align-items-center mb-0">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  style={{ display: "none" }}
-                  disabled={uploading}
-                />
-                📷
-              </label>
-
-              <button
-                className="btn btn-primary px-4"
-                type="submit"
-                disabled={uploading || (!commentText.trim() && !selectedFile)}
-                style={{ borderRadius: "0 20px 20px 0" }}
-              >
-                {uploading ? "Uploading..." : "Send"}
-              </button>
+      {/* FLOATING ACTION BAR */}
+      <div className="action-bar-container">
+        <div className="container" style={{ maxWidth: "680px" }}>
+          
+          {replyingTo && (
+            <div className="reply-tab animate-slide-up">
+              <span className="small text-muted">Replying to <strong>{replyingTo.username}</strong></span>
+              <button className="btn-close-custom" onClick={() => setReplyingTo(null)}>CANCEL</button>
             </div>
-          </form>
-        ) : (
-          <div className="text-center py-2">
-            <p className="text-muted small m-0">Please log in to participate.</p>
+          )}
+
+          <div className="pill-container shadow-lg">
+            {user ? (
+              <form onSubmit={postComment} className="w-100">
+                {previewUrl && (
+                  <div className="preview-strip">
+                    <img src={previewUrl} alt="preview" />
+                    <button type="button" onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}>REMOVE</button>
+                  </div>
+                )}
+
+                <div className="d-flex align-items-center p-2">
+                  <label className="attach-label">
+                    <input type="file" accept="image/*" onChange={handleFileChange} className="d-none" disabled={uploading} />
+                    ATTACH 📷
+                  </label>
+                  
+                  <input
+                    type="text"
+                    className="main-input"
+                    placeholder="Message"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    disabled={uploading}
+                  />
+
+                  <button
+                    className="action-btn"
+                    type="submit"
+                    disabled={uploading || (!commentText.trim() && !selectedFile)}
+                  >
+                    {uploading ? "..." : "SEND"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-3 text-center w-100 text-muted small fw-bold">SIGN IN TO JOIN THE CONVERSATION</div>
+            )}
           </div>
-        )}
+        </div>
       </div>
+
+      <style>{`
+        .feed-container {
+          padding-bottom: 120px !important;
+          background: #fcfcfc;
+        }
+
+        .msg-bubble {
+          max-width: 75%;
+          padding: 12px 18px;
+          border-radius: 24px;
+          transition: transform 0.2s ease-out;
+          cursor: grab;
+          position: relative;
+        }
+
+        .msg-me {
+          background: #111;
+          color: #fff;
+          border-bottom-right-radius: 4px;
+        }
+
+        .msg-them {
+          background: #fff;
+          color: #111;
+          border: 1px solid #eee;
+          border-bottom-left-radius: 4px;
+        }
+
+        .action-bar-container {
+          position: fixed;
+          bottom: 30px;
+          left: 0;
+          right: 0;
+          z-index: 1000;
+          padding: 0 20px;
+        }
+
+        .pill-container {
+          background: #fff;
+          border-radius: 100px;
+          border: 1px solid #111;
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+        }
+
+        .main-input {
+          flex: 1;
+          border: none;
+          outline: none;
+          background: transparent;
+          padding: 10px 15px;
+          font-size: 0.9rem;
+          color: #111;
+        }
+
+        .attach-label {
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          color: #777;
+          cursor: pointer;
+          padding: 0 15px;
+          border-right: 1px solid #eee;
+        }
+
+        .action-btn {
+          background: #111;
+          color: #fff;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 100px;
+          font-size: 0.7rem;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          transition: 0.2s;
+        }
+
+        .action-btn:disabled { background: #eee; color: #aaa; }
+
+        .reply-tab {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          width: fit-content;
+          margin-bottom: 10px;
+          padding: 6px 18px;
+          border-radius: 15px;
+          border: 1px solid #111;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        }
+
+        .btn-close-custom {
+          background: transparent;
+          border: none;
+          color: #ff0000;
+          font-size: 0.6rem;
+          font-weight: 900;
+          padding: 0;
+        }
+
+        .preview-strip {
+          padding: 10px 20px;
+          background: #f8f8f8;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          border-bottom: 1px solid #eee;
+        }
+        .preview-strip img { height: 50px; border-radius: 8px; border: 1px solid #ddd; }
+        .preview-strip button { 
+          background: none; border: none; font-size: 0.6rem; font-weight: 900; color: #ff0000; 
+        }
+
+        .animate-slide-up {
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
