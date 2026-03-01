@@ -5,57 +5,51 @@ const LandingPage = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalling, setIsInstalling] = useState(false);
   const [showManualInstall, setShowManualInstall] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
 
   useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+      setIsPWA(true);
+    }
+
     const handler = (e) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
+      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
 
-    const handleAppInstalled = () => {
+    window.addEventListener("appinstalled", () => {
       setDeferredPrompt(null);
       setIsInstalling(false);
       setShowManualInstall(false);
-      console.log("PWA was successfully installed");
-      // You could add a success toast/notification here later
-    };
-
-    window.addEventListener("appinstalled", handleAppInstalled);
+      setIsPWA(true);
+      console.log("PWA installed successfully");
+    });
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      // Browser supports native install prompt
-      setIsInstalling(true);
-      deferredPrompt.prompt();
-
-      try {
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
-        if (outcome === "accepted") {
-          setDeferredPrompt(null);
-        }
-      } catch (err) {
-        console.error("Install prompt failed:", err);
-      } finally {
-        setIsInstalling(false);
-      }
-    } else {
-      // No native prompt available → show friendly instructions
+    if (!deferredPrompt) {
+      // If no native prompt, show the beautiful manual guide
       setShowManualInstall(true);
+      return;
     }
-  };
 
-  const closeManualInstall = () => {
-    setShowManualInstall(false);
+    setIsInstalling(true);
+    deferredPrompt.prompt();
+
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setDeferredPrompt(null);
+    }
+    setIsInstalling(false);
   };
 
   return (
@@ -79,23 +73,30 @@ const LandingPage = () => {
 
         <div style={styles.buttonStack}>
           {/* Primary Action - Install */}
-          <button 
-            onClick={handleInstallClick}
-            className="pes-button-primary"
-            style={styles.pesButtonPrimary}
-            disabled={isInstalling}
-          >
-            <span style={styles.btnContent}>
-              {isInstalling ? (
-                <span className="loader-text">INITIALIZING...</span>
-              ) : (
-                <>
-                  <i className="bi bi-cloud-arrow-down-fill" style={styles.icon}></i>
-                  GET APP NOW
-                </>
-              )}
-            </span>
-          </button>
+          {!isPWA ? (
+            <button 
+              onClick={handleInstallClick}
+              className="pes-button-primary"
+              style={styles.pesButtonPrimary}
+              disabled={isInstalling}
+            >
+              <span style={styles.btnContent}>
+                {isInstalling ? (
+                  <span className="loader-text">INITIALIZING...</span>
+                ) : (
+                  <>
+                    <i className="bi bi-download" style={styles.icon}></i>
+                    GET APP NOW
+                  </>
+                )}
+              </span>
+            </button>
+          ) : (
+            <div style={styles.installedBadge}>
+              <i className="bi bi-check-circle-fill" style={{marginRight: '10px'}}></i>
+              APP INSTALLED
+            </div>
+          )}
 
           {/* Secondary Action - Play in Browser */}
           <Link 
@@ -104,180 +105,88 @@ const LandingPage = () => {
             style={styles.pesButtonSecondary}
           >
             <span style={styles.btnContent}>
-              <i className="bi bi-play-fill" style={styles.icon}></i>
+              <i className="bi bi-globe" style={styles.icon}></i>
               BROWSER MODE
             </span>
           </Link>
         </div>
-
+        
 
       </div>
 
-      {/* Nice game-style manual install guide (shows when native prompt unavailable) */}
+      {/* Manual Install Guide */}
       {showManualInstall && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <h3 style={styles.modalTitle}>INSTALL LIVE CONNECT</h3>
+        <div className="modalOverlay" onClick={() => setShowManualInstall(false)}>
+          <div className="modalContent" onClick={e => e.stopPropagation()}>
+            <h3 className="modalTitle">INSTALLING APP</h3>
             
-            <p style={styles.modalText}>
-              Tap the menu in your browser and look for:
+            <p className="modalText">
+              Follow these steps to add <strong>LIVE CONNECT</strong> to your home screen:
             </p>
 
-            <div style={styles.platformHints}>
-              <div style={styles.hint}>
-                <strong>Chrome / Edge (Android):</strong><br />
-                Menu (⁝) → Add to home screen / Install app
+            <div className="platformHints">
+              <div className="hint">
+                <i className="bi bi-android2" style={{color: '#3DDC84', marginRight: '10px'}}></i>
+                <strong>ANDROID (Chrome)</strong><br />
+                Tap Menu (⁝) → <span style={{color: '#e3ff00'}}>Install App</span>
               </div>
-              <div style={styles.hint}>
-                <strong>Safari (iPhone / iPad):</strong><br />
-                Share (□ with ↑) → Add to Home Screen
-              </div>
-              <div style={styles.hint}>
-                <strong>Other browsers:</strong><br />
-                Look for "Install" or "Add to Home Screen" in the browser menu
+              <div className="hint">
+                <i className="bi bi-apple" style={{color: '#FFF', marginRight: '10px'}}></i>
+                <strong>IPHONE (Safari)</strong><br />
+                Tap Share ( <i className="bi bi-box-arrow-up"></i> ) → <span style={{color: '#e3ff00'}}>Add to Home Screen</span>
               </div>
             </div>
 
             <button 
-              onClick={closeManualInstall} 
-              style={styles.modalClose}
+              onClick={() => setShowManualInstall(false)} 
+              className="modalClose"
             >
-              GOT IT
+              RETURN TO MENU
             </button>
           </div>
         </div>
       )}
 
-      {/* Global Styles */}
       <style>{`
         @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css');
 
-        :root {
-          touch-action: pan-x pan-y;
-        }
+        :root { touch-action: pan-x pan-y; }
 
         @keyframes bgMove {
-          0% { transform: scale(1.15) translate(0, 0); }
-          50% { transform: scale(1.25) translate(-2%, -1%); }
-          100% { transform: scale(1.15) translate(0, 0); }
+          0% { transform: scale(1.1); translate: 0 0; }
+          50% { transform: scale(1.2); translate: -1% -1%; }
+          100% { transform: scale(1.1); translate: 0 0; }
         }
 
-        .loader-text {
-          animation: blink 1s infinite;
-        }
-
+        .loader-text { animation: blink 1s infinite; }
         @keyframes blink {
-          0% { opacity: 1; }
+          0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
-          100% { opacity: 1; }
         }
 
-        @media (max-width: 768px) {
-          .menu-wrapper {
-            padding-left: 0 !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 90% !important;
-            margin: 0 auto;
-          }
-          
-          .pes-button-primary,
-          .pes-button-secondary {
-            width: 100% !important;
-            min-width: unset !important;
-            padding: 22px 20px !important;
-            font-size: 1.3rem !important;
-          }
-
-          .pes-button-primary {
-            box-shadow: -8px 8px 0px rgba(0,0,0,0.9) !important;
-          }
-        }
-
-        .pes-button-primary:active,
-        .pes-button-secondary:active {
-          transform: skew(-10deg) scale(0.96) !important;
-          filter: brightness(0.8);
-        }
-
-        /* Modal - PES / cyber aesthetic */
         .modalOverlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.88);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          backdrop-filter: blur(6px);
+          position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 1000; backdrop-filter: blur(8px);
         }
 
         .modalContent {
-          background: rgba(8, 8, 18, 0.94);
-          border: 2px solid #e3ff00;
-          border-radius: 12px;
-          max-width: 400px;
-          width: 92%;
-          padding: 28px 24px;
-          color: white;
-          text-align: center;
-          box-shadow: 0 0 50px rgba(227, 255, 0, 0.2);
-          transform: skew(-6deg);
+          background: #0a0a0f; border: 2px solid #e3ff00;
+          border-radius: 0; max-width: 420px; width: 90%;
+          padding: 30px; color: white; transform: skew(-3deg);
+          box-shadow: 0 0 40px rgba(227, 255, 0, 0.15);
         }
 
-        .modalContent > * {
-          transform: skew(6deg);
+        .modalTitle { color: #e3ff00; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; }
+        .hint { 
+            background: rgba(255,255,255,0.05); padding: 15px; 
+            margin-bottom: 10px; border-left: 4px solid #e3ff00; 
+            font-size: 0.9rem; line-height: 1.4;
         }
 
-        .modalTitle {
-          color: #e3ff00;
-          font-size: 1.7rem;
-          font-weight: 900;
-          margin: 0 0 20px;
-          letter-spacing: 2px;
-          text-transform: uppercase;
-        }
-
-        .modalText {
-          font-size: 1.05rem;
-          line-height: 1.5;
-          margin: 0 0 24px;
-        }
-
-        .platformHints {
-          text-align: left;
-          margin-bottom: 28px;
-        }
-
-        .hint {
-          margin: 12px 0;
-          padding: 12px 14px;
-          background: rgba(227,255,0,0.07);
-          border-left: 5px solid #e3ff00;
-          border-radius: 4px;
-          font-size: 0.98rem;
-        }
-
-        .modalClose {
-          background: #e3ff00;
-          color: #000;
-          border: none;
-          padding: 16px 48px;
-          font-size: 1.15rem;
-          font-weight: 900;
-          border-radius: 8px;
-          cursor: pointer;
-          box-shadow: -8px 8px 0px rgba(0,0,0,0.8);
-          transition: all 0.15s ease;
-        }
-
-        .modalClose:hover {
-          filter: brightness(1.1);
-        }
-
-        .modalClose:active {
-          transform: scale(0.97);
-          box-shadow: -4px 4px 0px rgba(0,0,0,0.8);
+        @media (max-width: 768px) {
+          .menu-wrapper { padding-left: 0 !important; align-items: center !important; }
+          .pes-button-primary, .pes-button-secondary { width: 90% !important; min-width: unset !important; }
         }
       `}</style>
     </div>
@@ -294,128 +203,51 @@ const styles = {
     justifyContent: "flex-start",
     overflow: "hidden",
     position: "relative",
-    fontFamily: "'Segoe UI', Roboto, Helvetica, sans-serif",
+    fontFamily: "'Inter', sans-serif",
   },
-  imageWrapper: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 1,
-  },
+  imageWrapper: { position: "absolute", inset: 0, zIndex: 1 },
   pesImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    opacity: "0.55",
-    animation: "bgMove 25s ease-in-out infinite",
+    width: "100%", height: "100%", objectFit: "cover",
+    opacity: "0.4", animation: "bgMove 30s infinite",
   },
   overlayGradient: {
-    position: "absolute",
-    inset: 0,
-    background: "linear-gradient(90deg, #020617 5%, transparent 60%, #020617 100%)",
+    position: "absolute", inset: 0,
+    background: "linear-gradient(90deg, #020617 10%, transparent 70%, #020617 100%)",
   },
   menuWrapper: {
-    position: "relative",
-    zIndex: 10,
-    paddingLeft: "7%",
-    display: "flex",
-    flexDirection: "column",
-    width: "100%",
-    maxWidth: "600px",
+    position: "relative", zIndex: 10, paddingLeft: "8%",
+    display: "flex", flexDirection: "column", width: "100%",
   },
-  pesHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-    marginBottom: "35px",
-  },
-  line: {
-    width: "8px",
-    height: "40px",
-    backgroundColor: "#e3ff00",
-  },
-  titleText: {
-    color: "#fff",
-    fontSize: "2rem",
-    fontWeight: "900",
-    letterSpacing: "4px",
-    margin: 0,
-    textTransform: "uppercase",
-    fontStyle: "italic",
-  },
-  buttonStack: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-    width: "100%",
-  },
+  pesHeader: { display: "flex", alignItems: "center", gap: "15px", marginBottom: "40px" },
+  line: { width: "10px", height: "45px", backgroundColor: "#e3ff00" },
+  titleText: { color: "#fff", fontSize: "2.2rem", fontWeight: "900", letterSpacing: "5px", fontStyle: "italic" },
+  buttonStack: { display: "flex", flexDirection: "column", gap: "20px" },
   pesButtonPrimary: {
-    background: "#e3ff00",
-    color: "#000",
-    border: "none",
-    padding: "20px 50px",
-    fontSize: "1.2rem",
-    fontWeight: "900",
-    cursor: "pointer",
-    textAlign: "left",
-    transform: "skew(-10deg)",
-    transition: "all 0.15s ease",
-    width: "fit-content",
-    minWidth: "350px",
-    boxShadow: "-10px 10px 0px rgba(0,0,0,1)",
+    background: "#e3ff00", color: "#000", border: "none", padding: "20px 45px",
+    fontSize: "1.2rem", fontWeight: "900", cursor: "pointer",
+    transform: "skew(-12deg)", transition: "0.2s", minWidth: "340px",
+    boxShadow: "-8px 8px 0px #000",
   },
   pesButtonSecondary: {
-    background: "rgba(255,255,255,0.05)",
-    backdropFilter: "blur(10px)",
-    color: "#fff",
-    border: "2px solid rgba(255,255,255,0.2)",
-    padding: "18px 50px",
-    fontSize: "1.1rem",
-    fontWeight: "700",
-    textDecoration: "none",
-    textAlign: "left",
-    transform: "skew(-10deg)",
-    transition: "all 0.15s ease",
-    width: "fit-content",
-    minWidth: "350px",
-    display: "inline-block",
+    background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)",
+    padding: "18px 45px", fontSize: "1.1rem", fontWeight: "700",
+    textDecoration: "none", transform: "skew(-12deg)", transition: "0.2s", minWidth: "340px",
   },
-  btnContent: {
-    transform: "skew(10deg)",
-    display: "flex",
-    alignItems: "center",
+  installedBadge: {
+    background: "transparent", color: "#00ff88", border: "1px solid #00ff88",
+    padding: "15px 45px", fontSize: "1rem", fontWeight: "900",
+    transform: "skew(-12deg)", width: "fit-content", minWidth: "340px",
   },
-  icon: {
-    marginRight: "15px",
-    fontSize: "1.4rem",
-  },
-  pesFooter: {
-    marginTop: "50px",
-    paddingTop: "20px",
-    borderTop: "1px solid rgba(255,255,255,0.1)",
-    maxWidth: "350px",
-  },
-  footerText: {
-    color: "#fff",
-    fontSize: "0.85rem",
-    fontWeight: "bold",
-    margin: "0 0 5px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  statusDot: {
-    width: "8px",
-    height: "8px",
-    backgroundColor: "#00ff88",
-    borderRadius: "50%",
-    boxShadow: "0 0 10px #00ff88",
-  },
-  versionText: {
-    color: "rgba(255,255,255,0.3)",
-    fontSize: "0.7rem",
-    margin: 0,
-    letterSpacing: "1px",
-  },
+  btnContent: { display: "flex", alignItems: "center", transform: "skew(12deg)" },
+  icon: { marginRight: "15px", fontSize: "1.3rem" },
+  pesFooter: { marginTop: "40px" },
+  footerText: { color: "#fff", fontSize: "0.8rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "10px" },
+  statusDot: { width: "8px", height: "8px", backgroundColor: "#00ff88", borderRadius: "50%", boxShadow: "0 0 10px #00ff88" },
+  versionText: { color: "rgba(255,255,255,0.4)", fontSize: "0.7rem", marginTop: "5px" },
+  modalClose: {
+    marginTop: "20px", background: "#e3ff00", border: "none", padding: "12px 25px",
+    fontWeight: "900", cursor: "pointer", width: "100%", letterSpacing: "1px"
+  }
 };
 
 export default LandingPage;
