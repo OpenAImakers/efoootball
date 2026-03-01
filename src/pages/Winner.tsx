@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { fetchGlobalMatches, Match } from "../MatchesApi";
+import Navbar from "../components/Navbar";
 
 interface League {
   id: number | string;
@@ -54,7 +55,8 @@ export default function MatchesList() {
 
   return (
     <div className="min-vh-100 bg-light d-flex flex-column" style={{ overflow: "hidden" }}>
-      <div className="container-fluid py-4 flex-grow-1" style={{ height: "100vh" }}>
+      <Navbar />
+      <div className="container-fluid py-4 mt-5 flex-grow-1" style={{ height: "100vh" }}>
         <div className="row g-3 h-100">
           
           {/* LEFT: Leagues Sidebar */}

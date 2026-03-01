@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
-import Winner from "./Winner";
 import MatchPredictions from "./MatchPredictonsTable";
 
 const STAGES = ["GROUP", "QUARTER", "SEMI", "FINAL", "THIRD_PLACE"];
@@ -243,11 +242,6 @@ export default function MatchesList() {
               Please select a tournament to view matches.
             </div>
           )}
-
-          {/* Winner component – placed at bottom */}
-          <div className="mt-5 w-100">
-            <Winner />
-          </div>
         </div>
       </div>
     </div>

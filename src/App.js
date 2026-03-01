@@ -13,6 +13,7 @@ import Leaderboard from "./pages/Leaderboard.tsx";
 import LeaderboardForm from "./pages/Leaderboardadmin.tsx";
 import Navbar from "./components/Navbar.jsx";
 import Advert from "./components/Advert.jsx";
+import Winner from "./pages/Winner.tsx";  
 import UpgradeToAdmin from "./pages/UpgradeToAdmin.tsx";
 import TournamentCreation from "./pages/TournamentCreation.tsx";
 import TournamentList from "./pages/TournamentList.tsx";
@@ -72,6 +73,14 @@ useEffect(() => {
         element={
           <ProtectedRoute>
             <Teams />
+          </ProtectedRoute>
+        }
+      />
+            <Route
+        path="/sports"
+        element={
+          <ProtectedRoute>
+            <Winner />
           </ProtectedRoute>
         }
       />

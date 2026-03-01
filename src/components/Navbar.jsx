@@ -6,107 +6,103 @@ export default function Navbar() {
   const location = useLocation();
 
   return (
-    <nav className="navbar fixed-top bg-black border-bottom border-primary shadow-lg" style={{ borderBottomWidth: '4px' }}>
+    <nav className="navbar fixed-top bg-black border-bottom border-primary shadow-lg" style={{ borderBottomWidth: '2px' }}>
       <div className="container-fluid px-3 px-md-4 px-lg-5">
         <div className="d-flex align-items-center w-100">
 
-          {/* Brand */}
+          {/* Brand - Slightly tighter for a "pro" look */}
           <Link
-            className="navbar-brand fw-bold text-decoration-none me-4 me-lg-5 flex-shrink-0"
+            className="navbar-brand fw-black text-decoration-none me-4 me-lg-5 flex-shrink-0"
             to="/dashboard"
             style={{
-              fontSize: '2.1rem',
+              fontSize: '1.9rem',
+              letterSpacing: '-1px',
               background: 'linear-gradient(90deg, #0d6efd, #20c997, #fd7e14)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-              color: 'transparent',
+              textTransform: 'lowercase'
             }}
           >
             efootball
           </Link>
 
-          {/* Scrollable area: links + logout */}
+          {/* Scrollable area */}
           <div
-            className="d-flex align-items-center flex-nowrap overflow-auto flex-grow-1 ps-2"
+            className="d-flex align-items-center flex-nowrap overflow-auto flex-grow-1"
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            {/* Hide scrollbar visually */}
             <style>{`
-              .overflow-auto::-webkit-scrollbar {
-                display: none;
-              }
-              .overflow-auto {
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-              }
-
+              .overflow-auto::-webkit-scrollbar { display: none; }
+              
               .nav-link {
-                font-size: 1.35rem;
-                padding: 0.75rem 1.5rem;
-                transition: all 0.25s ease;
-                border-radius: 9999px;
-                white-space: nowrap;
+                font-size: 0.95rem; /* Smaller font = more sophisticated */
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                padding: 0.5rem 1.2rem;
+                margin: 0 0.25rem;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                border-radius: 8px;
+                border: 1px solid transparent;
               }
 
               .nav-link:hover:not(.active) {
-                background: rgba(13, 110, 253, 0.18);
                 color: #fff !important;
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(13, 110, 253, 0.3);
               }
 
               .active {
-                background: linear-gradient(135deg, rgba(13,110,253,0.4), rgba(32,201,151,0.3), rgba(253,126,20,0.3)) !important;
-                color: white !important;
-                box-shadow: 0 0 14px rgba(13,110,253,0.5);
+                background: rgba(13, 110, 253, 0.1) !important;
+                color: #0d6efd !important;
+                border: 1px solid #0d6efd !important;
                 font-weight: 700;
+                box-shadow: inset 0 0 10px rgba(13, 110, 253, 0.2);
+              }
+
+              .logout-btn {
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                font-size: 0.85rem !important;
+                transition: all 0.3s ease;
               }
 
               @media (max-width: 576px) {
-                .navbar-brand { font-size: 1.8rem !important; }
-                .nav-link { font-size: 1.15rem; padding: 0.6rem 1.1rem; }
-                .logout-btn { font-size: 1.05rem !important; padding: 0.5rem 1.2rem !important; }
-              }
-
-              @media (max-width: 400px) {
-                .nav-link { padding: 0.5rem 0.9rem; font-size: 1.05rem; }
+                .navbar-brand { font-size: 1.6rem !important; }
+                .nav-link { font-size: 0.85rem; padding: 0.4rem 0.9rem; }
               }
             `}</style>
 
-            <NavLink to="/dashboard" icon="bi-house-door-fill" label="Home"   currentPath={location.pathname} />
-            <NavLink to="/teams"     icon="bi-people-fill"      label="Teams"  currentPath={location.pathname} />
-            <NavLink to="/admin"     icon="bi-shield-lock-fill"  label="Admin"  currentPath={location.pathname} />
-            <NavLink to="/leaderboard"   icon="bi-trophy-fill"      label="Leaderboard" currentPath={location.pathname} />
-             <NavLink to="/account"   icon="bi-person-fill"      label="Account" currentPath={location.pathname} />
-            
+            <NavLink to="/dashboard" label="Home" currentPath={location.pathname} />
+            <NavLink to="/teams" label="Teams" currentPath={location.pathname} />
+            <NavLink to="/admin" label="Admin" currentPath={location.pathname} />
+            <NavLink to="/leaderboard" label="Leaderboard" currentPath={location.pathname} />
+            <NavLink to="/account" label="Account" currentPath={location.pathname} />
+            <NavLink to="/sports" label="Sports" currentPath={location.pathname} />
 
-            {/* Logout inside the scrollable area */}
             <button
-              className="btn btn-outline-primary rounded-pill fw-bold d-flex align-items-center px-4 py-2 ms-3 logout-btn flex-shrink-0"
+              className="btn btn-outline-danger rounded-2 fw-bold px-3 py-1 ms-auto logout-btn flex-shrink-0"
               onClick={() => supabase.auth.signOut().then(() => navigate("/"))}
               style={{
-                borderColor: '#fd7e14',
-                color: '#fd7e14',
-                fontSize: '1.25rem',
-                whiteSpace: 'nowrap',
-                minWidth: 'fit-content',
+                marginLeft: '20px',
+                borderWidth: '1px',
+                background: 'transparent'
               }}
             >
-              <i className="bi bi-box-arrow-right me-2 fs-4"></i>
-              Logout
+              Sign Out
             </button>
           </div>
-
         </div>
       </div>
     </nav>
   );
 }
 
-function NavLink({ to, icon, label, currentPath }) {
+function NavLink({ to, label, currentPath }) {
   const isActive =
     currentPath === to ||
     (to !== "/dashboard" && currentPath.startsWith(to + "/"));
@@ -114,16 +110,11 @@ function NavLink({ to, icon, label, currentPath }) {
   return (
     <Link
       to={to}
-      className={`nav-link d-flex align-items-center text-nowrap me-2 ${isActive ? 'active' : 'text-white-50'}`}
+      className={`nav-link text-nowrap ${isActive ? 'active' : 'text-white-50'}`}
       style={{
-        fontWeight: isActive ? '700' : '600',
         minWidth: 'fit-content',
       }}
     >
-      <i
-        className={`bi ${icon} me-2 fs-4 ${isActive ? 'text-warning' : 'text-primary'}`}
-        style={{ color: isActive ? '#fd7e14' : '#0d6efd' }}
-      />
       {label}
     </Link>
   );
