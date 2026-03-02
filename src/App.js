@@ -20,6 +20,7 @@ import TournamentList from "./pages/TournamentList.tsx";
 import NoLeaderboardState from "./pages/NoLeaderboardState.tsx";
 import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
+import Register from "./pages/Register.tsx";
 
 
 
@@ -65,6 +66,14 @@ useEffect(() => {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+            <Route
+        path="/register"
+        element={
+          <ProtectedRoute>
+            <Register/>
           </ProtectedRoute>
         }
       />

@@ -109,59 +109,71 @@ export default function ProfilePage() {
         ) : (
           <div className="row g-4">
             
-            {/* LEFT COLUMN: IDENTITY & TABS */}
-            <div className="col-md-4">
-              <div className="card border-0 shadow-sm p-4 text-center mb-4" style={{ borderRadius: "15px" }}>
-                <div className="mb-3">
-                  {profilePic ? (
-                    <img src={profilePic} alt="Profile" className="rounded-circle border" style={{ width: "100px", height: "100px", objectFit: "cover" }} />
-                  ) : (
-                    <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto"
-                         style={{ width: "100px", height: "100px", fontSize: "2.5rem" }}>
-                      {(displayName || username || "?").charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                
-                <h5 className="fw-bold mb-1">{profile?.display_name || "New Player"}</h5>
-                <p className="text-muted small mb-3">@{profile?.username || "username"}</p>
-                
-                <button 
-                  className={`btn btn-sm ${isEditing ? 'btn-secondary' : 'btn-primary'} w-100 fw-bold`}
-                  onClick={() => {
-                    setIsEditing(!isEditing);
-                    setActiveTab("welcome");
-                  }}
-                >
-                  {isEditing ? "Exit Editor" : "Edit Profile"}
-                </button>
-              </div>
+{/* LEFT COLUMN: IDENTITY & TABS */}
+<div className="col-md-4">
+  <div className="card border-0 shadow-sm p-4 text-center mb-4" style={{ borderRadius: "15px" }}>
+    <div className="mb-3">
+      {profilePic ? (
+        <img src={profilePic} alt="Profile" className="rounded-circle border" style={{ width: "100px", height: "100px", objectFit: "cover" }} />
+      ) : (
+        <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto"
+             style={{ width: "100px", height: "100px", fontSize: "2.5rem" }}>
+          {(displayName || username || "?").charAt(0).toUpperCase()}
+        </div>
+      )}
+    </div>
+    
+    <h5 className="fw-bold mb-1">{profile?.display_name || "New Player"}</h5>
+    <p className="text-muted small mb-3">@{profile?.username || "username"}</p>
+    
+    <button 
+      className={`btn btn-sm ${isEditing ? 'btn-secondary' : 'btn-primary'} w-100 fw-bold`}
+      onClick={() => {
+        setIsEditing(!isEditing);
+        setActiveTab("welcome");
+      }}
+    >
+      {isEditing ? "Exit Editor" : "Edit Profile"}
+    </button>
+  </div>
 
-              {/* ACTIVITY TABS - CLEANED COLOR LOGIC */}
-              <div className="list-group shadow-sm border-0" style={{ borderRadius: "15px", overflow: "hidden" }}>
-                <div className="list-group-item bg-primary text-white border-0 fw-bold py-3">
-                  Player Activity
-                </div>
-                <button 
-                  onClick={() => { setActiveTab("tournaments"); setIsEditing(false); }}
-                  className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'tournaments' ? 'active' : ''}`}
-                >
-                  Tournaments Created
-                </button>
-                <button 
-                  onClick={() => { setActiveTab("predictions"); setIsEditing(false); }}
-                  className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'predictions' ? 'active' : ''}`}
-                >
-                  Predictions
-                </button>
-                <button 
-                  onClick={() => { setActiveTab("picks"); setIsEditing(false); }}
-                  className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'picks' ? 'active' : ''}`}
-                >
-                  Picks
-                </button>
-              </div>
-            </div>
+  {/* ACTIVITY TABS */}
+  <div className="list-group shadow-sm border-0 mb-4" style={{ borderRadius: "15px", overflow: "hidden" }}>
+    <div className="list-group-item bg-primary text-white border-0 fw-bold py-3">
+      Player Activity
+    </div>
+    <button 
+      onClick={() => { setActiveTab("tournaments"); setIsEditing(false); }}
+      className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'tournaments' ? 'active' : ''}`}
+    >
+      Tournaments Created
+    </button>
+    <button 
+      onClick={() => { setActiveTab("predictions"); setIsEditing(false); }}
+      className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'predictions' ? 'active' : ''}`}
+    >
+      Predictions
+    </button>
+    <button 
+      onClick={() => { setActiveTab("picks"); setIsEditing(false); }}
+      className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'picks' ? 'active' : ''}`}
+    >
+      Picks
+    </button>
+  </div>
+
+  {/* SIGN OUT BUTTON - Cleanly placed at bottom of sidebar */}
+  <button
+    className="btn btn-outline-danger w-100 fw-bold py-2 shadow-sm"
+    style={{ borderRadius: "15px", borderWidth: "2px" }}
+    onClick={async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/"; // Standard redirect
+    }}
+  >
+    <i className="bi bi-box-arrow-right me-2"></i> Sign Out
+  </button>
+</div>
 
             {/* RIGHT COLUMN: CONTENT AREA */}
             <div className="col-md-8">

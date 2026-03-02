@@ -1,8 +1,6 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "../supabase";
+import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar() {
-  const navigate = useNavigate();
   const location = useLocation();
 
   return (
@@ -78,23 +76,12 @@ export default function Navbar() {
             `}</style>
 
             <NavLink to="/dashboard" label="Home" currentPath={location.pathname} />
-            <NavLink to="/teams" label="Teams" currentPath={location.pathname} />
+            <NavLink to="/teams" label="Tournaments" currentPath={location.pathname} />
             <NavLink to="/admin" label="Admin" currentPath={location.pathname} />
             <NavLink to="/leaderboard" label="Leaderboard" currentPath={location.pathname} />
             <NavLink to="/account" label="Account" currentPath={location.pathname} />
+            <NavLink to="/register" label="Register" currentPath={location.pathname} />
             <NavLink to="/sports" label="Sports" currentPath={location.pathname} />
-
-            <button
-              className="btn btn-outline-danger rounded-2 fw-bold px-3 py-1 ms-auto logout-btn flex-shrink-0"
-              onClick={() => supabase.auth.signOut().then(() => navigate("/"))}
-              style={{
-                marginLeft: '20px',
-                borderWidth: '1px',
-                background: 'transparent'
-              }}
-            >
-              Sign Out
-            </button>
           </div>
         </div>
       </div>
