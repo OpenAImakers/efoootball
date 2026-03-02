@@ -85,8 +85,26 @@ export default function RoundRobinLayout({ tournament }: { tournament: Tournamen
   return (
     <div className="container-fluid px-0">
       <style>{`
-        .nav-pills .nav-link { color: #fff; opacity: 0.6; border-radius: 20px; transition: 0.3s; }
-        .nav-pills .nav-link.active { background-color: #0d6efd !important; opacity: 1; transform: scale(1.05); }
+        .nav-pills .nav-link { 
+          color: #adb5bd !important; 
+          font-weight: 800; 
+          border-radius: 0;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          border-bottom: 4px solid transparent;
+          transition: 0.3s ease;
+          padding: 10px 20px;
+          background: transparent !important;
+        }
+        .nav-pills .nav-link.active { 
+          color: #0d6efd !important; 
+          border-bottom: 4px solid #0d6efd;
+          opacity: 1;
+        }
+        .nav-pills .nav-link:hover:not(.active) { 
+          color: #fff !important; 
+        }
+
         .beaten { color: #ff4d4d !important; text-decoration: line-through; opacity: 0.5; }
         .match-box { background: #111; border: 1px solid #222; border-radius: 12px; transition: 0.3s; }
         .match-box:hover { border-color: #0d6efd; transform: translateY(-3px); }
