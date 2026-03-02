@@ -1,73 +1,102 @@
 "use client";
 
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Team } from "../pages/Team"; // Adjust path as needed
+import { useEffect, useState } from "react";
+import { Team } from "../pages/Team"; 
+import { supabase } from "../supabase";
 
 export default function SingleEliminationLayout({ 
   tournament, 
-  teams 
+  teams = [] // Default to empty array to prevent map errors
 }: { 
   tournament: any, 
   teams: Team[] 
 }) {
-  return (
-    <div className="container-fluid py-4">
-      {/* HEADER SECTION */}
-      <div className="text-center mb-5">
-        <h2 className="text-warning fw-bold text-uppercase tracking-wider">
-          {tournament.name.replace(/_/g, " ")}
-        </h2>
-        <span className="badge rounded-pill bg-warning text-dark">Single Elimination</span>
+  const [matches, setMatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchMatches() {
+      if (!tournament?.id) return;
+      const { data, error } = await supabase
+        .from("matches")
+        .select(`
+          id, 
+          home_team:home_team_id(name), 
+          away_team:away_team_id(name), 
+          played, 
+          stage,
+          home_goals,
+          away_goals,
+          round
+        `)
+        .eq("tournament_id", tournament.id)
+        .order("round", { ascending: true });
+
+      if (!error) setMatches(data || []);
+    }
+    fetchMatches();
+  }, [tournament?.id]);
+
+  // --- MatchCard to support the other tabs ---
+  const MatchCard = ({ match }: { match: any }) => (
+    <div className="p-3 border rounded shadow-sm bg-white mb-3">
+      <div className="d-flex justify-content-between">
+        <span className={match.played && match.home_goals > match.away_goals ? "fw-bold text-primary" : ""}>
+          {match.home_team?.name || "TBD"}
+        </span>
+        <span className="badge bg-light text-dark border">{match.played ? match.home_goals : "-"}</span>
       </div>
+      <hr className="my-2 opacity-25" />
+      <div className="d-flex justify-content-between">
+        <span className={match.played && match.away_goals > match.home_goals ? "fw-bold text-primary" : ""}>
+          {match.away_team?.name || "TBD"}
+        </span>
+        <span className="badge bg-light text-dark border">{match.played ? match.away_goals : "-"}</span>
+      </div>
+    </div>
+  );
 
-      {/* TABS NAVIGATION */}
-      <ul className="nav nav-tabs border-secondary mb-4 justify-content-center" id="singleElimTab" role="tablist">
-        <li className="nav-item" role="presentation">
-          <button className="nav-link active text-white border-0 bg-transparent px-4" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams-pane" type="button" role="tab">
-            Teams
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button className="nav-link text-white border-0 bg-transparent px-4" id="bracket-tab" data-bs-toggle="tab" data-bs-target="#bracket-pane" type="button" role="tab">
-            Bracket
-          </button>
-        </li>
-      </ul>
+  return (
+    <div className="min-vh-100 bg-white text-dark d-flex flex-column">
+      <nav className="sticky-top bg-white border-bottom shadow-sm">
+        <ul className="nav nav-pills justify-content-center gap-4 py-3">
+          <li className="nav-item">
+            <button className="nav-link active" data-bs-toggle="pill" data-bs-target="#teams-pane">Teams</button>
+          </li>
+          <li className="nav-item">
+            <button className="nav-link" data-bs-toggle="pill" data-bs-target="#opening-pane">Qualifiers</button>
+          </li>
+          <li className="nav-item">
+            <button className="nav-link" data-bs-toggle="pill" data-bs-target="#championship-pane">Championship</button>
+          </li>
+        </ul>
+      </nav>
 
-      {/* TAB CONTENT */}
-      <div className="tab-content" id="singleElimTabContent">
-        
-        {/* TEAMS LIST PANE */}
-        <div className="tab-pane fade show active" id="teams-pane" role="tabpanel" tabIndex={0}>
-          <div className="row justify-content-center">
-            <div className="col-lg-8">
-              <div className="table-responsive bg-dark border border-warning rounded-4 overflow-hidden shadow-lg">
-                <table className="table table-dark table-hover mb-0 align-middle">
-                  <thead className="bg-warning">
-                    <tr>
-                      <th className="text-dark ps-4 py-3">#</th>
-                      <th className="text-dark py-3">Participating Team</th>
-                      <th className="text-dark text-center py-3">Status</th>
+      <div className="tab-content flex-grow-1 d-flex flex-column">
+        {/* --- TEAMS TAB --- */}
+        <div className="tab-pane fade show active flex-grow-1" id="teams-pane">
+          <div className="py-5">
+            <h2 className="text-center mb-5 fw-bold text-primary">Tournament Participants</h2>
+            <div className="container-xl px-3 px-md-5">
+              <div className="table-responsive">
+                <table className="table table-hover table-bordered border-primary align-middle">
+                  <thead>
+                    <tr className="table-primary">
+                      <th scope="col" className="text-center">#</th>
+                      <th scope="col">Team Name</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {teams.length > 0 ? (
+                    {teams && teams.length > 0 ? (
                       teams.map((team, index) => (
-                        <tr key={team.id} className="border-secondary">
-                          <td className="ps-4 text-muted">{index + 1}</td>
-                          <td className="fw-bold">{team.name}</td>
-                          <td className="text-center">
-                            <span className="badge bg-outline-warning border border-warning text-warning small">
-                              Active
-                            </span>
-                          </td>
+                        <tr key={team.id || index}>
+                          <td className="text-center fw-bold text-primary">{index + 1}</td>
+                          <td className="fw-medium">{team.name || "Unnamed Team"}</td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={3} className="text-center py-5 text-muted">
-                          No teams registered for this tournament yet.
-                        </td>
+                        <td colSpan={2} className="text-center text-muted py-5">No teams registered yet.</td>
                       </tr>
                     )}
                   </tbody>
@@ -77,41 +106,48 @@ export default function SingleEliminationLayout({
           </div>
         </div>
 
-        {/* BRACKET PANE (COMING SOON) */}
-        <div className="tab-pane fade" id="bracket-pane" role="tabpanel" tabIndex={0}>
-          <div className="text-center py-5 bg-dark border border-warning border-dashed rounded-4 shadow-lg mx-auto" style={{maxWidth: '700px'}}>
-             <div className="display-4 text-warning mb-3">
-               <i className="bi bi-diagram-3"></i> 🏆
-             </div>
-             <h3 className="text-warning">Bracket Visualizer</h3>
-             <p className="text-muted">
-               We are currently generating the seeds for the **Single Elimination** bracket. 
-               Check back shortly to see the matchups!
-             </p>
+        {/* --- QUALIFIERS TAB --- */}
+        <div className="tab-pane fade py-5" id="opening-pane">
+          <div className="container">
+            <h4 className="text-center mb-4 text-primary fw-bold">Opening Matches</h4>
+            <div className="row justify-content-center">
+              {matches.filter(m => m.stage === "OPENING_ROUND").map(match => (
+                <div key={match.id} className="col-md-6 col-lg-4">
+                  <MatchCard match={match} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
+        {/* --- CHAMPIONSHIP TAB --- */}
+        <div className="tab-pane fade py-5" id="championship-pane">
+          <div className="horizontal-scroll-container d-flex gap-4 px-4 overflow-auto pb-4">
+            {Array.from(new Set(matches.filter(m => m.stage === "WINNERS_BRACKET").map(m => m.round)))
+              .sort((a, b) => a - b)
+              .map(round => (
+                <div key={round} style={{ minWidth: "300px" }}>
+                  <h5 className="text-center text-primary border-bottom pb-2 mb-3">Round {round}</h5>
+                  {matches.filter(m => m.stage === "WINNERS_BRACKET" && m.round === round).map(match => (
+                    <MatchCard key={match.id} match={match} />
+                  ))}
+                </div>
+              ))}
+          </div>
+        </div>
       </div>
 
       <style>{`
-        .nav-tabs .nav-link.active {
-          border-bottom: 3px solid #ffc107 !important;
-          font-weight: bold;
-          opacity: 1;
-        }
-        .nav-tabs .nav-link {
-          opacity: 0.5;
-          transition: 0.3s;
-        }
-        .nav-tabs .nav-link:hover {
-          opacity: 1;
-        }
-        .tracking-wider {
-          letter-spacing: 2px;
-        }
-        .border-dashed {
-          border-style: dashed !important;
-        }
+        body { background: #f8f9fa; }
+        .table { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .table th, .table td { vertical-align: middle; padding: 14px 16px; font-size: 1.05rem; }
+        .table thead th { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.95rem; color: #0d6efd; background-color: #e7f1ff !important; border-bottom: 2px solid #0d6efd; }
+        .table tbody tr:hover { background-color: #f0f6ff; }
+        .table td:first-child { width: 80px; text-align: center; }
+        .nav-pills .nav-link { padding: 10px 28px; border-radius: 50rem; font-weight: 600; color: #6c757d; }
+        .nav-pills .nav-link.active { background-color: #0d6efd !important; color: white !important; }
+        .horizontal-scroll-container::-webkit-scrollbar { height: 8px; }
+        .horizontal-scroll-container::-webkit-scrollbar-thumb { background: #0d6efd; border-radius: 10px; }
       `}</style>
     </div>
   );

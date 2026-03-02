@@ -16,7 +16,7 @@ function MatchScheduler() {
   const [stage, setStage] = useState("GROUP");
   const [stagegroup, setStagegroup] = useState("");
   // --- ADDED ROUND STATE ---
-  const [round, setRound] = useState(1); 
+  const [round, setRound] = useState(0); 
 
   // Update Result State
   const [selectedMatchId, setSelectedMatchId] = useState("");
