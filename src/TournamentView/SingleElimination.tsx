@@ -37,24 +37,47 @@ export default function SingleEliminationLayout({
     fetchMatches();
   }, [tournament?.id]);
 
-  // --- MatchCard to support the other tabs ---
-  const MatchCard = ({ match }: { match: any }) => (
-    <div className="p-3 border rounded shadow-sm bg-white mb-3">
-      <div className="d-flex justify-content-between">
-        <span className={match.played && match.home_goals > match.away_goals ? "fw-bold text-primary" : ""}>
-          {match.home_team?.name || "TBD"}
-        </span>
-        <span className="badge bg-light text-dark border">{match.played ? match.home_goals : "-"}</span>
+  // --- MatchCard with Win/Loss Styling ---
+  const MatchCard = ({ match }: { match: any }) => {
+    const homeWon = match.played && match.home_goals > match.away_goals;
+    const awayWon = match.played && match.away_goals > match.home_goals;
+
+    return (
+      <div className="p-3 border rounded shadow-sm bg-white mb-3">
+        {/* Home Team */}
+        <div className="d-flex justify-content-between align-items-center">
+          <span className={`
+            ${homeWon ? "fw-bold text-success" : ""} 
+            ${awayWon ? "text-danger text-decoration-line-through opacity-75" : ""}
+          `}>
+            {match.home_team?.name || "TBD"}
+          </span>
+          <span className={`badge border ${
+            homeWon ? "bg-success text-white" : awayWon ? "bg-danger text-white" : "bg-light text-dark"
+          }`}>
+            {match.played ? match.home_goals : "-"}
+          </span>
+        </div>
+
+        <hr className="my-2 opacity-25" />
+
+        {/* Away Team */}
+        <div className="d-flex justify-content-between align-items-center">
+          <span className={`
+            ${awayWon ? "fw-bold text-success" : ""} 
+            ${homeWon ? "text-danger text-decoration-line-through opacity-75" : ""}
+          `}>
+            {match.away_team?.name || "TBD"}
+          </span>
+          <span className={`badge border ${
+            awayWon ? "bg-success text-white" : homeWon ? "bg-danger text-white" : "bg-light text-dark"
+          }`}>
+            {match.played ? match.away_goals : "-"}
+          </span>
+        </div>
       </div>
-      <hr className="my-2 opacity-25" />
-      <div className="d-flex justify-content-between">
-        <span className={match.played && match.away_goals > match.home_goals ? "fw-bold text-primary" : ""}>
-          {match.away_team?.name || "TBD"}
-        </span>
-        <span className="badge bg-light text-dark border">{match.played ? match.away_goals : "-"}</span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-vh-100 bg-white text-dark d-flex flex-column">
