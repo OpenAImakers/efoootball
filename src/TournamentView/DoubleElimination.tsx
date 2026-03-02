@@ -211,7 +211,7 @@ export default function DoubleEliminationLayout({
         }
 
         .nav-pills .nav-link { 
-          color: #666; 
+          color: #adb5bd !important; 
           font-weight: 800; 
           border-radius: 0;
           text-transform: uppercase;
@@ -220,13 +220,14 @@ export default function DoubleEliminationLayout({
           transition: 0.3s ease;
           padding: 12px 15px;
           font-size: 0.85rem;
+          background: transparent !important;
         }
         .nav-pills .nav-link.active { 
           background: none !important; 
           color: #0d6efd !important; 
           border-bottom: 4px solid #0d6efd;
         }
-        .nav-pills .nav-link:hover:not(.active) { color: #fff; }
+        .nav-pills .nav-link:hover:not(.active) { color: #fff !important; }
         .tracking-widest { letter-spacing: 4px; }
         .anime-fade-in { animation: fadeIn 0.6s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
