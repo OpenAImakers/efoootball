@@ -144,9 +144,9 @@ const TournamentList = () => {
                         style={{ fontSize: '0.7rem', border: t.isFollowing ? '1px solid #0dcaf0' : 'none' }}
                       >
                         {t.isFollowing ? (
-                          <><i className="bi bi-check-lg me-1"></i> SUBBED</>
+                          <><i className="bi bi-check-lg me-1"></i> Following</>
                         ) : (
-                          <><i className="bi bi-plus-lg me-1"></i> JOIN</>
+                          <><i className="bi bi-plus-lg me-1"></i> Follow</>
                         )}
                       </button>
                     </div>
