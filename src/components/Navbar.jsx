@@ -79,9 +79,9 @@ export default function Navbar() {
             <NavLink to="/teams" label="Tournaments" currentPath={location.pathname} />
             <NavLink to="/admin" label="Admin" currentPath={location.pathname} />
             <NavLink to="/leaderboard" label="Leaderboard" currentPath={location.pathname} />
-            <NavLink to="/account" label="Account" currentPath={location.pathname} />
             <NavLink to="/register" label="Register" currentPath={location.pathname} />
-            <NavLink to="/sports" label="Sports" currentPath={location.pathname} />
+             <NavLink to="/account" label="Account" currentPath={location.pathname} />
+
           </div>
         </div>
       </div>
