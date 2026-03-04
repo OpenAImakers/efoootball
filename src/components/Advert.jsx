@@ -82,11 +82,11 @@ const LandingPage = () => {
             >
               <span style={styles.btnContent}>
                 {isInstalling ? (
-                  <span className="loader-text">INITIALIZING...</span>
+                  <span className="loader-text">INITIALIZING... / INITIALISATION...</span>
                 ) : (
                   <>
                     <i className="bi bi-download" style={styles.icon}></i>
-                    GET APP NOW
+                    GET APP NOW / OBTENIR L'APP
                   </>
                 )}
               </span>
@@ -94,7 +94,7 @@ const LandingPage = () => {
           ) : (
             <div style={styles.installedBadge}>
               <i className="bi bi-check-circle-fill" style={{marginRight: '10px'}}></i>
-              APP INSTALLED
+              APP INSTALLED / APPLICATION INSTALLÉE
             </div>
           )}
 
@@ -106,7 +106,7 @@ const LandingPage = () => {
           >
             <span style={styles.btnContent}>
               <i className="bi bi-globe" style={styles.icon}></i>
-              BROWSER MODE
+              BROWSER MODE / MODE NAVIGATEUR
             </span>
           </Link>
         </div>
@@ -118,22 +118,24 @@ const LandingPage = () => {
       {showManualInstall && (
         <div className="modalOverlay" onClick={() => setShowManualInstall(false)}>
           <div className="modalContent" onClick={e => e.stopPropagation()}>
-            <h3 className="modalTitle">INSTALLING APP</h3>
+            <h3 className="modalTitle">INSTALLING APP / INSTALLATION</h3>
             
             <p className="modalText">
               Follow these steps to add <strong>LIVE CONNECT</strong> to your home screen:
+              <br />
+              <small>Suivez ces étapes pour ajouter l'application à votre écran d'accueil :</small>
             </p>
 
             <div className="platformHints">
               <div className="hint">
                 <i className="bi bi-android2" style={{color: '#3DDC84', marginRight: '10px'}}></i>
                 <strong>ANDROID (Chrome)</strong><br />
-                Tap Menu (⁝) → <span style={{color: '#e3ff00'}}>Install App</span>
+                Tap Menu (⁝) → <span style={{color: '#e3ff00'}}>Install App / Installer l'app</span>
               </div>
               <div className="hint">
                 <i className="bi bi-apple" style={{color: '#FFF', marginRight: '10px'}}></i>
                 <strong>IPHONE (Safari)</strong><br />
-                Tap Share ( <i className="bi bi-box-arrow-up"></i> ) → <span style={{color: '#e3ff00'}}>Add to Home Screen</span>
+                Tap Share ( <i className="bi bi-box-arrow-up"></i> ) → <span style={{color: '#e3ff00'}}>Add to Home Screen / Sur l'écran d'accueil</span>
               </div>
             </div>
 
@@ -141,7 +143,7 @@ const LandingPage = () => {
               onClick={() => setShowManualInstall(false)} 
               className="modalClose"
             >
-              RETURN TO MENU
+              RETURN TO MENU / RETOUR
             </button>
           </div>
         </div>
@@ -224,21 +226,21 @@ const styles = {
   buttonStack: { display: "flex", flexDirection: "column", gap: "20px" },
   pesButtonPrimary: {
     background: "#e3ff00", color: "#000", border: "none", padding: "20px 45px",
-    fontSize: "1.2rem", fontWeight: "900", cursor: "pointer",
+    fontSize: "1rem", fontWeight: "900", cursor: "pointer",
     transform: "skew(-12deg)", transition: "0.2s", minWidth: "340px",
     boxShadow: "-8px 8px 0px #000",
   },
   pesButtonSecondary: {
     background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)",
-    padding: "18px 45px", fontSize: "1.1rem", fontWeight: "700",
+    padding: "18px 45px", fontSize: "1rem", fontWeight: "700",
     textDecoration: "none", transform: "skew(-12deg)", transition: "0.2s", minWidth: "340px",
   },
   installedBadge: {
     background: "transparent", color: "#00ff88", border: "1px solid #00ff88",
-    padding: "15px 45px", fontSize: "1rem", fontWeight: "900",
+    padding: "15px 45px", fontSize: "0.9rem", fontWeight: "900",
     transform: "skew(-12deg)", width: "fit-content", minWidth: "340px",
   },
-  btnContent: { display: "flex", alignItems: "center", transform: "skew(12deg)" },
+  btnContent: { display: "flex", alignItems: "center", transform: "skew(12deg)", justifyContent: "center" },
   icon: { marginRight: "15px", fontSize: "1.3rem" },
   pesFooter: { marginTop: "40px" },
   footerText: { color: "#fff", fontSize: "0.8rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "10px" },
