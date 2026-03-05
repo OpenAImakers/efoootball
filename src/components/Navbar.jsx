@@ -1,16 +1,21 @@
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar() {
   const location = useLocation();
+  // State for language toggle: true = French, false = English
+  const [isFrench, setIsFrench] = useState(true);
+
+  const toggleLanguage = () => setIsFrench(!isFrench);
 
   return (
     <nav className="navbar fixed-top bg-black border-bottom border-primary shadow-lg" style={{ borderBottomWidth: '2px' }}>
       <div className="container-fluid px-3 px-md-4 px-lg-5">
         <div className="d-flex align-items-center w-100">
 
-          {/* Brand - Slightly tighter for a "pro" look */}
+          {/* Brand */}
           <Link
-            className="navbar-brand fw-black text-decoration-none me-4 me-lg-5 flex-shrink-0"
+            className="navbar-brand fw-black text-decoration-none me-3 me-lg-4 flex-shrink-0"
             to="/dashboard"
             style={{
               fontSize: '1.9rem',
@@ -25,7 +30,7 @@ export default function Navbar() {
             efootball
           </Link>
 
-          {/* Scrollable area */}
+          {/* Scrollable Nav Links */}
           <div
             className="d-flex align-items-center flex-nowrap overflow-auto flex-grow-1"
             style={{
@@ -38,7 +43,7 @@ export default function Navbar() {
               .overflow-auto::-webkit-scrollbar { display: none; }
               
               .nav-link {
-                font-size: 0.95rem; /* Smaller font = more sophisticated */
+                font-size: 0.95rem;
                 text-transform: uppercase;
                 letter-spacing: 1.5px;
                 padding: 0.5rem 1.2rem;
@@ -62,11 +67,23 @@ export default function Navbar() {
                 box-shadow: inset 0 0 10px rgba(13, 110, 253, 0.2);
               }
 
-              .logout-btn {
+              .lang-toggle-btn {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                color: #fff;
+                font-weight: 800;
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+                border-radius: 4px;
                 letter-spacing: 1px;
-                text-transform: uppercase;
-                font-size: 0.85rem !important;
-                transition: all 0.3s ease;
+                transition: all 0.2s ease;
+                min-width: 45px;
+              }
+
+              .lang-toggle-btn:hover {
+                background: #0d6efd;
+                border-color: #0d6efd;
+                transform: scale(1.05);
               }
 
               @media (max-width: 576px) {
@@ -75,13 +92,24 @@ export default function Navbar() {
               }
             `}</style>
 
-            <NavLink to="/dashboard" label="Home" currentPath={location.pathname} />
-            <NavLink to="/teams" label="Tournaments" currentPath={location.pathname} />
-           <NavLink to="/leaderboard" label="Leaderboard" currentPath={location.pathname} />
-            <NavLink to="/register" label="Register" currentPath={location.pathname} />
-             <NavLink to="/account" label="Account" currentPath={location.pathname} />
-
+            <NavLink to="/dashboard" label={isFrench ? "Accueil" : "Home"} currentPath={location.pathname} />
+            <NavLink to="/teams" label={isFrench ? "Tournois" : "Tournaments"} currentPath={location.pathname} />
+            <NavLink to="/leaderboard" label={isFrench ? "Classement" : "Leaderboard"} currentPath={location.pathname} />
+            <NavLink to="/register" label={isFrench ? "S'inscrire" : "Register"} currentPath={location.pathname} />
+            <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>
+
+          {/* Language Toggle - Far Right */}
+          <div className="ms-3 flex-shrink-0">
+            <button 
+              onClick={toggleLanguage}
+              className="lang-toggle-btn text-uppercase"
+              title={isFrench ? "Switch to English" : "Passer en Français"}
+            >
+              {isFrench ? "FR" : "EN"}
+            </button>
+          </div>
+
         </div>
       </div>
     </nav>
