@@ -219,7 +219,7 @@ const LeaderboardDisplay: React.FC = () => {
                         <td className="text-center text-success fw-medium">{row.w}</td>
                         <td className="text-center text-secondary">{row.d}</td>
                         <td className="text-center text-danger">{row.l}</td>
-                        <td className="text-center">{row.goals}</td>
+                        <td className="text-center">{row.goals}</td>  
                         <td className="text-center">{row.against}</td>
                         <td className="text-center fw-medium">
                           <span className={row.gd > 0 ? "text-success" : row.gd < 0 ? "text-danger" : "text-muted"}>
