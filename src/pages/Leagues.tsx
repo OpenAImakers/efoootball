@@ -78,8 +78,12 @@ export default function Leagues() {
                       </div>
                     </td>
                     <td className="pe-4 text-end">
-                      <button className="btn btn-dark btn-sm rounded-pill px-4 fw-black text-uppercase" style={{ fontSize: '0.65rem' }}>
-                        Join
+                      <button 
+                        onClick={() => navigate("/specificleague")}
+                        className="btn btn-dark btn-sm rounded-pill px-4 fw-black text-uppercase" 
+                        style={{ fontSize: '0.65rem' }}
+                      >
+                        Details
                       </button>
                     </td>
                   </tr>

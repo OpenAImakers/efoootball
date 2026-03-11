@@ -22,6 +22,7 @@ import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 import Register from "./pages/Register.tsx";
 import Leagues from "./pages/Leagues.tsx";
+import SpecificLeague from "./pages/SpecificLeague.tsx";
 
 
 function App() {
@@ -61,6 +62,14 @@ useEffect(() => {
           </ProtectedRoute>
         }
       />
+          <Route
+        path="/specificleague"
+        element={
+          <ProtectedRoute>
+            <SpecificLeague />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={
@@ -69,6 +78,7 @@ useEffect(() => {
           </ProtectedRoute>
         }
       />
+      
             <Route
         path="/register"
         element={
