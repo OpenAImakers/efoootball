@@ -21,7 +21,7 @@ import NoLeaderboardState from "./pages/NoLeaderboardState.tsx";
 import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 import Register from "./pages/Register.tsx";
-
+import Leagues from "./pages/Leagues.tsx";
 
 
 function App() {
@@ -82,6 +82,14 @@ useEffect(() => {
         element={
           <ProtectedRoute>
             <Teams />
+          </ProtectedRoute>
+        }
+      />
+            <Route
+        path="/leagues"
+        element={
+          <ProtectedRoute>
+            <Leagues />
           </ProtectedRoute>
         }
       />

@@ -7,8 +7,8 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  // State for language toggle: true = French, false = English
-  const [isFrench, setIsFrench] = useState(true);
+  // State for language toggle: false = English (Default), true = French
+  const [isFrench, setIsFrench] = useState(false);
 
   const toggleLanguage = () => setIsFrench(!isFrench);
 
@@ -62,7 +62,7 @@ export default function Navbar() {
           <div className="d-flex align-items-center w-100" style={{ height: '60px', overflow: 'hidden' }}>
             <Link
               className="navbar-brand fw-black text-decoration-none me-4 me-lg-5 flex-shrink-0"
-              to="/dashboard"
+              to="/leagues"
               style={{
                 fontSize: '1.9rem',
                 letterSpacing: '-1px',
@@ -113,16 +113,15 @@ export default function Navbar() {
     );
   }
 
-  // NORMAL NAVBAR WITH LINKS AND TOGGLE
   return (
     <nav className="navbar fixed-top bg-black border-bottom border-primary shadow-lg" style={{ borderBottomWidth: '2px' }}>
       <div className="container-fluid px-3 px-md-4 px-lg-5">
         <div className="d-flex align-items-center w-100">
           
-          {/* Brand */}
+          {/* Brand - Redirects to Leagues */}
           <Link
-            className="navbar-brand fw-black text-decoration-none me-3 me-lg-4 flex-shrink-0"
-            to="/dashboard"
+            className="navbar-brand fw-black text-decoration-none me-3 me-lg-4 flex-shrink-0 brand-logo"
+            to="/leagues"
             style={{
               fontSize: '1.9rem',
               letterSpacing: '-1px',
@@ -130,7 +129,8 @@ export default function Navbar() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-              textTransform: 'lowercase'
+              textTransform: 'lowercase',
+              transition: 'opacity 0.2s ease'
             }}
           >
             efootball
@@ -147,6 +147,7 @@ export default function Navbar() {
           >
             <style>{`
               .overflow-auto::-webkit-scrollbar { display: none; }
+              .brand-logo:hover { opacity: 0.8; cursor: pointer; }
               .nav-link {
                 font-size: 0.95rem;
                 text-transform: uppercase;
@@ -200,7 +201,7 @@ export default function Navbar() {
             <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>
 
-          {/* Language Toggle - Far Right */}
+          {/* Language Toggle */}
           <div className="ms-3 flex-shrink-0">
             <button 
               onClick={toggleLanguage}
