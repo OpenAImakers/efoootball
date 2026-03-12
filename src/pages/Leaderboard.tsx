@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Hook for routing
 import Navbar from "../components/Navbar";
 import { supabase } from "../supabase";
-// ADD THESE TWO LINES BACK IN:
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -20,6 +20,7 @@ interface LeaderboardRow {
 }
 
 const LeaderboardDisplay: React.FC = () => {
+  const navigate = useNavigate(); // Initialize navigation
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -52,7 +53,7 @@ const LeaderboardDisplay: React.FC = () => {
     const pageHeight = doc.internal.pageSize.getHeight();
 
     // 1. BRANDED HEADER
-    doc.setFillColor(10, 26, 94); 
+    doc.setFillColor(10, 26, 94);
     doc.rect(0, 0, pageWidth, 40, "F");
 
     doc.setFontSize(22);
@@ -71,7 +72,7 @@ const LeaderboardDisplay: React.FC = () => {
       startY: 45,
       head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "%"]],
       body: rows.map((row, index) => [
-        index + 1, // FRONTEND RANK FOR PDF
+        index + 1,
         row.username,
         row.tournaments_played,
         row.mp,
@@ -126,7 +127,7 @@ const LeaderboardDisplay: React.FC = () => {
       doc.setTextColor(10, 26, 94);
       doc.setFont("helvetica", "bold");
       doc.text("Skyla", 14, pageHeight - 10);
-      
+
       const skylaWidth = doc.getTextWidth("Skyla");
       doc.setFontSize(6);
       doc.text("®", 14 + skylaWidth + 0.5, pageHeight - 12);
@@ -134,7 +135,7 @@ const LeaderboardDisplay: React.FC = () => {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100, 100, 100);
-      doc.text("|   smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
+      doc.text("|   smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
 
       doc.setFontSize(8);
       doc.text(
@@ -154,16 +155,16 @@ const LeaderboardDisplay: React.FC = () => {
       <div className="flex-grow-1 d-flex flex-column pt-4 pb-5" style={{ marginTop: "52px" }}>
         <div className="container flex-grow-1 d-flex flex-column">
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-           <h2 className="fw-bold mb-0 text-uppercase tracking-tighter" style={{
-    fontSize: "2rem",
-    background: "linear-gradient(to right, #000000 20%, #BB0000 40%, #BB0000 60%, #006600 80%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    filter: "drop-shadow(0px 2px 2px rgba(255,255,255,0.1))",
-    letterSpacing: "1px"
-}}>
-  Kenya eFootball Rankings
-</h2>
+            <h2 className="fw-bold mb-0 text-uppercase tracking-tighter" style={{
+              fontSize: "2rem",
+              background: "linear-gradient(to right, #000000 20%, #BB0000 40%, #BB0000 60%, #006600 80%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              filter: "drop-shadow(0px 2px 2px rgba(255,255,255,0.1))",
+              letterSpacing: "1px"
+            }}>
+              Kenya eFootball Rankings
+            </h2>
             <div className="d-flex gap-2">
               <button className="btn btn-outline-light btn-sm px-3" onClick={fetchLeaderboard} disabled={loading}>
                 {loading ? "Refreshing..." : "Refresh"}
@@ -211,7 +212,12 @@ const LeaderboardDisplay: React.FC = () => {
                   </thead>
                   <tbody>
                     {rows.map((row, index) => (
-                      <tr key={row.username} className="border-bottom border-secondary">
+                      <tr 
+                        key={row.username} 
+                        className="border-bottom border-secondary"
+                        onClick={() => navigate(`/team/${row.username}/matches`)}
+                        style={{ cursor: "pointer" }}
+                      >
                         <td className="ps-4 text-center fw-bold fs-5">{index + 1}</td>
                         <td className="ps-3 fw-semibold text-info">{row.username}</td>
                         <td className="text-center">{row.tournaments_played}</td>
@@ -219,7 +225,7 @@ const LeaderboardDisplay: React.FC = () => {
                         <td className="text-center text-success fw-medium">{row.w}</td>
                         <td className="text-center text-secondary">{row.d}</td>
                         <td className="text-center text-danger">{row.l}</td>
-                        <td className="text-center">{row.goals}</td>  
+                        <td className="text-center">{row.goals}</td>
                         <td className="text-center">{row.against}</td>
                         <td className="text-center fw-medium">
                           <span className={row.gd > 0 ? "text-success" : row.gd < 0 ? "text-danger" : "text-muted"}>

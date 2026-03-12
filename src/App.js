@@ -22,6 +22,7 @@ import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 import Register from "./pages/Register.tsx";
 import Leagues from "./pages/Leagues.tsx";
+import TeamMatches  from "./pages/TeamMatches.tsx";
 import SpecificLeague from "./pages/SpecificLeague.tsx";
 
 
@@ -53,6 +54,8 @@ useEffect(() => {
       {/* Password Update Route */}
       <Route path="/update-password" element={<UpdatePassword />} />
 
+
+
       {/* Other existing routes unchanged */}
       <Route
         path="/leaderboard-list"
@@ -70,6 +73,14 @@ useEffect(() => {
           </ProtectedRoute>
         }
       />
+      <Route 
+  path="/team/:username/matches" 
+  element={
+    <ProtectedRoute>
+      <TeamMatches />
+    </ProtectedRoute>
+  } 
+/>
       <Route
         path="/dashboard"
         element={
