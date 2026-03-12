@@ -57,13 +57,69 @@ export default function ProtectedRoute({
     };
   }, [navigate]);
 
-  if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", marginTop: "100px" }}>
-        <p>Verifying access...</p>
-      </div>
-    );
-  }
+if (loading) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        backgroundColor: "#1a1a1a",
+      }}
+    >
+      {/* Animated Verifying Text */}
+      <p
+        style={{
+          fontSize: "24px",
+          fontWeight: "bold",
+          color: "#ff9900",
+          marginBottom: "40px",
+          animation: "bounce 1.5s infinite",
+        }}
+      >
+        Verifying access...
+      </p>
+
+      {/* Stadium Image */}
+      <img
+        src="/stadium.png"
+        alt="Stadium"
+        style={{
+          width: "60%",
+          maxWidth: "700px",
+          borderRadius: "15px",
+          boxShadow: "0 0 40px rgba(255, 204, 51, 0.8)",
+          animation: "riseGlow 3s ease-in-out infinite alternate",
+        }}
+      />
+
+      {/* Animations */}
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+
+        @keyframes riseGlow {
+          0% {
+            transform: translateY(0) scale(1);
+            box-shadow: 0 0 20px rgba(255, 204, 51, 0.5);
+          }
+          50% {
+            transform: translateY(-30px) scale(1.05);
+            box-shadow: 0 0 60px rgba(255, 204, 51, 1);
+          }
+          100% {
+            transform: translateY(0) scale(1);
+            box-shadow: 0 0 20px rgba(255, 204, 51, 0.5);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
 
   // Access check
   if (requiredRole && role !== requiredRole) {
