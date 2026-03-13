@@ -21,9 +21,10 @@ import NoLeaderboardState from "./pages/NoLeaderboardState.tsx";
 import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 import Register from "./pages/Register.tsx";
-import Leagues from "./pages/Leagues.tsx";
+import Leagues from "./pages/leagues/AllLeagues.tsx";
 import TeamMatches  from "./pages/TeamMatches.tsx";
-import SpecificLeague from "./pages/SpecificLeague.tsx";
+import SpecificLeague from "./pages/leagues/SpecificLeague.tsx";
+import LandingPage  from "./pages/leagues/LandingLeaguePage.tsx";
 
 
 function App() {
@@ -44,6 +45,20 @@ useEffect(() => {
 }, []);
   return (
     <Routes>
+      {/* leagues routes */}
+
+   <Route
+        path="/leaguelandingpage"
+        element={
+          <ProtectedRoute>
+            <LandingPage />
+          </ProtectedRoute>
+        }
+      />
+
+
+
+      {/* leagues routes end */}
       {/* PWA starts at /auth, browser starts at / (Advert) */}
       <Route
         path="/"
