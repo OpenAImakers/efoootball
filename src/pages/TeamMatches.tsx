@@ -34,7 +34,6 @@ const TeamMatches = () => {
           const results = data || [];
           setMatches(results);
 
-          // Calculate Quick Stats
           let w = 0, d = 0, l = 0, gf = 0, ga = 0;
           results.filter(m => m.played).forEach(m => {
             const isHome = m.home?.name === username;
@@ -57,120 +56,122 @@ const TeamMatches = () => {
     if (username) fetchTeamDataAndMatches();
   }, [username]);
 
+  const RenderTable = ({ data }: { data: any[] }) => (
+    <div className="table-responsive shadow-sm rounded border bg-white">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-light">
+          <tr>
+            <th className="ps-4">Date</th>
+            <th className="text-end">Home</th>
+            <th className="text-center">Result</th>
+            <th>Away</th>
+            <th className="pe-4 text-center">Stage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.length === 0 ? (
+            <tr><td colSpan={5} className="text-center py-5 text-muted">No matches found in this category.</td></tr>
+          ) : (
+            data.map((match) => {
+              const isHome = match.home?.name === username;
+              return (
+                <tr key={match.id}>
+                  <td className="ps-4 text-muted small">
+                    {new Date(match.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </td>
+                  <td className={`text-end ${isHome ? 'fw-bold text-primary' : ''}`}>
+                    {match.home?.name}
+                  </td>
+                  <td className="text-center">
+                    <div className="d-inline-block px-3 py-1 rounded bg-dark text-white font-monospace fw-bold" style={{ fontSize: '0.85rem', minWidth: '65px' }}>
+                      {match.played ? `${match.home_goals} - ${match.away_goals}` : 'VS'}
+                    </div>
+                  </td>
+                  <td className={!isHome ? 'fw-bold text-primary' : ''}>
+                    {match.away?.name || "TBD"}
+                  </td>
+                  <td className="text-center pe-4">
+                    <span className="badge bg-light text-primary border border-primary-subtle text-uppercase" style={{ fontSize: '0.65rem' }}>
+                      {match.stage?.replace('_', ' ')}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
-    <div className="min-vh-100 bg-white flex-column d-flex">
+    <div className="min-vh-100 bg-light">
       <Navbar />
-      
-      {/* Header Banner */}
-      <div className="bg-light border-bottom py-5 mt-5">
-        <div className="container">
-          <button className="btn btn-sm btn-outline-secondary rounded-pill mb-3" onClick={() => navigate(-1)}>
-            ← Leaderboard
+
+      {/* Sub-Header with Back Button */}
+      <div className="bg-white border-bottom py-3 shadow-sm" style={{ marginTop: "100px" }}>
+        <div className="container d-flex align-items-center">
+          <button className="btn btn-outline-secondary btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center me-3" 
+                  style={{ width: '32px', height: '32px' }} 
+                  onClick={() => navigate(-1)}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+            </svg>
           </button>
-          <div className="d-flex align-items-center justify-content-between flex-wrap">
-            <div>
-              <h1 className="display-5 fw-bold text-primary mb-0">{username}</h1>
-              <p className="text-muted text-uppercase fw-semibold mb-0" style={{ letterSpacing: '1px' }}>Team Dashboard</p>
-            </div>
-            
-            {/* Stats Grid */}
-            <div className="d-flex gap-4 mt-3 mt-lg-0">
-              <div className="text-center">
-                <div className="h4 fw-bold mb-0">{stats.w + stats.d + stats.l}</div>
-                <small className="text-muted">Played</small>
-              </div>
-              <div className="text-center">
-                <div className="h4 fw-bold mb-0 text-success">{stats.w}</div>
-                <small className="text-muted">Wins</small>
-              </div>
-              <div className="text-center border-start ps-4">
-                <div className="h4 fw-bold mb-0">{stats.gf}</div>
-                <small className="text-muted">GF</small>
-              </div>
-              <div className="text-center">
-                <div className="h4 fw-bold mb-0 text-danger">{stats.ga}</div>
-                <small className="text-muted">GA</small>
-              </div>
-            </div>
-          </div>
+          <h2 className="mb-0 fw-bold h4">{username} <span className="text-muted fw-normal fs-6 ms-2">| Match History</span></h2>
         </div>
       </div>
 
-      <div className="container py-5">
-        <h4 className="fw-bold mb-4">Match Results & Fixtures</h4>
-        
-        {loading ? (
-          <div className="text-center py-5"><div className="spinner-border text-primary" /></div>
-        ) : (
-          <div className="table-responsive shadow-sm rounded border">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th className="ps-4">Date</th>
-                  <th className="text-end">Home</th>
-                  <th className="text-center">Result</th>
-                  <th>Away</th>
-                  <th>Stage</th>
-                  <th className="text-center pe-4">Form</th>
-                </tr>
-              </thead>
-              <tbody>
-                {matches.map((match) => {
-                  const isHome = match.home?.name === username;
-                  const userGoals = isHome ? match.home_goals : match.away_goals;
-                  const oppGoals = isHome ? match.away_goals : match.home_goals;
-                  
-                  let formCircle = { label: '-', class: 'bg-light text-muted' };
-                  if (match.played) {
-                    if (userGoals > oppGoals) formCircle = { label: 'W', class: 'bg-success text-white' };
-                    else if (userGoals < oppGoals) formCircle = { label: 'L', class: 'bg-danger text-white' };
-                    else formCircle = { label: 'D', class: 'bg-secondary text-white' };
-                  }
+      {/* Stats Quick-View */}
+      <div className="container mt-4">
+        <div className="row g-3">
+          {[
+            { label: "Won", val: stats.w, color: "text-success" },
+            { label: "Lost", val: stats.l, color: "text-danger" },
+            { label: "GF", val: stats.gf, color: "text-dark" },
+            { label: "GA", val: stats.ga, color: "text-dark" }
+          ].map((stat, i) => (
+            <div key={i} className="col-6 col-md-3">
+              <div className="p-3 bg-white rounded border shadow-sm text-center">
+                <div className="text-muted small text-uppercase fw-bold" style={{ fontSize: '0.65rem' }}>{stat.label}</div>
+                <div className={`h4 mb-0 fw-bold ${stat.color}`}>{stat.val}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-                  return (
-                    <tr key={match.id}>
-                      <td className="ps-4 text-muted small">
-                        {new Date(match.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </td>
-                      <td className={`text-end ${isHome ? 'fw-bold text-primary' : ''}`}>
-                        {match.home?.name}
-                      </td>
-                      <td className="text-center">
-                        <div className="d-inline-block px-3 py-1 rounded bg-dark text-white font-monospace fw-bold" style={{ fontSize: '0.9rem', minWidth: '60px' }}>
-                          {match.played ? `${match.home_goals} - ${match.away_goals}` : 'VS'}
-                        </div>
-                      </td>
-                      <td className={!isHome ? 'fw-bold text-primary' : ''}>
-                        {match.away?.name || "TBD"}
-                      </td>
-                      <td>
-                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle text-uppercase" style={{ fontSize: '0.65rem' }}>
-                          {match.stage?.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="text-center pe-4">
-                        <div className={`form-indicator ${formCircle.class}`}>
-                          {formCircle.label}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* Tab Selection */}
+        <div className="mt-4">
+          <ul className="nav nav-pills nav-justified mb-3 bg-white p-1 rounded shadow-sm border" role="tablist">
+            <li className="nav-item">
+              <button className="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#played">Played</button>
+            </li>
+            <li className="nav-item">
+              <button className="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#upcoming">Upcoming</button>
+            </li>
+          </ul>
+
+          {loading ? (
+            <div className="text-center py-5"><div className="spinner-border text-primary" /></div>
+          ) : (
+            <div className="tab-content pb-5">
+              <div className="tab-pane fade show active" id="played">
+                <RenderTable data={matches.filter(m => m.played)} />
+              </div>
+              <div className="tab-pane fade" id="upcoming">
+                <RenderTable data={matches.filter(m => !m.played)} />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <style>{`
-        .table thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; padding: 15px; }
-        .table tbody td { padding: 18px 15px; border-bottom: 1px solid #f0f0f0; }
-        .form-indicator {
-          width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-          font-size: 0.7rem; fw-bold;
-        }
-        .bg-primary-subtle { background-color: #eef4ff !important; color: #0d6efd !important; }
-        .font-monospace { letter-spacing: 1px; }
+        body { background-color: #f8f9fa !important; }
+        .nav-pills .nav-link { color: #6c757d; border-radius: 6px; padding: 10px; transition: 0.2s; }
+        .nav-pills .nav-link.active { background-color: #0d6efd !important; color: white !important; }
+        .table thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 15px; border-top: none; }
+        .table tbody td { padding: 18px 15px; }
       `}</style>
     </div>
   );

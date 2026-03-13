@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // Hook for routing
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { supabase } from "../supabase";
 import jsPDF from "jspdf";
@@ -20,7 +20,7 @@ interface LeaderboardRow {
 }
 
 const LeaderboardDisplay: React.FC = () => {
-  const navigate = useNavigate(); // Initialize navigation
+  const navigate = useNavigate();
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -155,21 +155,32 @@ const LeaderboardDisplay: React.FC = () => {
       <div className="flex-grow-1 d-flex flex-column pt-4 pb-5" style={{ marginTop: "52px" }}>
         <div className="container flex-grow-1 d-flex flex-column">
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h2 className="fw-bold mb-0 text-uppercase tracking-tighter" style={{
-              fontSize: "2rem",
-              background: "linear-gradient(to right, #000000 20%, #BB0000 40%, #BB0000 60%, #006600 80%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              filter: "drop-shadow(0px 2px 2px rgba(255,255,255,0.1))",
-              letterSpacing: "1px"
-            }}>
+            <h2
+              className="fw-bold mb-0 text-uppercase tracking-tighter"
+              style={{
+                fontSize: "2rem",
+                background: "linear-gradient(to right, #000000 20%, #BB0000 40%, #BB0000 60%, #006600 80%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                filter: "drop-shadow(0px 2px 2px rgba(255,255,255,0.1))",
+                letterSpacing: "1px",
+              }}
+            >
               Kenya eFootball Rankings
             </h2>
             <div className="d-flex gap-2">
-              <button className="btn btn-outline-light btn-sm px-3" onClick={fetchLeaderboard} disabled={loading}>
+              <button
+                className="btn btn-outline-light btn-sm px-3"
+                onClick={fetchLeaderboard}
+                disabled={loading}
+              >
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
-              <button className="btn btn-outline-success btn-sm px-3" onClick={exportToPDF} disabled={loading || rows.length === 0}>
+              <button
+                className="btn btn-outline-success btn-sm px-3"
+                onClick={exportToPDF}
+                disabled={loading || rows.length === 0}
+              >
                 Download PDF
               </button>
             </div>
@@ -178,26 +189,38 @@ const LeaderboardDisplay: React.FC = () => {
           {errorMsg && (
             <div className="alert alert-danger alert-dismissible fade show" role="alert">
               {errorMsg}
-              <button type="button" className="btn-close" onClick={() => setErrorMsg(null)} />
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setErrorMsg(null)}
+              />
             </div>
           )}
 
           <div className="flex-grow-1 bg-dark-subtle rounded-3 shadow-lg overflow-hidden border border-secondary">
             {loading ? (
               <div className="d-flex flex-column justify-content-center align-items-center h-100 text-muted">
-                <div className="spinner-border text-primary mb-3" style={{ width: "3rem", height: "3rem" }} role="status" />
+                <div
+                  className="spinner-border text-primary mb-3"
+                  style={{ width: "3rem", height: "3rem" }}
+                  role="status"
+                />
                 <p className="fs-5">Loading leaderboard...</p>
               </div>
             ) : rows.length === 0 ? (
               <div className="d-flex justify-content-center align-items-center h-100 text-muted">
-                <div className="alert alert-info fs-5 m-4 text-center">No standings available yet.</div>
+                <div className="alert alert-info fs-5 m-4 text-center">
+                  No standings available yet.
+                </div>
               </div>
             ) : (
               <div className="h-100 overflow-auto">
                 <table className="table table-dark table-hover table-striped align-middle mb-0">
                   <thead className="bg-dark border-bottom border-secondary">
                     <tr className="text-uppercase small fw-semibold">
-                      <th scope="col" className="ps-4 text-center" style={{ width: "60px" }}>Rank</th>
+                      <th scope="col" className="ps-4 text-center" style={{ width: "60px" }}>
+                        Rank
+                      </th>
                       <th scope="col" className="ps-3">Player</th>
                       <th scope="col" className="text-center">T</th>
                       <th scope="col" className="text-center">MP</th>
@@ -212,14 +235,24 @@ const LeaderboardDisplay: React.FC = () => {
                   </thead>
                   <tbody>
                     {rows.map((row, index) => (
-                      <tr 
-                        key={row.username} 
+                      <tr
+                        key={row.username}
                         className="border-bottom border-secondary"
                         onClick={() => navigate(`/team/${row.username}/matches`)}
-                        style={{ cursor: "pointer" }}
+                        style={{
+                          cursor: "pointer",
+                          height: "54px", // Increased vertical spacing / breathing room
+                        }}
                       >
                         <td className="ps-4 text-center fw-bold fs-5">{index + 1}</td>
-                        <td className="ps-3 fw-semibold text-info">{row.username}</td>
+                        <td className="ps-3 fw-semibold text-info d-flex align-items-center gap-2">
+                          <i
+                            className="bi bi-bar-chart-line-fill text-secondary opacity-75"
+                            style={{ fontSize: "1.1rem" }}
+                            title="Click to view team stats & match history"
+                          ></i>
+                          <span>{row.username}</span>
+                        </td>
                         <td className="text-center">{row.tournaments_played}</td>
                         <td className="text-center">{row.mp}</td>
                         <td className="text-center text-success fw-medium">{row.w}</td>
@@ -228,9 +261,13 @@ const LeaderboardDisplay: React.FC = () => {
                         <td className="text-center">{row.goals}</td>
                         <td className="text-center">{row.against}</td>
                         <td className="text-center fw-medium">
-                          <span className={row.gd > 0 ? "text-success" : row.gd < 0 ? "text-danger" : "text-muted"}>
-                            {row.gd > 0 ? `+${row.gd}` : row.gd}
-                          </span>
+                          {row.gd > 0 ? (
+                            <span className="text-success">+{row.gd}</span>
+                          ) : row.gd < 0 ? (
+                            <span className="text-danger">{row.gd}</span>
+                          ) : (
+                            <span className="text-muted opacity-50 fw-normal">0</span>
+                          )}
                         </td>
                         <td className="text-center pe-4 fw-bold text-warning">{row.points}</td>
                       </tr>
