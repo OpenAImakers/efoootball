@@ -25,6 +25,7 @@ import Leagues from "./pages/leagues/AllLeagues.tsx";
 import TeamMatches  from "./pages/TeamMatches.tsx";
 import SpecificLeague from "./pages/leagues/SpecificLeague.tsx";
 import LandingPage  from "./pages/leagues/LandingLeaguePage.tsx";
+import RegistrationsAdmin from "./pages/RegistrationsAdmin.tsx";
 
 
 function App() {
@@ -59,6 +60,15 @@ useEffect(() => {
 
 
       {/* leagues routes end */}
+
+         <Route
+        path="/registrations-admin"
+        element={
+          <ProtectedRoute>
+            <RegistrationsAdmin />
+          </ProtectedRoute>
+        }
+      />
       {/* PWA starts at /auth, browser starts at / (Advert) */}
       <Route
         path="/"
