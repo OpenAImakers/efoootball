@@ -179,22 +179,78 @@ export default function RoundRobinLayout({ tournament }: { tournament: Tournamen
                         const awayLost = match.played && match.away_goals < match.home_goals;
 
                         return (
-                          <div key={match.id} className="col-md-6 col-lg-4 col-xl-3">
-                            <div className="match-box p-3 text-center">
-                              <div className="d-flex justify-content-between align-items-center">
-                                <span className={`fw-bold flex-fill ${homeLost ? "beaten" : ""}`}>{match.home_team?.name}</span>
-                                <div className="mx-2">
-                                  {match.played ? (
-                                    <span className="badge bg-primary px-3 py-2">{match.home_goals} - {match.away_goals}</span>
-                                  ) : (
-                                    <span className="badge bg-secondary">VS</span>
-                                  )}
-                                </div>
-                                <span className={`fw-bold flex-fill ${awayLost ? "beaten" : ""}`}>{match.away_team?.name}</span>
-                              </div>
-                              <div className="mt-2 opacity-50 small text-uppercase">{match.stage}</div>
-                            </div>
-                          </div>
+<div className="d-flex align-items-center">
+
+  {/* HOME TEAM */}
+  <div 
+    className="d-flex align-items-center gap-2"
+    style={{ flex: 1, justifyContent: "flex-start", minWidth: 0 }}
+  >
+    <img 
+      src="/teamlogo.png" 
+      alt="team"
+      style={{
+        width: "28px",
+        height: "28px",
+        borderRadius: "50%",
+        objectFit: "cover",
+        border: "2px solid #fff",
+        flexShrink: 0
+      }}
+    />
+    <span 
+      className={`fw-bold ${homeLost ? "beaten" : ""}`}
+      style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+    >
+      {match.home_team?.name}
+    </span>
+  </div>
+
+  {/* CENTER SCORE / VS */}
+  <div 
+    style={{
+      width: "90px",   // fixed width = ALWAYS centered
+      textAlign: "center",
+      flexShrink: 0
+    }}
+  >
+    {match.played ? (
+      <span className="badge bg-primary px-3 py-2">
+        {match.home_goals} - {match.away_goals}
+      </span>
+    ) : (
+      <span className="badge bg-secondary px-3 py-2">
+        VS
+      </span>
+    )}
+  </div>
+
+  {/* AWAY TEAM */}
+  <div 
+    className="d-flex align-items-center gap-2"
+    style={{ flex: 1, justifyContent: "flex-end", minWidth: 0 }}
+  >
+    <span 
+      className={`fw-bold ${awayLost ? "beaten" : ""}`}
+      style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+    >
+      {match.away_team?.name}
+    </span>
+    <img 
+      src="/teamlogo.png" 
+      alt="team"
+      style={{
+        width: "28px",
+        height: "28px",
+        borderRadius: "50%",
+        objectFit: "cover",
+        border: "2px solid #fff",
+        flexShrink: 0
+      }}
+    />
+  </div>
+
+</div>
                         );
                       })}
                     </div>
