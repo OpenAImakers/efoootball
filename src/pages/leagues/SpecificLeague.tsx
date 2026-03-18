@@ -1,34 +1,50 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "../../supabase";
 import LeaguesNavbar from "./Leaguenav";
 
-
 export default function SpecificLeague() {
+  const { id } = useParams();
 
+  const [league, setLeague] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    fetchLeagueData();
+  }, [id]);
 
-  const players = [
-    {pos:1, name:"DENNY SANDE"},
-    {pos:2, name:"WENDYCUTIE"},
-    {pos:3, name:"DIEZ10"},
-    {pos:4, name:"TIKITAKA"},
-    {pos:5, name:"CALMCHAOS"},
-    {pos:6, name:"MACHAPO"},
-    {pos:7, name:"SAYMYNAMEBABY"},
-    {pos:8, name:"ELSAO"},
-    {pos:9, name:"YACINE"},
-    {pos:10, name:"ISACK SKYLA"}
-  ];
+  const fetchLeagueData = async () => {
+    setLoading(true);
 
-  const goats = [
-    {name:"DENNY SANDE", titles:5, era:"2023 - Present"},
-    {name:"WENDYCUTIE", titles:3, era:"2024 - Present"},
-    {name:"DIEZ10", titles:4, era:"2022 - 2025"}
-  ];
+    // 1. Fetch league
+    const { data: leagueData, error: leagueError } = await supabase
+      .from("leagues")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    // 2. Fetch teams in this league
+    const { data: teamsData, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, name")
+      .eq("league_id", id);
+
+    if (leagueError) console.error(leagueError);
+    if (teamsError) console.error(teamsError);
+
+    setLeague(leagueData);
+    setTeams(teamsData || []);
+    setLoading(false);
+  };
+
+  if (loading) return <div className="p-4">Loading...</div>;
+
+  if (!league) return <div className="p-4">League not found</div>;
 
   return (
     <div className="min-vh-100 w-100 bg-white d-flex flex-column">
 
-      {/* Navbar */}
       <LeaguesNavbar />
 
       <div className="container-fluid px-4 py-4">
@@ -36,178 +52,62 @@ export default function SpecificLeague() {
         {/* Header */}
         <div className="d-flex align-items-center mb-4">
           <div>
-            <h3 className="fw-bold mb-0">Nairobi Premier League</h3>
-            <small className="text-muted">League Archive</small>
+            <h3 className="fw-bold mb-0">{league.name}</h3>
+            <small className="text-muted">League Overview</small>
           </div>
         </div>
 
-
-        {/* League Information */}
+        {/* League Info */}
         <table className="table table-bordered align-middle">
-
           <tbody>
 
             <tr>
               <th style={{width:"30%"}}>Organizer</th>
-              <td>City Stars Gaming</td>
+              <td>{league.organizer || "N/A"}</td>
             </tr>
 
             <tr>
-              <th>League Position</th>
-              <td>3</td>
-            </tr>
-
-            <tr>
-              <th>Total Players</th>
-              <td>124</td>
-            </tr>
-
-            <tr>
-              <th>Cups Played</th>
-              <td>12</td>
-            </tr>
-
-            <tr>
-              <th>Sponsors</th>
-              <td>Safaricom, Red Bull</td>
-            </tr>
-
-            <tr>
-              <th>League Since</th>
-              <td>2022</td>
-            </tr>
-
-            <tr>
-              <th>Total Matches Played</th>
-              <td>1402</td>
+              <th>Total Teams</th>
+              <td>{teams.length}</td>
             </tr>
 
           </tbody>
-
         </table>
 
-
-        {/* Tournament Archive */}
+        {/* Teams Table */}
         <h5 className="mt-5 mb-3 fw-bold">
-          Tournament History
-        </h5>
-
-        <table className="table table-hover table-bordered align-middle">
-
-          <thead className="table-dark">
-
-            <tr>
-              <th>Tournament</th>
-              <th>Season</th>
-              <th>Winner</th>
-              <th>Players</th>
-              <th>Status</th>
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            <tr>
-              <td>Kanairo Champions Cup</td>
-              <td>2025</td>
-              <td>DENNY SANDE</td>
-              <td>32</td>
-              <td><span className="badge bg-success">Completed</span></td>
-            </tr>
-
-            <tr>
-              <td>Eastlands Knockout</td>
-              <td>2025</td>
-              <td>WENDYCUTIE</td>
-              <td>16</td>
-              <td><span className="badge bg-success">Completed</span></td>
-            </tr>
-
-            <tr>
-              <td>Super 8 League</td>
-              <td>2026</td>
-              <td>-</td>
-              <td>8</td>
-              <td><span className="badge bg-warning text-dark">Ongoing</span></td>
-            </tr>
-
-          </tbody>
-
-        </table>
-
-
-        {/* Players Leaderboard */}
-        <h5 className="mt-5 mb-3 fw-bold">
-          Top Players Leaderboard
+          Teams
         </h5>
 
         <table className="table table-bordered align-middle">
 
           <thead className="table-light">
             <tr>
-              <th style={{width:"10%"}}>Position</th>
-              <th>Player</th>
+              <th style={{width:"10%"}}>#</th>
+              <th>Team Name</th>
             </tr>
           </thead>
 
-          <tbody>
-
-            {players.map((p) => (
-              <tr key={p.pos}>
-                <td className="fw-bold">{p.pos}</td>
-                <td>{p.name}</td>
-              </tr>
-            ))}
-
-          </tbody>
-
-        </table>
-
-
-        {/* Masters Corner */}
-        <h5 className="mt-5 mb-3 fw-bold text-warning">
-          🐐 Masters Corner
-        </h5>
-
-        <table className="table table-bordered align-middle">
-
-          <thead className="table-dark">
-            <tr>
-              <th>Legend</th>
-              <th>Titles</th>
-              <th>Era</th>
-            </tr>
-          </thead>
-
-          <tbody>
-
-            {goats.map((g,i) => (
-              <tr key={i}>
-                <td className="fw-bold">{g.name}</td>
-                <td>{g.titles}</td>
-                <td>{g.era}</td>
-              </tr>
-            ))}
-
-          </tbody>
+<tbody>
+  {teams.length === 0 ? (
+    <tr>
+      <td colSpan={2} className="text-center">
+        No teams found
+      </td>
+    </tr>
+  ) : (
+    teams.map((team, index) => (
+      <tr key={team.id}>
+        <td className="fw-bold">{index + 1}</td>
+        <td>{team.name}</td>
+      </tr>
+    ))
+  )}
+</tbody>
 
         </table>
 
       </div>
-
-      <style>{`
-
-        table{
-          font-size:0.95rem;
-        }
-
-        th{
-          font-weight:600;
-        }
-
-      `}</style>
-
     </div>
   );
 }
