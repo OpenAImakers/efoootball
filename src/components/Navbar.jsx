@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+(import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "../supabase";
 
@@ -194,7 +194,11 @@ export default function Navbar() {
             `}</style>
 
             <NavLink to="/dashboard" label={isFrench ? "Accueil" : "Home"} currentPath={location.pathname} />
-            <NavLink to="/teams" label={isFrench ? "Tournois" : "Tournaments"} currentPath={location.pathname} />
+            <NavLink 
+  to="/teams" 
+  label={isFrench ? "Calendrier" : "FIXTURES"} 
+  currentPath={location.pathname} 
+/>
             {isAdmin && <NavLink to="/admin" label="Admin" currentPath={location.pathname} />}
             <NavLink to="/leaderboard" label={isFrench ? "Classement" : "Leaderboard"} currentPath={location.pathname} />
             <NavLink to="/register" label={isFrench ? "S'inscrire" : "Register"} currentPath={location.pathname} />
