@@ -76,9 +76,11 @@ export default function RoundRobinLayout({ tournament }: { tournament: Tournamen
 
   const groupMatchesByGroupAndRound = (matchesArray: Match[]) => {
     return matchesArray.reduce((acc: { [key: string]: { [key: string]: Match[] } }, match) => {
-      // Use a consistent key for null/empty groups
+      // FRONTEND CHECK: Normalize null, undefined, "", or 0 to "NONE"
       const gid = match.group_id;
-      const groupKey = (gid === null || gid === undefined || gid === "") ? "NONE" : `GROUP ${gid}`;
+      const normalizedGid = (!gid || gid === "" || gid === 0 || gid === "0") ? "NONE" : gid;
+      
+      const groupKey = normalizedGid === "NONE" ? "NONE" : `GROUP ${normalizedGid}`;
       const roundLabel = match.round ? `Round ${match.round}` : "Matches";
       
       if (!acc[groupKey]) acc[groupKey] = {};
@@ -91,9 +93,12 @@ export default function RoundRobinLayout({ tournament }: { tournament: Tournamen
 
   const groupTeamsByGroup = (teamsArray: Team[]) => {
     return teamsArray.reduce((groups: { [key: string]: Team[] }, team) => {
-      const gid = (team.group_id === null || team.group_id === undefined || team.group_id === "") ? "NONE" : team.group_id.toString();
-      if (!groups[gid]) groups[gid] = [];
-      groups[gid].push(team);
+      // FRONTEND CHECK: Normalize null, undefined, "", or 0 to "NONE"
+      const gid = team.group_id;
+      const normalizedGid = (!gid || gid === "" || gid === 0 || gid === "0") ? "NONE" : gid.toString();
+
+      if (!groups[normalizedGid]) groups[normalizedGid] = [];
+      groups[normalizedGid].push(team);
       return groups;
     }, {});
   };
@@ -129,6 +134,7 @@ export default function RoundRobinLayout({ tournament }: { tournament: Tournamen
             <div className="standings-container">
               {Object.entries(groupedStandings).sort().map(([groupId, teams]) => (
                 <div key={groupId} className="mb-5">
+                {/* Only renders "GROUP X" if groupId is a valid number >= 1 */}
                 {Number(groupId) >= 1 && <div className="group-title">GROUP {groupId}</div>}
                   <div className={`bg-dark w-100 border rounded-4 overflow-hidden shadow-lg ${groupId !== "NONE" ? 'border-primary' : 'border-secondary'}`}>
                     <div className="table-responsive">
