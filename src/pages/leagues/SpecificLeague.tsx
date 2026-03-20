@@ -21,28 +21,32 @@ export default function SpecificLeague() {
       .select("*")
       .eq("id", id)
       .single();
-
     if (leagueError) console.error(leagueError);
 
-    // 2. Fetch teams in this league
-    const { data: teamsData, error: teamsError } = await supabase
-      .from("teams")
-      .select("id, name")
-      .eq("league_id", id);
-
-    if (teamsError) console.error(teamsError);
-
-    // 3. Fetch tournaments linked to this league
+    // 2. Fetch tournaments linked to this league
     const { data: tournamentsData, error: tournamentsError } = await supabase
       .from("tournaments")
       .select("id, name, start_time, end_time, tournament_type")
       .eq("league_id", id)
       .order("created_at", { ascending: true });
-
     if (tournamentsError) console.error(tournamentsError);
 
+    // 3. Fetch all teams in those tournaments (keep all team columns)
+    let allTeams: any[] = [];
+    if (tournamentsData?.length) {
+      const tournamentIds = tournamentsData.map((t: any) => t.id);
+
+      const { data: teamsData, error: teamsError } = await supabase
+        .from("teams")
+        .select("*") // <-- keep all team columns
+        .in("tournament_id", tournamentIds);
+      if (teamsError) console.error(teamsError);
+
+      allTeams = teamsData || [];
+    }
+
     setLeague(leagueData);
-    setTeams(teamsData || []);
+    setTeams(allTeams);
     setTournaments(tournamentsData || []);
     setLoading(false);
   }, [id]);
@@ -82,27 +86,31 @@ export default function SpecificLeague() {
           </tbody>
         </table>
 
-        <h5 className="mt-5 mb-3 fw-bold">Teams</h5>
-        <table className="table table-bordered align-middle">
-          <thead className="table-light">
-            <tr>
-              <th style={{ width: "10%" }}>#</th>
-              <th>Team Name</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teams.length === 0 ? (
-              <tr><td colSpan={2} className="text-center">No teams found</td></tr>
-            ) : (
-              teams.map((team, index) => (
-                <tr key={team.id}>
-                  <td className="fw-bold">{index + 1}</td>
-                  <td>{team.name}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+       <h5 className="mt-5 mb-3 fw-bold">Teams</h5>
+<table className="table table-bordered align-middle">
+  <thead className="table-light">
+    <tr>
+      <th style={{ width: "5%" }}>#</th>
+      <th>Team Name</th>
+      <th>Tournament</th>
+      <th>Leaderboard</th>
+    </tr>
+  </thead>
+  <tbody>
+    {teams.length === 0 ? (
+      <tr><td colSpan={4} className="text-center">No teams found</td></tr>
+    ) : (
+      teams.map((team, index) => (
+        <tr key={team.id}>
+          <td className="fw-bold">{index + 1}</td>
+          <td>{team.name}</td>
+          <td>{tournaments.find(t => t.id === team.tournament_id)?.name || "N/A"}</td>
+          <td></td> {/* empty leaderboard column */}
+        </tr>
+      ))
+    )}
+  </tbody>
+</table>
 
         <h5 className="mt-5 mb-3 fw-bold">Tournaments</h5>
         <table className="table table-bordered align-middle">

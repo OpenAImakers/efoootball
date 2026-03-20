@@ -11,7 +11,10 @@ interface League {
   name: string;
   organizer: string;
   passkey: string;
-  rules: string;
+  short_intro: string;
+  season: string;
+  avatar_url?: string;
+  rules?: string;
 }
 
 interface Tournament {
@@ -27,11 +30,14 @@ export default function LeagueManagement() {
   const activeLeague = getActiveLeague();
   const activeLeagueId = activeLeague?.id;
 
-  const [editMode, setEditMode] = useState(false);
+  // const [editMode, setEditMode] = useState(true); // editing page defaults to editable
   const [leagueData, setLeagueData] = useState<League>({
     name: "",
     organizer: "",
     passkey: "",
+    short_intro: "",
+    season: "",
+    avatar_url: "",
     rules: "",
   });
 
@@ -39,7 +45,6 @@ export default function LeagueManagement() {
   const [linkedTournaments, setLinkedTournaments] = useState<Tournament[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Define handleLinkTournament with useCallback
   const handleLinkTournament = useCallback(async () => {
     if (!tournamentPasskey || !activeLeagueId) return;
 
@@ -63,7 +68,6 @@ export default function LeagueManagement() {
     setTournamentPasskey("");
   }, [tournamentPasskey, activeLeagueId]);
 
-  // Effect for fetching data
   useEffect(() => {
     if (!activeLeagueId) {
       navigate("/leaguelandingpage");
@@ -73,7 +77,7 @@ export default function LeagueManagement() {
     const fetchLeague = async () => {
       const { data, error } = await supabase
         .from("leagues")
-        .select("*")
+        .select("id, name, organizer, passkey, short_intro, season, avatar_url, rules")
         .eq("id", activeLeagueId)
         .single();
       if (error) return console.error(error);
@@ -83,6 +87,9 @@ export default function LeagueManagement() {
         name: data.name,
         organizer: data.organizer,
         passkey: data.passkey || "",
+        short_intro: data.short_intro || "",
+        season: data.season || "",
+        avatar_url: data.avatar_url,
         rules: data.rules || "",
       });
     };
@@ -93,7 +100,6 @@ export default function LeagueManagement() {
         .select("*")
         .eq("league_id", activeLeagueId)
         .order("created_at", { ascending: true });
-
       if (error) return console.error(error);
       setLinkedTournaments(data || []);
     };
@@ -102,7 +108,6 @@ export default function LeagueManagement() {
     fetchTournaments();
   }, [activeLeagueId, navigate]);
 
-  // Effect for Enter Key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter" && tournamentPasskey) {
@@ -127,29 +132,24 @@ export default function LeagueManagement() {
 
     if (error) return alert("Error saving league: " + error.message);
     alert("League updated successfully!");
-    setEditMode(false);
   };
 
   return (
     <div className="min-vh-100 bg-white">
       <LeaguesNavbar />
-      <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
-          <div>
-            <h2 className="fw-black text-primary m-0">{leagueData.name.toUpperCase() || "LOADING..."}</h2>
-            <p className="text-muted small m-0 uppercase tracking-widest">Organizer: {leagueData.organizer}</p>
-          </div>
-          <button 
-            className={`btn btn-sm ${editMode ? 'btn-dark' : 'btn-outline-primary'} fw-bold`}
-            onClick={() => setEditMode(!editMode)}
-          >
-            {editMode ? "CANCEL" : "EDIT PROFILE"}
-          </button>
-        </div>
 
-        {editMode && (
-          <div className="card border-primary mb-4 shadow-sm">
-            <div className="card-body bg-light">
+      <div className="container py-4">
+        {/* Top Profile Editing Section */}
+        <div className="card mb-4 p-4 shadow-sm">
+          <div className="row g-3 align-items-center">
+            <div className="col-md-2">
+              <img
+                src={leagueData.avatar_url || "/cup.png"}
+                alt="League Avatar"
+                style={{ width: "100%", borderRadius: "12px", objectFit: "cover", border: "1px solid #ddd" }}
+              />
+            </div>
+            <div className="col-md-10">
               <div className="row g-3">
                 <div className="col-md-6">
                   <label className="small fw-bold text-uppercase">League Name</label>
@@ -159,30 +159,49 @@ export default function LeagueManagement() {
                   <label className="small fw-bold text-uppercase">Organizer</label>
                   <input type="text" className="form-control" name="organizer" value={leagueData.organizer} onChange={handleChange} />
                 </div>
-                <div className="col-md-12">
+                <div className="col-md-6">
                   <label className="small fw-bold text-uppercase">Passkey</label>
                   <input type="text" className="form-control" name="passkey" value={leagueData.passkey} onChange={handleChange} />
                 </div>
+                <div className="col-md-6">
+                  <label className="small fw-bold text-uppercase">Season</label>
+                  <input type="text" className="form-control" name="season" value={leagueData.season} onChange={handleChange} />
+                </div>
                 <div className="col-md-12">
-                  <label className="small fw-bold text-uppercase">Rules / Notes</label>
-                  <textarea className="form-control" name="rules" value={leagueData.rules} onChange={handleChange} rows={3} />
+                  <label className="small fw-bold text-uppercase">Short Intro</label>
+                  <textarea className="form-control" name="short_intro" value={leagueData.short_intro} onChange={handleChange} rows={2} />
                 </div>
                 <div className="col-12">
-                  <button className="btn btn-primary w-100 fw-bold" onClick={handleSaveLeague}>UPDATE LEAGUE DETAILS</button>
+                  <button className="btn btn-primary w-100 fw-bold" onClick={handleSaveLeague}>
+                    SAVE LEAGUE DETAILS
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
+        {/* Rules / Description Section */}
+        <div className="card mb-4 p-4 shadow-sm">
+          <label className="small fw-bold text-uppercase mb-2">Rules / Notes</label>
+          <textarea
+            className="form-control"
+            name="rules"
+            value={leagueData.rules}
+            onChange={handleChange}
+            rows={4}
+          />
+        </div>
+
+        {/* Linked Tournaments */}
         <div className="mb-5">
           <h5 className="fw-bold mb-3 d-flex align-items-center">
             <i className="bi bi-trophy me-2 text-primary"></i> LINKED TOURNAMENTS
           </h5>
           <div className="tournament-scroller d-flex gap-3 overflow-auto pb-3">
             {linkedTournaments.map((t, idx) => (
-              <div 
-                key={t.id} 
+              <div
+                key={t.id}
                 className={`t-card p-3 border rounded-3 transition-all ${selectedIndex === idx ? 'active-t' : ''}`}
                 onClick={() => setSelectedIndex(idx)}
               >
@@ -198,6 +217,7 @@ export default function LeagueManagement() {
           </div>
         </div>
 
+        {/* Connect New Tournament */}
         <div className="bg-light p-4 rounded-4 border">
           <label className="fw-bold small text-uppercase mb-2">Connect New Tournament</label>
           <div className="input-group input-group-lg shadow-sm">
