@@ -12,7 +12,6 @@ import UpdatePassword from "./pages/UpdatePassword.js";
 import Leaderboard from "./pages/Leaderboard.tsx";  
 import LeaderboardForm from "./pages/Leaderboardadmin.tsx";
 import Navbar from "./components/Navbar.jsx";
-import Advert from "./components/Advert.jsx";
 import Winner from "./pages/Winner.tsx";  
 import UpgradeToAdmin from "./pages/UpgradeToAdmin.tsx";
 import TournamentCreation from "./pages/TournamentCreation.tsx";
@@ -89,8 +88,9 @@ useEffect(() => {
       {/* PWA starts at /auth, browser starts at / (Advert) */}
       <Route
         path="/"
-        element={isStandalone ? <Navigate to="/auth" /> : <Advert />}
+        element={isStandalone ? <Navigate to="/auth" /> : <Leaderboard/>}
       />
+
       <Route path="/auth" element={<Auth />} />
 
       {/* Password Update Route */}
@@ -118,9 +118,9 @@ useEffect(() => {
       <Route 
   path="/team/:username/matches" 
   element={
-    <ProtectedRoute>
+    
       <TeamMatches />
-    </ProtectedRoute>
+ 
   } 
 />
       <Route

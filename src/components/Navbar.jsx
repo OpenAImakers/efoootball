@@ -200,7 +200,6 @@ export default function Navbar() {
   currentPath={location.pathname} 
 />
             {isAdmin && <NavLink to="/admin" label="Admin" currentPath={location.pathname} />}
-            <NavLink to="/leaderboard" label={isFrench ? "Classement" : "Leaderboard"} currentPath={location.pathname} />
             <NavLink to="/register" label={isFrench ? "S'inscrire" : "Register"} currentPath={location.pathname} />
             <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>

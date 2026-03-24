@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
-import Navbar from "../components/Navbar";
 
 const TeamMatches = () => {
-  const { username } = useParams<{ username: string }>();
+  const { username } = useParams();
   const navigate = useNavigate();
-  const [matches, setMatches] = useState<any[]>([]);
+  const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ w: 0, d: 0, l: 0, gf: 0, ga: 0 });
 
@@ -34,7 +33,6 @@ const TeamMatches = () => {
           const results = data || [];
           setMatches(results);
 
-          // Calculate stats (only played matches)
           let w = 0, d = 0, l = 0, gf = 0, ga = 0;
           results.filter(m => m.played).forEach(m => {
             const isHome = m.home?.name === username;
@@ -48,6 +46,7 @@ const TeamMatches = () => {
             else if (userGoals < opponentGoals) l++;
             else d++;
           });
+
           setStats({ w, d, l, gf, ga });
         }
       } catch (err) {
@@ -60,8 +59,7 @@ const TeamMatches = () => {
     if (username) fetchTeamDataAndMatches();
   }, [username]);
 
-  // Helper to determine result display
-  const getResult = (match: any): { text: string; className: string } => {
+  const getResult = (match) => {
     if (!match.played) {
       return { text: "-", className: "text-muted" };
     }
@@ -70,22 +68,20 @@ const TeamMatches = () => {
     const userG = isHome ? match.home_goals : match.away_goals;
     const oppG = isHome ? match.away_goals : match.home_goals;
 
-    if (userG > oppG) {
-      return { text: "W", className: "text-success fw-bold" };
-    }
-    if (userG < oppG) {
-      return { text: "L", className: "text-danger fw-bold" };
-    }
+    if (userG > oppG) return { text: "W", className: "text-success fw-bold" };
+    if (userG < oppG) return { text: "L", className: "text-danger fw-bold" };
     return { text: "D", className: "text-secondary fw-medium" };
   };
 
   return (
     <div className="min-vh-100 bg-light">
-      <Navbar />
 
-      {/* Sub-Header with Back Button */}
-      <div className="bg-white border-bottom py-3 shadow-sm" style={{ marginTop: "100px" }}>
-        <div className="container d-flex align-items-center">
+      {/* ✅ FIXED TOP BAR */}
+      <div
+        className=" border-bottom shadow-sm position-fixed top-0 start-0 w-100" style={{ backgroundColor: "#020617" ,
+        zIndex: 1000 }}
+      >
+        <div className="container d-flex align-items-center py-3">
           <button
             className="btn btn-outline-secondary btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center me-3"
             style={{ width: '32px', height: '32px' }}
@@ -95,14 +91,20 @@ const TeamMatches = () => {
               <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
             </svg>
           </button>
-          <h2 className="mb-0 fw-bold h4">
-            {username} <span className="text-muted fw-normal fs-6 ms-2">| Match History</span>
+
+          <h2 className="mb-0 fw-bold text-white h5">
+            {username}
+            <span className="fw-normal fs-6 ms-2">
+              | Match History
+            </span>
           </h2>
         </div>
       </div>
 
-      {/* Stats Quick-View */}
-      <div className="container mt-4">
+      {/* ✅ CONTENT (pushed down below fixed bar) */}
+      <div className="container mt-4" style={{ paddingTop: "80px" }}>
+
+        {/* Stats */}
         <div className="row g-3">
           {[
             { label: "Won", val: stats.w, color: "text-success" },
@@ -122,7 +124,7 @@ const TeamMatches = () => {
           ))}
         </div>
 
-        {/* Matches Table – All in one view */}
+        {/* Matches */}
         <div className="mt-5">
           <h5 className="mb-3 fw-bold">All Matches</h5>
 

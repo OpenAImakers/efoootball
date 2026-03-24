@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import Advert from "../components/Advert";
 import { supabase } from "../supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -151,7 +151,7 @@ const LeaderboardDisplay: React.FC = () => {
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-dark text-light">
-      <Navbar />
+    <Advert /> {/* Full-width advert banner at the top */}
       <div className="flex-grow-1 d-flex flex-column pt-4 pb-5" style={{ marginTop: "52px" }}>
         <div className="container flex-grow-1 d-flex flex-column">
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
