@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import Navbar from "../components/Navbar";
-import Matches from "./Matches"; 
+import Matches from "./Matchvote/Matches"; 
 import Tournaments from "./Tournaments";
 import CommunityFeed from "./CommunityFeed"; 
 

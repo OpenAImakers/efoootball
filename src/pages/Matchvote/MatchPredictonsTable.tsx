@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react"; // Added useCallback
-import { supabase } from "../supabase";
+import { supabase } from "../../supabase";
 
 interface MatchStat {
   matchName: string;
