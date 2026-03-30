@@ -5,104 +5,110 @@ import Matches from "./Matchvote/Matches";
 import Tournaments from "./Tournaments";
 import CommunityFeed from "./CommunityFeed"; 
 
+const BRAND = {
+  NAVY: "#1A2251",
+  ORANGE: "#F38D1F",
+  WHITE: "#FFFFFF",
+};
+
 function Home() {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('tournaments'); // Default to ONGOING
+  const [activeTab, setActiveTab] = useState('tournaments');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
 
+  const tabs = [
+    { id: 'tournaments', label: 'ONGOING' },
+    { id: 'matches', label: 'MATCHES' },
+    { id: 'discussion', label: 'COMMUNITY' },
+  ];
+
   return (
-    <>
+    <div className="w-100 m-0 p-0 overflow-x-hidden" style={{ minHeight: "100vh", backgroundColor: "#F8F9FD" }}>
       <Navbar />
 
-      <div className="container-fluid" style={{ marginTop: '5rem' }}>
-        {/* Secondary Navbar (Sticky Tabs) */}
-        <ul
-          className="nav nav-pills nav-fill p-1 shadow-lg"
-          style={{
-            position: "sticky",
-            top: "64px",
-            zIndex: 999,
-            backgroundColor: "rgba(30, 30, 30, 0.85)",
-            backdropFilter: "blur(10px)",
-            borderRadius: "0 0 16px 16px",
-            borderBottom: "1px solid #333",
+      {/* 1. FIXED SECONDARY NAVBAR (This stays at the top always) */}
+      <div 
+        className="fixed-top w-100 d-flex justify-content-center align-items-center py-2 px-2" 
+        style={{ 
+          top: "56px", // Adjust this to exactly match your main Navbar height
+          zIndex: 1020, 
+          backgroundColor: "rgba(255, 255, 255, 0.95)", 
+          backdropFilter: "blur(10px)",
+          borderBottom: "1px solid #eee",
+          height: "65px"
+        }}
+      >
+        <div 
+          className="d-flex w-100 shadow-sm" 
+          style={{ 
+            maxWidth: "600px", 
+            backgroundColor: BRAND.NAVY, 
+            borderRadius: "100px", 
+            padding: "4px"
           }}
         >
-          {/* ONGOING Tab */}
-          <li className="nav-item">
+          {tabs.map((tab) => (
             <button
-              className={`nav-link py-2 fw-bold transition-all ${
-                activeTab === "tournaments" ? "active" : "text-secondary"
-              }`}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="btn flex-fill border-0 fw-black p-0"
               style={{
-                fontSize: "0.85rem",
-                letterSpacing: "0.5px",
-                backgroundColor: activeTab === "tournaments" ? "#28a745" : "transparent", // Green for ongoing
-                color: activeTab === "tournaments" ? "#fff" : "#bbb",
-                border: "none",
-                borderRadius: "10px",
-                transition: "all 0.3s ease",
+                fontSize: "0.7rem",
+                height: "38px",
+                letterSpacing: "1px",
+                borderRadius: "100px",
+                backgroundColor: activeTab === tab.id ? BRAND.ORANGE : "transparent",
+                color: BRAND.WHITE,
+                transition: "all 0.2s ease-in-out",
               }}
-              onClick={() => setActiveTab("tournaments")}
             >
-              ONGOING
+              {tab.label}
             </button>
-          </li>
-
-          {/* Matches Tab */}
-          <li className="nav-item">
-            <button
-              className={`nav-link py-2 fw-bold transition-all ${
-                activeTab === "matches" ? "active" : "text-secondary"
-              }`}
-              style={{
-                fontSize: "0.85rem",
-                letterSpacing: "0.5px",
-                backgroundColor: activeTab === "matches" ? "#FFA500" : "transparent",
-                color: activeTab === "matches" ? "#000" : "#bbb",
-                border: "none",
-                borderRadius: "10px",
-                transition: "all 0.3s ease",
-              }}
-              onClick={() => setActiveTab("matches")}
-            >
-              Matches
-            </button>
-          </li>
-
-          {/* Feed Tab */}
-          <li className="nav-item">
-            <button
-              className={`nav-link py-2 fw-bold transition-all ${
-                activeTab === "discussion" ? "active" : "text-secondary"
-              }`}
-              style={{
-                fontSize: "0.85rem",
-                letterSpacing: "0.5px",
-                backgroundColor: activeTab === "discussion" ? "#FFA500" : "transparent",
-                color: activeTab === "discussion" ? "#000" : "#bbb",
-                border: "none",
-                borderRadius: "10px",
-                transition: "all 0.3s ease",
-              }}
-              onClick={() => setActiveTab("discussion")}
-            >
-              Feed
-            </button>
-          </li>
-        </ul>
-
-        {/* Content scrolls UNDER the sticky tabs */}
-        <div className="tab-content mt-3">
-          {activeTab === 'matches' && <Matches />}
-          {activeTab === 'discussion' && <CommunityFeed user={user} />}
-          {activeTab === 'tournaments' && <Tournaments />}
+          ))}
         </div>
       </div>
-    </>
+
+      {/* 2. SPACER (Prevents content from being hidden under the fixed bar) */}
+      <div style={{ height: "125px" }}></div> 
+
+      {/* 3. FULL WIDTH CONTENT AREA */}
+      <main className="w-100 m-0 p-0">
+        <div className="w-100">
+          {activeTab === 'matches' && (
+            <div className="w-100 fade-in-animation"><Matches /></div>
+          )}
+          {activeTab === 'discussion' && (
+            <div className="w-100 fade-in-animation"><CommunityFeed user={user} /></div>
+          )}
+          {activeTab === 'tournaments' && (
+            <div className="w-100 fade-in-animation"><Tournaments /></div>
+          )}
+        </div>
+      </main>
+
+      <style>{`
+        .fw-black { font-weight: 900 !important; }
+        .w-100 { width: 100% !important; }
+        
+        .fade-in-animation {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Prevent any horizontal scrolling from children */
+        body, html {
+          overflow-x: hidden;
+          width: 100%;
+        }
+      `}</style>
+    </div>
   );
 }
 
