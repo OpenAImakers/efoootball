@@ -8,15 +8,16 @@ import autoTable from "jspdf-autotable";
 interface LeaderboardRow {
   rank: number;
   username: string;
-  tournaments_played: number;
-  mp: number;
-  w: number;
-  d: number;
-  l: number;
-  goals: number;
-  against: number;
-  gd: number;
-  points: number;
+  display_name: string; // Using this for the Player column
+  tournaments_played: any;
+  mp: any;
+  w: any;
+  d: any;
+  l: any;
+  goals: any;
+  against: any;
+  gd: any;
+  points: any;
 }
 
 const LeaderboardDisplay: React.FC = () => {
@@ -31,16 +32,32 @@ const LeaderboardDisplay: React.FC = () => {
 
   const fetchLeaderboard = async () => {
     setLoading(true);
+    // Fetching directly from profiles table
     const { data, error } = await supabase
-      .from("tournamentstats_view")
-      .select("*")
-      .order("rank", { ascending: true });
+      .from("profiles")
+      .select("username, display_name")
+      .order("display_name", { ascending: true });
 
     if (error) {
       console.error("Error fetching leaderboard:", error);
       setErrorMsg("Failed to load leaderboard data.");
     } else {
-      setRows(data || []);
+      // Maintaining your structure with static data for maintenance
+      const mappedRows = (data || []).map((profile, index) => ({
+        rank: index + 1,
+        username: profile.username,
+        display_name: profile.display_name || profile.username,
+        tournaments_played: "--",
+        mp: 0,
+        w: 0,
+        d: 0,
+        l: 0,
+        goals: 0,
+        against: 0,
+        gd: 0,
+        points: 0,
+      }));
+      setRows(mappedRows);
     }
     setLoading(false);
   };
@@ -66,14 +83,14 @@ const LeaderboardDisplay: React.FC = () => {
 
     doc.setFontSize(10);
     doc.setTextColor(200, 200, 200);
-    doc.text(`Updated: ${new Date().toLocaleDateString()}`, 14, 35);
+    doc.text(`Updated: ${new Date().toLocaleDateString()} (Maintenance Mode)`, 14, 35);
 
     autoTable(doc, {
       startY: 45,
       head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "%"]],
       body: rows.map((row, index) => [
         index + 1,
-        row.username,
+        row.display_name,
         row.tournaments_played,
         row.mp,
         row.w,
@@ -81,7 +98,7 @@ const LeaderboardDisplay: React.FC = () => {
         row.l,
         row.goals,
         row.against,
-        row.gd > 0 ? `+${row.gd}` : row.gd.toString(),
+        "0",
         row.points,
       ]),
       theme: "grid",
@@ -107,13 +124,6 @@ const LeaderboardDisplay: React.FC = () => {
       alternateRowStyles: {
         fillColor: [245, 250, 255],
       },
-      didParseCell: (data) => {
-        if (data.column.index === 9 && data.cell.section === "body") {
-          const val = parseFloat(data.cell.text[0]);
-          if (val > 0) data.cell.styles.textColor = [0, 181, 204];
-          if (val < 0) data.cell.styles.textColor = [239, 68, 68];
-        }
-      },
     });
 
     const pageCount = doc.getNumberOfPages();
@@ -135,7 +145,7 @@ const LeaderboardDisplay: React.FC = () => {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100, 100, 100);
-      doc.text("|   smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
+      doc.text("|    smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
 
       doc.setFontSize(8);
       doc.text(
@@ -146,14 +156,20 @@ const LeaderboardDisplay: React.FC = () => {
       );
     }
 
-    doc.save(`Masters_Leaderboard${new Date().toISOString().split("T")[0]}.pdf`);
+    doc.save(`Masters_Leaderboard_Maint_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-dark text-light">
-    <Advert /> {/* Full-width advert banner at the top */}
+      <Advert />
       <div className="flex-grow-1 d-flex flex-column pt-4 pb-5" style={{ marginTop: "52px" }}>
         <div className="container flex-grow-1 d-flex flex-column">
+          
+          {/* MAINTENANCE ALERT - Using standard bootstrap alert for zero UI impact */}
+          <div className="alert alert-warning border-0 shadow-sm mb-4" role="alert">
+            <strong>Maintenance:</strong> Live stats are temporarily hidden while we update player records. Showing Profile Display Names.
+          </div>
+
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <h2
               className="fw-bold mb-0 text-uppercase tracking-tighter"
@@ -241,7 +257,7 @@ const LeaderboardDisplay: React.FC = () => {
                         onClick={() => navigate(`/team/${row.username}/matches`)}
                         style={{
                           cursor: "pointer",
-                          height: "54px", // Increased vertical spacing / breathing room
+                          height: "54px",
                         }}
                       >
                         <td className="ps-4 text-center fw-bold fs-5">{index + 1}</td>
@@ -251,25 +267,17 @@ const LeaderboardDisplay: React.FC = () => {
                             style={{ fontSize: "1.1rem" }}
                             title="Click to view team stats & match history"
                           ></i>
-                          <span>{row.username}</span>
+                          <span>{row.display_name}</span>
                         </td>
-                        <td className="text-center">{row.tournaments_played}</td>
-                        <td className="text-center">{row.mp}</td>
-                        <td className="text-center text-success fw-medium">{row.w}</td>
-                        <td className="text-center text-secondary">{row.d}</td>
-                        <td className="text-center text-danger">{row.l}</td>
-                        <td className="text-center">{row.goals}</td>
-                        <td className="text-center">{row.against}</td>
-                        <td className="text-center fw-medium">
-                          {row.gd > 0 ? (
-                            <span className="text-success">+{row.gd}</span>
-                          ) : row.gd < 0 ? (
-                            <span className="text-danger">{row.gd}</span>
-                          ) : (
-                            <span className="text-muted opacity-50 fw-normal">0</span>
-                          )}
-                        </td>
-                        <td className="text-center pe-4 fw-bold text-warning">{row.points}</td>
+                        <td className="text-center opacity-50">{row.tournaments_played}</td>
+                        <td className="text-center opacity-50">{row.mp}</td>
+                        <td className="text-center text-success fw-medium opacity-50">{row.w}</td>
+                        <td className="text-center text-secondary opacity-50">{row.d}</td>
+                        <td className="text-center text-danger opacity-50">{row.l}</td>
+                        <td className="text-center opacity-50">{row.goals}</td>
+                        <td className="text-center opacity-50">{row.against}</td>
+                        <td className="text-center fw-medium opacity-50">0</td>
+                        <td className="text-center pe-4 fw-bold text-warning opacity-50">{row.points}</td>
                       </tr>
                     ))}
                   </tbody>
