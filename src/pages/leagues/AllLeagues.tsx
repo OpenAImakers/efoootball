@@ -24,98 +24,122 @@ export default function Leagues() {
   };
 
   return (
-    <div className="min-vh-100 bg-white text-dark">
+    <div className="min-vh-100 bg-konami-dark text-white font-konami">
       <LeaguesNavbar />
 
-      <div className="container-fluid px-3 mt-3">
-        {leagues.length === 0 && (
-          <div className="text-center py-5 text-muted">
-            No active leagues found.
-          </div>
-        )}
+      <div className="container-fluid px-4 mt-4">
+        {/* Table Header */}
+        <div className="konami-table-header d-none d-md-flex row mx-0 align-items-center py-2 px-3">
+          <div className="col-md-6 small fw-bold tracking-widest text-primary-glow text-uppercase">Leagues</div>
+          <div className="col-md-2 small fw-bold tracking-widest text-primary-glow text-center text-uppercase">Region</div>
+          <div className="col-md-2 small fw-bold tracking-widest text-primary-glow text-center text-uppercase">Season</div>
+          <div className="col-md-2 small fw-bold tracking-widest text-primary-glow text-end text-uppercase">Organizer</div>
+        </div>
 
         {leagues.map((league) => (
           <div
             key={league.id}
-            className="league-card mb-4 p-4 d-flex align-items-center"
+            className="konami-row row mx-0 align-items-center py-3 px-3"
             onClick={() => navigate(`/league/${league.id}`)}
           >
-            <div className="d-flex align-items-center me-4">
-              <img
-                src={league.avatar_url || "/cup.png"}
-                alt="League Icon"
-                className="league-icon"
-                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/60?text=🏆' }}
-              />
-              <span className="followers-text ms-2">1.1k followers</span>
+            {/* League Info */}
+            <div className="col-md-6 d-flex align-items-center">
+              <div className="avatar-frame me-3">
+                <img
+                  src={league.avatar_url || "/cup.png"}
+                  alt=""
+                  className="konami-img"
+                  onError={(e) => { e.currentTarget.src = "/cup.png" }}
+                />
+              </div>
+              <div>
+                <h6 className="m-0 text-uppercase italic fw-bold">{league.name}</h6>
+                <div className="small text-konami-blue">{league.short_intro || ""}</div>
+              </div>
             </div>
-            <div className="flex-grow-1">
-              <h4 className="league-name mb-1">{league.name.toUpperCase()}</h4>
-              <small className="league-info text-muted">
-                {league.short_intro || "No description"} • {league.country || "Unknown"} • {league.season || "Season TBD"}
-              </small>
+
+            {/* Region */}
+            <div className="col-md-2 text-center text-uppercase small">
+              {league.country || ""}
             </div>
-            <div className="ms-3 text-end">
-              <span className="organizer-tag">{league.organizer || "OFFICIAL"}</span>
+
+            {/* Season */}
+            <div className="col-md-2 text-center text-uppercase small italic text-info">
+              {league.season || ""}
+            </div>
+
+            {/* Organizer Tag */}
+            <div className="col-md-2 text-end">
+              <span className="konami-badge">
+                {league.organizer || "OFFICIAL"}
+              </span>
             </div>
           </div>
         ))}
       </div>
 
       <style>{`
-        .league-card {
-          width: 100%;
-          background: #fff;
-          border-radius: 15px;
-          box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        :root {
+          --konami-bg: #030a1a;
+          --konami-row-bg: rgba(13, 110, 253, 0.03);
+          --konami-border: #0d6efd;
+          --konami-blue-text: #58a6ff;
+        }
+
+        .bg-konami-dark {
+          background-color: var(--konami-bg);
+          background-image: radial-gradient(circle at 50% 50%, #051a3d 0%, #030a1a 100%);
+        }
+
+        .text-primary-glow {
+          color: var(--konami-blue-text);
+        }
+
+        .text-konami-blue { color: var(--konami-blue-text); }
+        .italic { font-style: italic; }
+        .tracking-widest { letter-spacing: 2px; }
+
+        .konami-table-header {
+          border-bottom: 2px solid var(--konami-border);
+          background: rgba(13, 110, 253, 0.1);
+        }
+
+        .konami-row {
+          background: var(--konami-row-bg);
           cursor: pointer;
-          display: flex;
-          align-items: center;
+          border-bottom: 1px solid rgba(13, 110, 253, 0.08);
+          transition: background 0.15s ease-in-out;
         }
 
-        .league-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        .konami-row:hover {
+          background: rgba(13, 110, 253, 0.1);
         }
 
-        .league-icon {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
+        .avatar-frame {
+          width: 40px;
+          height: 40px;
+          border: 1px solid var(--konami-border);
+          transform: skew(-10deg);
+          overflow: hidden;
+          background: #000;
+          flex-shrink: 0;
+        }
+
+        .konami-img {
+          width: 100%;
+          height: 100%;
           object-fit: cover;
-          border: 2px solid #dee2e6;
+          transform: skew(10deg) scale(1.1);
         }
 
-        .followers-text {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: #0d6efd;
-        }
-
-        .league-name {
-          font-size: 1.2rem;
+        .konami-badge {
+          font-size: 0.75rem;
           font-weight: 700;
-        }
-
-        .league-info {
-          font-size: 0.85rem;
-        }
-
-        .organizer-tag {
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: #6c757d;
-          text-transform: uppercase;
-          background: #e9ecef;
-          padding: 4px 12px;
-          border-radius: 20px;
-          transition: all 0.2s ease;
-        }
-
-        .league-card:hover .organizer-tag {
-          background: #0d6efd;
-          color: white;
+          padding: 2px 12px;
+          border: 1px solid var(--konami-border);
+          color: var(--konami-border);
+          clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+          display: inline-block;
         }
       `}</style>
     </div>

@@ -30,7 +30,6 @@ export default function LeagueManagement() {
   const activeLeague = getActiveLeague();
   const activeLeagueId = activeLeague?.id;
 
-  // const [editMode, setEditMode] = useState(true); // editing page defaults to editable
   const [leagueData, setLeagueData] = useState<League>({
     name: "",
     organizer: "",
@@ -43,7 +42,6 @@ export default function LeagueManagement() {
 
   const [tournamentPasskey, setTournamentPasskey] = useState("");
   const [linkedTournaments, setLinkedTournaments] = useState<Tournament[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const handleLinkTournament = useCallback(async () => {
     if (!tournamentPasskey || !activeLeagueId) return;
@@ -54,19 +52,29 @@ export default function LeagueManagement() {
       .eq("passkey", tournamentPasskey)
       .single();
 
-    if (error || !data) return alert("Invalid tournament passkey");
+    if (error || !data) return alert("INVALID TOURNAMENT PASSKEY");
+
+    const isAlreadyLinkedLocally = linkedTournaments.some(t => t.id === data.id);
+    if (isAlreadyLinkedLocally) {
+      setTournamentPasskey("");
+      return alert("ALREADY LINKED TO THIS LEAGUE.");
+    }
+
+    if (data.league_id && data.league_id !== activeLeagueId) {
+      return alert(`ALREADY LINKED TO ANOTHER LEAGUE (ID: ${data.league_id})`);
+    }
 
     const { error: updateError } = await supabase
       .from("tournaments")
       .update({ league_id: activeLeagueId })
       .eq("id", data.id);
 
-    if (updateError) return alert("Failed to link: " + updateError.message);
+    if (updateError) return alert("LINK FAILED: " + updateError.message);
 
-    alert(`Linked: ${data.name}`);
+    alert(`SUCCESSFULLY LINKED: ${data.name}`);
     setLinkedTournaments((prev) => [...prev, data]);
     setTournamentPasskey("");
-  }, [tournamentPasskey, activeLeagueId]);
+  }, [tournamentPasskey, activeLeagueId, linkedTournaments]);
 
   useEffect(() => {
     if (!activeLeagueId) {
@@ -108,16 +116,6 @@ export default function LeagueManagement() {
     fetchTournaments();
   }, [activeLeagueId, navigate]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && tournamentPasskey) {
-        handleLinkTournament();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [tournamentPasskey, handleLinkTournament]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setLeagueData((prev) => ({ ...prev, [name]: value }));
@@ -130,130 +128,154 @@ export default function LeagueManagement() {
       .update(leagueData)
       .eq("id", activeLeagueId);
 
-    if (error) return alert("Error saving league: " + error.message);
-    alert("League updated successfully!");
+    if (error) return alert("ERROR SAVING: " + error.message);
+    alert("LEAGUE DATA SYNCHRONIZED.");
   };
 
   return (
-    <div className="min-vh-100 bg-white">
+    <div className="min-vh-100 bg-konami-dark text-white font-konami">
       <LeaguesNavbar />
 
       <div className="container py-4">
-        {/* Top Profile Editing Section */}
-        <div className="card mb-4 p-4 shadow-sm">
-          <div className="row g-3 align-items-center">
-            <div className="col-md-2">
-              <img
-                src={leagueData.avatar_url || "/cup.png"}
-                alt="League Avatar"
-                style={{ width: "100%", borderRadius: "12px", objectFit: "cover", border: "1px solid #ddd" }}
-              />
+        {/* Header Section */}
+        <div className="mb-4 d-flex align-items-center">
+          <div className="avatar-frame me-3">
+             <img src={leagueData.avatar_url || "/cup.png"} alt="" className="konami-img" />
+          </div>
+          <div>
+            <h3 className="m-0 italic fw-bold text-uppercase tracking-widest">{leagueData.name || "LOADING..."}</h3>
+            <span className="text-konami-blue smaller fw-bold">ADMINISTRATION TERMINAL</span>
+          </div>
+        </div>
+
+        {/* Accordion Sections */}
+        <div className="accordion konami-accordion mb-4" id="leagueAccordion">
+          
+          {/* Section 1: Profile Details */}
+          <div className="accordion-item bg-transparent border-primary">
+            <h2 className="accordion-header">
+              <button className="accordion-button collapsed text-uppercase italic fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#details">
+                League Profile Settings
+              </button>
+            </h2>
+            <div id="details" className="accordion-collapse collapse" data-bs-parent="#leagueAccordion">
+              <div className="accordion-body p-4">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="konami-label">League Name</label>
+                    <input type="text" className="konami-input" name="name" value={leagueData.name} onChange={handleChange} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="konami-label">Organizer</label>
+                    <input type="text" className="konami-input" name="organizer" value={leagueData.organizer} onChange={handleChange} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="konami-label">Passkey</label>
+                    <input type="text" className="konami-input" name="passkey" value={leagueData.passkey} onChange={handleChange} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="konami-label">Season</label>
+                    <input type="text" className="konami-input" name="season" value={leagueData.season} onChange={handleChange} />
+                  </div>
+                  <div className="col-12">
+                    <label className="konami-label">Short Intro</label>
+                    <textarea className="konami-input" name="short_intro" value={leagueData.short_intro} onChange={handleChange} rows={2} />
+                  </div>
+                  <div className="col-12 text-end">
+                    <button className="konami-badge-btn px-4" onClick={handleSaveLeague}>UPDATE SETTINGS</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="col-md-10">
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="small fw-bold text-uppercase">League Name</label>
-                  <input type="text" className="form-control" name="name" value={leagueData.name} onChange={handleChange} />
-                </div>
-                <div className="col-md-6">
-                  <label className="small fw-bold text-uppercase">Organizer</label>
-                  <input type="text" className="form-control" name="organizer" value={leagueData.organizer} onChange={handleChange} />
-                </div>
-                <div className="col-md-6">
-                  <label className="small fw-bold text-uppercase">Passkey</label>
-                  <input type="text" className="form-control" name="passkey" value={leagueData.passkey} onChange={handleChange} />
-                </div>
-                <div className="col-md-6">
-                  <label className="small fw-bold text-uppercase">Season</label>
-                  <input type="text" className="form-control" name="season" value={leagueData.season} onChange={handleChange} />
-                </div>
-                <div className="col-md-12">
-                  <label className="small fw-bold text-uppercase">Short Intro</label>
-                  <textarea className="form-control" name="short_intro" value={leagueData.short_intro} onChange={handleChange} rows={2} />
-                </div>
-                <div className="col-12">
-                  <button className="btn btn-primary w-100 fw-bold" onClick={handleSaveLeague}>
-                    SAVE LEAGUE DETAILS
-                  </button>
+          </div>
+
+          {/* Section 2: Rules */}
+          <div className="accordion-item bg-transparent border-primary">
+            <h2 className="accordion-header">
+              <button className="accordion-button collapsed text-uppercase italic fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#rules">
+                League Rules & Regulations
+              </button>
+            </h2>
+            <div id="rules" className="accordion-collapse collapse" data-bs-parent="#leagueAccordion">
+              <div className="accordion-body p-4">
+                <textarea className="konami-input" name="rules" value={leagueData.rules} onChange={handleChange} rows={6} placeholder="DEFINE RULES..." />
+                <div className="text-end mt-3">
+                    <button className="konami-badge-btn px-4" onClick={handleSaveLeague}>SAVE RULES</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Rules / Description Section */}
-        <div className="card mb-4 p-4 shadow-sm">
-          <label className="small fw-bold text-uppercase mb-2">Rules / Notes</label>
-          <textarea
-            className="form-control"
-            name="rules"
-            value={leagueData.rules}
-            onChange={handleChange}
-            rows={4}
-          />
-        </div>
-
-        {/* Linked Tournaments */}
-        <div className="mb-5">
-          <h5 className="fw-bold mb-3 d-flex align-items-center">
-            <i className="bi bi-trophy me-2 text-primary"></i> LINKED TOURNAMENTS
-          </h5>
-          <div className="tournament-scroller d-flex gap-3 overflow-auto pb-3">
-            {linkedTournaments.map((t, idx) => (
-              <div
-                key={t.id}
-                className={`t-card p-3 border rounded-3 transition-all ${selectedIndex === idx ? 'active-t' : ''}`}
-                onClick={() => setSelectedIndex(idx)}
-              >
-                <img src="/cup.png" alt="" style={{ width: '30px' }} className="mb-2" />
-                <div className="fw-bold small text-uppercase truncate">{t.name}</div>
-                <div className="text-primary smaller fw-bold mt-1">ID: {t.id}</div>
+        {/* Linked Tournaments Section */}
+        <div className="mb-4">
+          <h6 className="text-uppercase italic text-konami-blue mb-3 fw-bold tracking-widest">Linked Tournaments</h6>
+          <div className="tournament-list">
+            {linkedTournaments.length === 0 && <p className="smaller opacity-50">NO TOURNAMENTS LINKED</p>}
+            {linkedTournaments.map((t) => (
+              <div key={t.id} className="konami-row d-flex justify-content-between align-items-center p-3 mb-2">
+                <div className="d-flex align-items-center">
+                  <img src="/cup.png" alt="" width="20" className="me-3" />
+                  <span className="fw-bold text-uppercase italic">{t.name}</span>
+                </div>
+                <span className="smaller text-konami-blue fw-bold">ID: {t.id}</span>
               </div>
             ))}
-            <div className="t-card add-card p-3 border border-dashed rounded-3 d-flex flex-column align-items-center justify-content-center">
-               <i className="bi bi-plus-circle h4 m-0 text-muted"></i>
-               <span className="smaller fw-bold text-muted">NEW</span>
-            </div>
           </div>
         </div>
 
-        {/* Connect New Tournament */}
-        <div className="bg-light p-4 rounded-4 border">
-          <label className="fw-bold small text-uppercase mb-2">Connect New Tournament</label>
-          <div className="input-group input-group-lg shadow-sm">
-            <span className="input-group-text bg-white border-end-0"><i className="bi bi-key text-primary"></i></span>
+        {/* Connection Terminal */}
+        <div className="konami-terminal p-4 mb-5">
+          <label className="konami-label mb-3">Link New Tournament </label>
+          <div className="d-flex gap-2">
             <input
               type="text"
-              className="form-control border-start-0"
+              className="konami-input flex-grow-1"
               value={tournamentPasskey}
               onChange={(e) => setTournamentPasskey(e.target.value)}
-              placeholder="ENTER PASSKEY & PRESS ENTER..."
+              placeholder="ENTER TOURNAMENT PASSKEY..."
+              onKeyDown={(e) => e.key === "Enter" && handleLinkTournament()}
             />
-            <button className="btn btn-primary px-4 fw-bold" onClick={handleLinkTournament}>LINK</button>
+            <button className="konami-badge-btn" onClick={handleLinkTournament}>LINK</button>
           </div>
         </div>
 
-        <div className="mt-5 pt-4 border-top">
-          <button className="btn btn-link text-danger fw-bold text-decoration-none p-0" onClick={logoutFromLeague}>
-            <i className="bi bi-box-arrow-left me-2"></i> EXIT MANAGEMENT SESSION
-          </button>
-        </div>
+        <button className="btn btn-link text-danger fw-bold text-decoration-none p-0 smaller italic text-uppercase" onClick={() => { logoutFromLeague(); navigate("/leaguelandingpage"); }}>
+          <i className="bi bi-power me-2"></i> Exit Management Session
+        </button>
       </div>
 
       <style>{`
-        .fw-black { font-weight: 900; letter-spacing: -1px; }
-        .uppercase { text-transform: uppercase; }
+        .bg-konami-dark {
+          background-color: #030a1a;
+          background-image: radial-gradient(circle at 50% 50%, #051a3d 0%, #030a1a 100%);
+        }
+        .text-konami-blue { color: #58a6ff; }
+        .italic { font-style: italic; }
         .tracking-widest { letter-spacing: 2px; }
         .smaller { font-size: 0.75rem; }
-        .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-        .tournament-scroller { scrollbar-width: none; -ms-overflow-style: none; }
-        .tournament-scroller::-webkit-scrollbar { display: none; }
-        .t-card { min-width: 160px; background: white; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
-        .t-card:hover { border-color: #0d6efd; transform: translateY(-3px); }
-        .active-t { border: 2px solid #0d6efd !important; background: #f0f7ff; box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15); }
-        .add-card { border-style: dashed !important; background: transparent; }
-        .border-dashed { border-style: dashed !important; border-width: 2px !important; }
-        .transition-all { transition: all 0.3s ease; }
+
+        /* Accordion Customization */
+        .konami-accordion .accordion-item { border-radius: 0; background: transparent; border: 1px solid rgba(13, 110, 253, 0.3); margin-bottom: 5px; }
+        .konami-accordion .accordion-button { background: rgba(13, 110, 253, 0.05); color: white; border-radius: 0; box-shadow: none; }
+        .konami-accordion .accordion-button:not(.collapsed) { background: rgba(13, 110, 253, 0.15); color: #58a6ff; }
+        .konami-accordion .accordion-button::after { filter: invert(1); }
+
+        .konami-label { display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #58a6ff; margin-bottom: 5px; }
+        .konami-input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #0d6efd; color: white; padding: 10px; font-size: 0.85rem; }
+        .konami-input:focus { outline: none; border-color: white; box-shadow: 0 0 10px rgba(13, 110, 253, 0.3); }
+
+        .konami-row { background: rgba(13, 110, 253, 0.05); border-left: 3px solid #0d6efd; transition: background 0.2s; }
+        .konami-row:hover { background: rgba(13, 110, 253, 0.1); }
+
+        .avatar-frame { width: 50px; height: 50px; border: 2px solid #0d6efd; transform: skew(-10deg); overflow: hidden; background: #000; }
+        .konami-img { width: 100%; height: 100%; object-fit: cover; transform: skew(10deg) scale(1.1); }
+
+        .konami-badge-btn {
+          background: #0d6efd; color: white; border: none; font-weight: 900; font-size: 0.75rem; padding: 8px 20px;
+          clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        }
+        .konami-terminal { background: rgba(13, 110, 253, 0.03); border: 1px dashed rgba(13, 110, 253, 0.3); }
       `}</style>
     </div>
   );
