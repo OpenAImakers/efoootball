@@ -1,14 +1,14 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Advert from "../components/Advert";
 import { supabase } from "../supabase";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 interface LeaderboardRow {
   rank: number;
   username: string;
-  display_name: string; // Using this for the Player column
+  display_name: string;
   tournaments_played: any;
   mp: any;
   w: any;
@@ -20,275 +20,207 @@ interface LeaderboardRow {
   points: any;
 }
 
-const LeaderboardDisplay: React.FC = () => {
+interface League {
+  id: number;
+  name: string;
+  organizer: string;
+  short_intro: string;
+  country: string;
+  season: string;
+  avatar_url?: string;
+}
+
+const KenyaEfootballHub: React.FC = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<"rankings" | "leagues">("rankings");
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [leagues, setLeagues] = useState<League[]>([]);
 
   useEffect(() => {
-    fetchLeaderboard();
+    fetchHubData();
   }, []);
 
-  const fetchLeaderboard = async () => {
-    setLoading(true);
-    // Fetching directly from profiles table
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("username, display_name")
-      .order("display_name", { ascending: true });
+  const fetchHubData = async () => {
+    try {
+      const [profilesRes, leaguesRes] = await Promise.all([
+        supabase.from("profiles").select("username, display_name").order("display_name", { ascending: true }),
+        supabase.from("leagues").select("*").order("id", { ascending: true })
+      ]);
 
-    if (error) {
-      console.error("Error fetching leaderboard:", error);
-      setErrorMsg("Failed to load leaderboard data.");
-    } else {
-      // Maintaining your structure with static data for maintenance
-      const mappedRows = (data || []).map((profile, index) => ({
-        rank: index + 1,
-        username: profile.username,
-        display_name: profile.display_name || profile.username,
-        tournaments_played: "--",
-        mp: 0,
-        w: 0,
-        d: 0,
-        l: 0,
-        goals: 0,
-        against: 0,
-        gd: 0,
-        points: 0,
-      }));
-      setRows(mappedRows);
+      if (profilesRes.data) {
+        setRows(profilesRes.data.map((p, i) => ({
+          rank: i + 1,
+          username: p.username,
+          display_name: p.display_name || p.username,
+          tournaments_played: "--",
+          mp: 0, w: 0, d: 0, l: 0, goals: 0, against: 0, gd: 0, points: 0
+        })));
+      }
+      if (leaguesRes.data) setLeagues(leaguesRes.data);
+    } catch (err) {
+      console.error(err);
     }
-    setLoading(false);
-  };
-
-  const exportToPDF = () => {
-    if (loading || rows.length === 0) return;
-
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    // 1. BRANDED HEADER
-    doc.setFillColor(10, 26, 94);
-    doc.rect(0, 0, pageWidth, 40, "F");
-
-    doc.setFontSize(22);
-    doc.setTextColor(255, 255, 255);
-    doc.text("KENYA EFOOTBALL RANKINGS", 14, 22);
-
-    doc.setDrawColor(0, 181, 204);
-    doc.setLineWidth(1);
-    doc.line(14, 28, 80, 28);
-
-    doc.setFontSize(10);
-    doc.setTextColor(200, 200, 200);
-    doc.text(`Updated: ${new Date().toLocaleDateString()} (Maintenance Mode)`, 14, 35);
-
-    autoTable(doc, {
-      startY: 45,
-      head: [["Rank", "Player", "T", "MP", "W", "D", "L", "GF", "GA", "GD", "%"]],
-      body: rows.map((row, index) => [
-        index + 1,
-        row.display_name,
-        row.tournaments_played,
-        row.mp,
-        row.w,
-        row.d,
-        row.l,
-        row.goals,
-        row.against,
-        "0",
-        row.points,
-      ]),
-      theme: "grid",
-      styles: {
-        fontSize: 9,
-        cellPadding: 3,
-        textColor: [40, 40, 40],
-        lineColor: [0, 181, 204],
-        lineWidth: 0.1,
-      },
-      headStyles: {
-        fillColor: [10, 26, 94],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        halign: "center",
-      },
-      columnStyles: {
-        0: { cellWidth: 12, halign: "center", fontStyle: "bold" },
-        1: { fontStyle: "bold", textColor: [10, 26, 94] },
-        4: { textColor: [0, 150, 0], fontStyle: "bold" },
-        10: { textColor: [245, 130, 32], fontStyle: "bold" },
-      },
-      alternateRowStyles: {
-        fillColor: [245, 250, 255],
-      },
-    });
-
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setDrawColor(220, 220, 220);
-      doc.setLineWidth(0.2);
-      doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
-
-      doc.setFontSize(10);
-      doc.setTextColor(10, 26, 94);
-      doc.setFont("helvetica", "bold");
-      doc.text("Skyla", 14, pageHeight - 10);
-
-      const skylaWidth = doc.getTextWidth("Skyla");
-      doc.setFontSize(6);
-      doc.text("®", 14 + skylaWidth + 0.5, pageHeight - 12);
-
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-      doc.text("|    smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
-
-      doc.setFontSize(8);
-      doc.text(
-        `Page ${i} of ${pageCount}`,
-        pageWidth - 14,
-        pageHeight - 10,
-        { align: "right" }
-      );
-    }
-
-    doc.save(`Masters_Leaderboard_Maint_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (
-    <div className="d-flex flex-column min-vh-100 bg-dark text-light">
+    <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5">
       <Advert />
-      <div className="flex-grow-1 d-flex flex-column pt-4 pb-5" style={{ marginTop: "52px" }}>
-        <div className="container flex-grow-1 d-flex flex-column">
-          
-          {/* MAINTENANCE ALERT - Using standard bootstrap alert for zero UI impact */}
-          <div className="alert alert-warning border-0 shadow-sm mb-4" role="alert">
-            <strong>Maintenance:</strong> Live stats are temporarily hidden while we update player records. Showing Profile Display Names.
-          </div>
 
-          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h2
-              className="fw-bold mb-0 text-uppercase tracking-tighter"
-              style={{
-                fontSize: "2rem",
-                background: "linear-gradient(to right, #000000 20%, #BB0000 40%, #BB0000 60%, #006600 80%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                filter: "drop-shadow(0px 2px 2px rgba(255,255,255,0.1))",
-                letterSpacing: "1px",
-              }}
+      <div className="container-fluid px-4 pt-5 mt-4">
+        {/* TACTICAL TAB SWITCHER */}
+        <div className="d-flex justify-content-center mb-5">
+          <div className="tab-switcher p-1 bg-black bg-opacity-50 rounded-pill border border-primary border-opacity-25">
+            <button 
+              className={`tab-btn ${activeTab === 'rankings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('rankings')}
             >
-              Kenya eFootball Rankings
-            </h2>
-            <div className="d-flex gap-2">
-              <button
-                className="btn btn-outline-light btn-sm px-3"
-                onClick={fetchLeaderboard}
-                disabled={loading}
-              >
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
-              <button
-                className="btn btn-outline-success btn-sm px-3"
-                onClick={exportToPDF}
-                disabled={loading || rows.length === 0}
-              >
-                Download PDF
-              </button>
-            </div>
+              <i className="bi bi-trophy-fill me-2"></i> Rankings
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'leagues' ? 'active' : ''}`}
+              onClick={() => setActiveTab('leagues')}
+            >
+              <i className="bi bi-controller me-2"></i> Leagues
+            </button>
           </div>
+        </div>
 
-          {errorMsg && (
-            <div className="alert alert-danger alert-dismissible fade show" role="alert">
-              {errorMsg}
-              <button
-                type="button"
-                className="btn-close"
-                onClick={() => setErrorMsg(null)}
-              />
-            </div>
-          )}
-
-          <div className="flex-grow-1 bg-dark-subtle rounded-3 shadow-lg overflow-hidden border border-secondary">
-            {loading ? (
-              <div className="d-flex flex-column justify-content-center align-items-center h-100 text-muted">
-                <div
-                  className="spinner-border text-primary mb-3"
-                  style={{ width: "3rem", height: "3rem" }}
-                  role="status"
-                />
-                <p className="fs-5">Loading leaderboard...</p>
+        <div className="animate-fade-in">
+          {activeTab === "rankings" ? (
+            <div className="container">
+              <div className="d-flex justify-content-between align-items-end mb-4">
+                <h2 className="text-uppercase italic fw-black m-0 tracking-tighter">
+                  <span className="text-konami-blue">Rankings</span>
+                </h2>
+                <span className="badge-status">STATS LIVE</span>
               </div>
-            ) : rows.length === 0 ? (
-              <div className="d-flex justify-content-center align-items-center h-100 text-muted">
-                <div className="alert alert-info fs-5 m-4 text-center">
-                  No standings available yet.
-                </div>
-              </div>
-            ) : (
-              <div className="h-100 overflow-auto">
-                <table className="table table-dark table-hover table-striped align-middle mb-0">
-                  <thead className="bg-dark border-bottom border-secondary">
-                    <tr className="text-uppercase small fw-semibold">
-                      <th scope="col" className="ps-4 text-center" style={{ width: "60px" }}>
-                        Rank
-                      </th>
-                      <th scope="col" className="ps-3">Player</th>
-                      <th scope="col" className="text-center">T</th>
-                      <th scope="col" className="text-center">MP</th>
-                      <th scope="col" className="text-center text-success">W</th>
-                      <th scope="col" className="text-center text-secondary">D</th>
-                      <th scope="col" className="text-center text-danger">L</th>
-                      <th scope="col" className="text-center">GF</th>
-                      <th scope="col" className="text-center">GA</th>
-                      <th scope="col" className="text-center">GD</th>
-                      <th scope="col" className="text-center pe-4">%</th>
+              
+              <div className="table-responsive rounded-3 border border-secondary border-opacity-25 bg-black bg-opacity-40 shadow-lg">
+                <table className="table table-dark table-hover align-middle mb-0">
+                  <thead className="bg-dark shadow-sm">
+                    <tr className="smaller text-konami-blue opacity-75 text-uppercase">
+                      <th className="ps-4">Rank</th>
+                      <th>Player</th>
+                      <th className="text-center">MP</th>
+                      <th className="text-center text-success">W</th>
+                      <th className="text-center text-danger">L</th>
+                      <th className="text-center pe-4">%</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row, index) => (
-                      <tr
-                        key={row.username}
-                        className="border-bottom border-secondary"
-                        onClick={() => navigate(`/team/${row.username}/matches`)}
-                        style={{
-                          cursor: "pointer",
-                          height: "54px",
-                        }}
-                      >
-                        <td className="ps-4 text-center fw-bold fs-5">{index + 1}</td>
-                        <td className="ps-3 fw-semibold text-info d-flex align-items-center gap-2">
-                          <i
-                            className="bi bi-bar-chart-line-fill text-secondary opacity-75"
-                            style={{ fontSize: "1.1rem" }}
-                            title="Click to view team stats & match history"
-                          ></i>
-                          <span>{row.display_name}</span>
-                        </td>
-                        <td className="text-center opacity-50">{row.tournaments_played}</td>
+                    {rows.map((row, idx) => (
+                      <tr key={row.username} onClick={() => navigate(`/team/${row.username}/matches`)} style={{ cursor: "pointer" }}>
+                        <td className="ps-4 fw-bold">{idx + 1}</td>
+                        <td className="fw-bold text-info">{row.display_name}</td>
                         <td className="text-center opacity-50">{row.mp}</td>
-                        <td className="text-center text-success fw-medium opacity-50">{row.w}</td>
-                        <td className="text-center text-secondary opacity-50">{row.d}</td>
-                        <td className="text-center text-danger opacity-50">{row.l}</td>
-                        <td className="text-center opacity-50">{row.goals}</td>
-                        <td className="text-center opacity-50">{row.against}</td>
-                        <td className="text-center fw-medium opacity-50">0</td>
-                        <td className="text-center pe-4 fw-bold text-warning opacity-50">{row.points}</td>
+                        <td className="text-center text-success opacity-75">{row.w}</td>
+                        <td className="text-center text-danger opacity-75">{row.l}</td>
+                        <td className="text-center pe-4 fw-black text-warning">{row.points}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="row g-4">
+              {leagues.map((league) => (
+                <div key={league.id} className="col-12 col-md-6 col-xl-4 col-xxl-3">
+                  <div className="league-card" onClick={() => navigate(`/league/${league.id}`)}>
+                    <div className="card-glitch-overlay"></div>
+                    <div className="card-header-info d-flex justify-content-between p-3">
+                      <span className="small-tag season-tag">{league.season || "S1"}</span>
+                      <span className="small-tag region-tag">{league.country || "KENYA"}</span>
+                    </div>
+                    <div className="card-body-main px-3 pt-2 text-center">
+                      <div className="card-avatar-container mb-3">
+                        <div className="card-avatar-hex">
+                          <img
+                            src={league.avatar_url || "/cup.png"}
+                            alt={league.name}
+                            className="card-img"
+                            onError={(e) => { e.currentTarget.src = "/cup.png" }}
+                          />
+                        </div>
+                      </div>
+                      <h4 className="league-title text-uppercase italic fw-bold mb-1">{league.name}</h4>
+                      <p className="league-intro smaller opacity-75">
+                        {league.short_intro || "Initializing sector data..."}
+                      </p>
+                    </div>
+                    <div className="card-footer-terminal mt-auto d-flex align-items-center justify-content-between px-3 py-2">
+                      <div className="organizer-info text-start">
+                        <div className="tiny-label">ORGANIZER</div>
+                        <div className="organizer-name fw-bold">{league.organizer || "SYSTEM"}</div>
+                      </div>
+                      <div className="card-action-icon"><i className="bi bi-chevron-right"></i></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      <style>{`
+        :root {
+          --k-blue: #0d6efd;
+          --k-glow: #58a6ff;
+          --k-dark: #030a1a;
+          --k-card-bg: rgba(13, 110, 253, 0.05);
+          --k-border: rgba(13, 110, 253, 0.4);
+        }
+        .bg-konami-dark {
+          background-color: var(--k-dark);
+          background-image: radial-gradient(circle at 50% 50%, #051a3d 0%, #030a1a 100%);
+        }
+        .tab-btn {
+          background: transparent; border: none; color: rgba(255, 255, 255, 0.5);
+          padding: 8px 25px; border-radius: 50px; font-weight: 800;
+          text-transform: uppercase; font-style: italic; font-size: 0.8rem;
+          letter-spacing: 1px; transition: 0.3s;
+        }
+        .tab-btn.active {
+          background: var(--k-blue); color: white;
+          box-shadow: 0 0 15px rgba(13, 110, 253, 0.5);
+        }
+        .league-card {
+          position: relative; background: var(--k-card-bg); border: 1px solid var(--k-border);
+          height: 100%; min-height: 280px; display: flex; flex-direction: column;
+          cursor: pointer; transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+          overflow: hidden; clip-path: polygon(0 0, 92% 0, 100% 8%, 100% 100%, 8% 100%, 0 92%);
+        }
+        .league-card:hover {
+          background: rgba(13, 110, 253, 0.12); border-color: var(--k-glow);
+          transform: translateY(-5px);
+        }
+        .card-avatar-hex {
+          width: 90px; height: 90px; background: #000;
+          border: 2px solid var(--k-blue);
+          clip-path: polygon(25% 5%, 75% 5%, 95% 50%, 75% 95%, 25% 95%, 5% 50%);
+          margin: auto;
+        }
+        .card-img { width: 100%; height: 100%; object-fit: cover; }
+        .small-tag { font-size: 0.6rem; font-weight: 800; padding: 2px 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--k-border); }
+        .season-tag { color: var(--k-glow); }
+        .card-footer-terminal { background: rgba(0,0,0,0.4); border-top: 1px solid var(--k-border); }
+        .tiny-label { font-size: 0.5rem; color: var(--k-glow); letter-spacing: 1px; }
+        .organizer-name { font-size: 0.75rem; text-transform: uppercase; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .text-konami-blue { color: var(--k-glow); }
+        .italic { font-style: italic; }
+        .smaller { font-size: 0.7rem; }
+        .fw-black { font-weight: 900; }
+        .badge-status {
+          font-size: 0.7rem; font-weight: 900; color: #00ff88;
+          border: 1px solid #00ff88; padding: 4px 10px;
+          clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        }
+      `}</style>
     </div>
   );
 };
 
-export default LeaderboardDisplay;
+export default KenyaEfootballHub;

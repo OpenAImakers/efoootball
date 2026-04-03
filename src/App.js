@@ -110,9 +110,9 @@ useEffect(() => {
          <Route
   path="/league/:id"
   element={
-    <ProtectedRoute>
+
       <SpecificLeague />
-    </ProtectedRoute>
+
   }
 />
       <Route 
@@ -151,9 +151,9 @@ useEffect(() => {
             <Route
         path="/leagues"
         element={
-          <ProtectedRoute>
+        
             <Leagues />
-          </ProtectedRoute>
+        
         }
       />
             <Route

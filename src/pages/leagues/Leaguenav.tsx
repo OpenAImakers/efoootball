@@ -6,7 +6,6 @@ export default function LeaguesNavbar() {
 
   const navItems = [
     { name: "Home", path: "/dashboard" },
-    { name: "Leagues", path: "/leagues" },
     { name: "Manage", path: "/leaguelandingpage" },
   ];
 

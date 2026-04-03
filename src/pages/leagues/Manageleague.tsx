@@ -42,6 +42,51 @@ export default function LeagueManagement() {
 
   const [tournamentPasskey, setTournamentPasskey] = useState("");
   const [linkedTournaments, setLinkedTournaments] = useState<Tournament[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  // --- IMAGE UPLOAD LOGIC ---
+  const handleUploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${activeLeagueId}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload to 'league-avatars' bucket
+      const { error: uploadError } = await supabase.storage
+        .from("league-avatars")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get Public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("league-avatars")
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // Update Local State
+      setLeagueData((prev) => ({ ...prev, avatar_url: publicUrl }));
+
+      // Update Database immediately for the avatar
+      const { error: updateError } = await supabase
+        .from("leagues")
+        .update({ avatar_url: publicUrl })
+        .eq("id", activeLeagueId);
+
+      if (updateError) throw updateError;
+
+      alert("AVATAR UPDATED SUCCESSFULLY");
+    } catch (error: any) {
+      alert("UPLOAD ERROR: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleLinkTournament = useCallback(async () => {
     if (!tournamentPasskey || !activeLeagueId) return;
@@ -140,7 +185,11 @@ export default function LeagueManagement() {
         {/* Header Section */}
         <div className="mb-4 d-flex align-items-center">
           <div className="avatar-frame me-3">
-             <img src={leagueData.avatar_url || "/cup.png"} alt="" className="konami-img" />
+            <img 
+              src={leagueData.avatar_url || "/cup.png"} 
+              alt="League Avatar" 
+              className="konami-img" 
+            />
           </div>
           <div>
             <h3 className="m-0 italic fw-bold text-uppercase tracking-widest">{leagueData.name || "LOADING..."}</h3>
@@ -161,6 +210,19 @@ export default function LeagueManagement() {
             <div id="details" className="accordion-collapse collapse" data-bs-parent="#leagueAccordion">
               <div className="accordion-body p-4">
                 <div className="row g-3">
+                  {/* Image Upload Input */}
+                  <div className="col-12 mb-3">
+                    <label className="konami-label">Update League Image</label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="konami-input" 
+                      onChange={handleUploadAvatar} 
+                      disabled={uploading}
+                    />
+                    {uploading && <span className="smaller italic text-konami-blue">UPLOADING DATA...</span>}
+                  </div>
+
                   <div className="col-md-6">
                     <label className="konami-label">League Name</label>
                     <input type="text" className="konami-input" name="name" value={leagueData.name} onChange={handleChange} />
@@ -255,7 +317,6 @@ export default function LeagueManagement() {
         .tracking-widest { letter-spacing: 2px; }
         .smaller { font-size: 0.75rem; }
 
-        /* Accordion Customization */
         .konami-accordion .accordion-item { border-radius: 0; background: transparent; border: 1px solid rgba(13, 110, 253, 0.3); margin-bottom: 5px; }
         .konami-accordion .accordion-button { background: rgba(13, 110, 253, 0.05); color: white; border-radius: 0; box-shadow: none; }
         .konami-accordion .accordion-button:not(.collapsed) { background: rgba(13, 110, 253, 0.15); color: #58a6ff; }

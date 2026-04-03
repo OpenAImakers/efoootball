@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../../supabase";
-import LeaguesNavbar from "./Leaguenav";
+import Advert from "../../components/Advert";
 
 export default function SpecificLeague() {
   const { id } = useParams();
@@ -68,7 +68,7 @@ export default function SpecificLeague() {
 
   return (
     <div className="vh-100 bg-konami-dark text-white font-konami d-flex flex-column overflow-hidden">
-      <LeaguesNavbar />
+      <Advert />
 
       <div className="container-fluid px-4 flex-grow-1 d-flex flex-column overflow-hidden mt-3">
         {/* Header */}
