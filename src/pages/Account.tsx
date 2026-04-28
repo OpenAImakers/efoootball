@@ -8,9 +8,10 @@ export default function ProfilePage() {
     username: string | null;
     display_name: string | null;
     profile_pic: string | null;
-    team_id: number | null;
   } | null>(null);
-  const [team, setTeam] = useState<{ name: string; team_code: string } | null>(null);
+  
+  // Changed to an array to support multiple linked teams
+  const [teams, setTeams] = useState<{ id: number; name: string; team_code: string }[]>([]);
   const [teamCodeInput, setTeamCodeInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,6 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [profilePic, setProfilePic] = useState<string | null>(null);
 
-  // New state for team preview / confirmation
   const [previewTeam, setPreviewTeam] = useState<{ id: number; name: string; team_code: string } | null>(null);
 
   useEffect(() => {
@@ -36,20 +36,30 @@ export default function ProfilePage() {
         setError("Please log in to view your profile.");
         return;
       }
-      const { data, error: profileError } = await supabase
+
+      // 1. Fetch Profile
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("username, display_name, profile_pic, team_id, teams(name, team_code)")
+        .select("username, display_name, profile_pic")
         .eq("id", user.id)
         .single();
+      
       if (profileError) throw profileError;
-      setProfile(data);
-      setUsername(data?.username || "");
-      setDisplayName(data?.display_name || "");
-      setProfilePic(data?.profile_pic || null);
-     
-      if (data?.teams) {
-        setTeam(data.teams as any);
-      }
+
+      // 2. Fetch all teams linked to this profile_id
+      const { data: teamData, error: teamError } = await supabase
+        .from("teams")
+        .select("id, name, team_code")
+        .eq("profile_id", user.id);
+
+      if (teamError) throw teamError;
+
+      setProfile(profileData);
+      setUsername(profileData?.username || "");
+      setDisplayName(profileData?.display_name || "");
+      setProfilePic(profileData?.profile_pic || null);
+      setTeams(teamData || []);
+
     } catch (err: any) {
       setError(err.message || "Failed to load profile.");
     } finally {
@@ -66,7 +76,7 @@ export default function ProfilePage() {
 
       const { data: teamData, error: teamError } = await supabase
         .from("teams")
-        .select("id, name, team_code")
+        .select("id, name, team_code, profile_id")
         .eq("team_code", trimmedCode)
         .single();
 
@@ -75,7 +85,11 @@ export default function ProfilePage() {
         return;
       }
 
-      // Show preview instead of joining immediately
+      if (teamData.profile_id) {
+        alert("This team is already claimed by another player.");
+        return;
+      }
+
       setPreviewTeam(teamData);
     } catch (err: any) {
       alert(err.message || "Something went wrong.");
@@ -92,18 +106,17 @@ export default function ProfilePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Update the team table directly
       const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ team_id: previewTeam.id })
-        .eq("id", user.id);
+        .from("teams")
+        .update({ profile_id: user.id })
+        .eq("id", previewTeam.id);
 
       if (updateError) throw updateError;
 
-      // Success
-      setTeam({ name: previewTeam.name, team_code: previewTeam.team_code });
       setPreviewTeam(null);
       setTeamCodeInput("");
-      fetchProfile(); // just in case
+      fetchProfile(); // Refresh list and profile
     } catch (err: any) {
       alert(err.message || "Failed to join team.");
     } finally {
@@ -171,7 +184,7 @@ export default function ProfilePage() {
           <div className="alert alert-danger">{error}</div>
         ) : (
           <div className="row g-4">
-            {/* LEFT COLUMN unchanged */}
+            {/* LEFT COLUMN */}
             <div className="col-md-4">
               <div className="card border-0 shadow-sm p-4 text-center mb-4" style={{ borderRadius: "15px" }}>
                 <div className="mb-3">
@@ -205,7 +218,7 @@ export default function ProfilePage() {
                   onClick={() => { setActiveTab("myteam"); setIsEditing(false); }}
                   className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'myteam' ? 'active' : ''}`}
                 >
-                  My Team ⚽
+                  My Teams ⚽
                 </button>
                 <button
                   onClick={() => { setActiveTab("tournaments"); setIsEditing(false); }}
@@ -237,7 +250,6 @@ export default function ProfilePage() {
             <div className="col-md-8">
               <div className="card border-0 shadow-sm p-4 h-100" style={{ borderRadius: "15px", minHeight: "400px" }}>
                 {isEditing ? (
-                  // Editing form unchanged
                   <div>
                     <h5 className="fw-bold text-primary mb-4">Edit Profile</h5>
                     <div className="mb-4 text-center p-3 bg-light rounded border">
@@ -271,61 +283,65 @@ export default function ProfilePage() {
                       )}
 
                       {activeTab === "myteam" && (
-                        <div className="p-4">
-                          {team ? (
-                            <div className="card bg-primary text-white p-5 border-0 shadow" style={{ borderRadius: "20px" }}>
-                              <i className="bi bi-shield-shaded display-1 mb-3"></i>
-                              <h2 className="fw-bold">{team.name}</h2>
-                              <p className="opacity-75">Your Official Squad</p>
-                              <div className="badge bg-white text-primary p-2">CODE: {team.team_code}</div>
+                        <div className="p-2">
+                          {/* 1. LIST OF TEAMS */}
+                          {teams.length > 0 && (
+                            <div className="mb-5">
+                              <h5 className="fw-bold text-start mb-3 text-muted text-uppercase small">Your Linked Squads</h5>
+                              <div className="row g-3">
+                                {teams.map((t) => (
+                                  <div key={t.id} className="col-sm-6">
+                                    <div className="card bg-primary text-white p-3 border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+                                      <div className="d-flex justify-content-between align-items-center">
+                                        <div className="text-start">
+                                          <div className="fw-bold small opacity-75">Team Name</div>
+                                          <h6 className="mb-1 fw-bold">{t.name}</h6>
+                                          <span className="badge bg-white text-primary" style={{ fontSize: '0.7rem' }}>CODE: {t.team_code}</span>
+                                        </div>
+                                        <i className="bi bi-shield-check fs-2 opacity-50"></i>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ) : previewTeam ? (
-                            // ── TEAM PREVIEW / CONFIRMATION UI ──
+                          )}
+
+                          {/* 2. JOIN/LINK SECTION */}
+                          {previewTeam ? (
                             <div className="card border-primary shadow-lg p-4" style={{ maxWidth: "500px", margin: "0 auto" }}>
-                              <h4 className="fw-bold text-primary mb-3">Join Team?</h4>
+                              <h4 className="fw-bold text-primary mb-3">Link this Team?</h4>
                               <div className="bg-light rounded p-4 mb-4 text-start">
                                 <h5 className="fw-bold mb-2">{previewTeam.name}</h5>
                                 <p className="mb-1 text-muted">Team Code:</p>
-                                <div className="badge bg-primary text-white fs-5 px-4 py-2">
-                                  {previewTeam.team_code}
-                                </div>
+                                <div className="badge bg-primary text-white fs-5 px-4 py-2">{previewTeam.team_code}</div>
                               </div>
                               <div className="d-grid gap-3">
-                                <button
-                                  className="btn btn-primary btn-lg fw-bold"
-                                  onClick={handleConfirmJoin}
-                                  disabled={saving}
-                                >
-                                  {saving ? "Joining..." : "Yes, Join Team"}
+                                <button className="btn btn-primary btn-lg fw-bold" onClick={handleConfirmJoin} disabled={saving}>
+                                  {saving ? "Linking..." : "Confirm Link"}
                                 </button>
-                                <button
-                                  className="btn btn-outline-secondary btn-lg"
-                                  onClick={handleCancelJoin}
-                                  disabled={saving}
-                                >
-                                  Cancel
-                                </button>
+                                <button className="btn btn-outline-secondary" onClick={handleCancelJoin} disabled={saving}>Cancel</button>
                               </div>
                             </div>
                           ) : (
-                            // Normal join form
-                            <div className="max-w-md mx-auto">
-                              <h4 className="fw-bold mb-3">Not Linked to a Team</h4>
-                              <p className="text-muted mb-4">Enter your team's secret code to join the action.</p>
-                              <div className="input-group mb-3 shadow-sm">
+                            <div className="max-w-md mx-auto py-3">
+                              <div className="text-center mb-4">
+                                <div className="bg-light rounded-circle d-inline-flex p-3 mb-3">
+                                  <i className="bi bi-plus-circle text-primary fs-3"></i>
+                                </div>
+                                <h4 className="fw-bold">Link a New Team</h4>
+                                <p className="text-muted small">Enter a secret code to add another squad to your profile.</p>
+                              </div>
+                              <div className="input-group mb-3 shadow-sm border rounded-pill overflow-hidden">
                                 <input
                                   type="text"
-                                  className="form-control form-control-lg text-center fw-bold"
-                                  placeholder="ENTER CODE (e.g. ARS123)"
+                                  className="form-control border-0 px-4"
+                                  placeholder="ENTER CODE"
                                   value={teamCodeInput}
                                   onChange={(e) => setTeamCodeInput(e.target.value.toUpperCase())}
                                 />
-                                <button
-                                  className="btn btn-primary px-4 fw-bold"
-                                  onClick={handleCheckTeamCode}
-                                  disabled={saving}
-                                >
-                                  {saving ? "Checking..." : "Preview Team"}
+                                <button className="btn btn-primary px-4 fw-bold" onClick={handleCheckTeamCode} disabled={saving}>
+                                  {saving ? "..." : "Link"}
                                 </button>
                               </div>
                             </div>
@@ -345,11 +361,11 @@ export default function ProfilePage() {
       </div>
 
       <style>{`
-        .tab-btn { color: #495057; font-weight: 500; }
-        .tab-btn:hover:not(.active) { background-color: #e9ecef; color: #0d6efd; }
+        .tab-btn { color: #495057; font-weight: 500; transition: all 0.2s; }
+        .tab-btn:hover:not(.active) { background-color: #f1f3f5; color: #0d6efd; transform: translateX(5px); }
         .tab-btn.active { background-color: #0d6efd !important; color: white !important; }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </main>
   );

@@ -9,15 +9,13 @@ interface LeaderboardRow {
   rank: number;
   username: string;
   display_name: string;
-  tournaments_played: any;
-  mp: any;
-  w: any;
-  d: any;
-  l: any;
-  goals: any;
-  against: any;
-  gd: any;
-  points: any;
+  tournaments_played: number;
+  mp: number;
+  w: number;
+  d: number;
+  l: number;
+  gd: number;
+  win_rate: number;
 }
 
 interface League {
@@ -43,19 +41,50 @@ const KenyaEfootballHub: React.FC = () => {
   const fetchHubData = async () => {
     try {
       const [profilesRes, leaguesRes] = await Promise.all([
-        supabase.from("profiles").select("username, display_name").order("display_name", { ascending: true }),
+        supabase.from("profiles").select(`
+          username, 
+          display_name,
+          teams ( w, d, l, gf, ga )
+        `),
         supabase.from("leagues").select("*").order("id", { ascending: true })
       ]);
 
       if (profilesRes.data) {
-        setRows(profilesRes.data.map((p, i) => ({
-          rank: i + 1,
-          username: p.username,
-          display_name: p.display_name || p.username,
-          tournaments_played: "--",
-          mp: 0, w: 0, d: 0, l: 0, goals: 0, against: 0, gd: 0, points: 0
-        })));
+        const aggregated = profilesRes.data.map((p: any) => {
+          const stats = (p.teams || []).reduce(
+            (acc: any, team: any) => ({
+              mp: acc.mp + (team.w + team.d + team.l || 0),
+              w: acc.w + (team.w || 0),
+              d: acc.d + (team.d || 0),
+              l: acc.l + (team.l || 0),
+              gf: acc.gf + (team.gf || 0),
+              ga: acc.ga + (team.ga || 0),
+            }),
+            { mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }
+          );
+
+          // Calculate Win Rate: (Wins / Matches Played) * 100
+          const winRate = stats.mp > 0 ? (stats.w / stats.mp) * 100 : 0;
+
+          return {
+            rank: 0,
+            username: p.username,
+            display_name: p.display_name || p.username,
+            tournaments_played: p.teams?.length || 0,
+            mp: stats.mp,
+            w: stats.w,
+            d: stats.d,
+            l: stats.l,
+            gd: stats.gf - stats.ga,
+            win_rate: parseFloat(winRate.toFixed(1))
+          };
+        });
+
+        // Sort by Win Rate primarily
+        const sorted = aggregated.sort((a, b) => b.win_rate - a.win_rate || b.gd - a.gd);
+        setRows(sorted.map((row, i) => ({ ...row, rank: i + 1 })));
       }
+      
       if (leaguesRes.data) setLeagues(leaguesRes.data);
     } catch (err) {
       console.error(err);
@@ -66,15 +95,15 @@ const KenyaEfootballHub: React.FC = () => {
     <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5">
       <Advert />
 
+      {/* FULL WIDTH CONTAINER */}
       <div className="container-fluid px-4 pt-5 mt-4">
-        {/* TACTICAL TAB SWITCHER */}
         <div className="d-flex justify-content-center mb-5">
           <div className="tab-switcher p-1 bg-black bg-opacity-50 rounded-pill border border-primary border-opacity-25">
             <button 
               className={`tab-btn ${activeTab === 'rankings' ? 'active' : ''}`}
               onClick={() => setActiveTab('rankings')}
             >
-              <i className="bi bi-trophy-fill me-2"></i> Rankings
+              <i className="bi bi-trophy-fill me-2"></i> Leaderboard
             </button>
             <button 
               className={`tab-btn ${activeTab === 'leagues' ? 'active' : ''}`}
@@ -87,12 +116,9 @@ const KenyaEfootballHub: React.FC = () => {
 
         <div className="animate-fade-in">
           {activeTab === "rankings" ? (
-            <div className="container">
+            <div className="w-100">
               <div className="d-flex justify-content-between align-items-end mb-4">
-                <h2 className="text-uppercase italic fw-black m-0 tracking-tighter">
-                  <span className="text-konami-blue">Rankings</span>
-                </h2>
-                <span className="badge-status">STATS LIVE</span>
+               <span className="text-konami-blue">KENYA EFOOTBALL RANKINGS</span>
               </div>
               
               <div className="table-responsive rounded-3 border border-secondary border-opacity-25 bg-black bg-opacity-40 shadow-lg">
@@ -101,21 +127,27 @@ const KenyaEfootballHub: React.FC = () => {
                     <tr className="smaller text-konami-blue opacity-75 text-uppercase">
                       <th className="ps-4">Rank</th>
                       <th>Player</th>
+                      <th className="text-center">Teams</th>
                       <th className="text-center">MP</th>
                       <th className="text-center text-success">W</th>
                       <th className="text-center text-danger">L</th>
-                      <th className="text-center pe-4">%</th>
+                      <th className="text-center">GD</th>
+                      <th className="text-center pe-4">Win %</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row, idx) => (
+                    {rows.map((row) => (
                       <tr key={row.username} onClick={() => navigate(`/team/${row.username}/matches`)} style={{ cursor: "pointer" }}>
-                        <td className="ps-4 fw-bold">{idx + 1}</td>
+                        <td className="ps-4 fw-bold">{row.rank}</td>
                         <td className="fw-bold text-info">{row.display_name}</td>
+                        <td className="text-center opacity-50">{row.tournaments_played}</td>
                         <td className="text-center opacity-50">{row.mp}</td>
                         <td className="text-center text-success opacity-75">{row.w}</td>
                         <td className="text-center text-danger opacity-75">{row.l}</td>
-                        <td className="text-center pe-4 fw-black text-warning">{row.points}</td>
+                        <td className="text-center opacity-75">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
+                        <td className="text-center pe-4 fw-black text-warning">
+                          {row.win_rate}%
+                        </td>
                       </tr>
                     ))}
                   </tbody>
