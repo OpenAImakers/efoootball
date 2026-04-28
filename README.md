@@ -1,5 +1,8 @@
 # ⚽ Welcome to [eFootball](https://efootballkenyaleague.website/)
-### Gaming a career
+> A competitive eFootball platform for creating leagues, tracking matches, and building your gaming career in a structured ecosystem.
+
+## 🎯 Purpose
+eFootball is built for mobile competitive efootball ecosystem players bringing structure, competition, and community into one platform.
 
 ---
 
