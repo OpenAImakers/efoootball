@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [teamsMap, setTeamsMap] = useState<Record<number, any[]>>({});
   const [user, setUser] = useState<any>(null);
+  const [profilesMap, setProfilesMap] = useState<Record<string, any>>({});
   const [formData, setFormData] = useState<Record<number, any>>({});
   const [submitting, setSubmitting] = useState<Record<number, boolean>>({});
   const [messages, setMessages] = useState<Record<number, { type: string; text: string } | null>>({});
@@ -32,6 +33,21 @@ export default function RegisterPage() {
 
       if (!regs) return;
       setRegistrations(regs);
+
+      // Fetch profiles for created_by users
+      const userIds = regs.map(reg => reg.created_by).filter(Boolean);
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("*")
+          .in("id", userIds);
+        
+        const profilesObj: Record<string, any> = {};
+        profiles?.forEach(profile => {
+          profilesObj[profile.id] = profile;
+        });
+        setProfilesMap(profilesObj);
+      }
 
       const initialFormData: Record<number, any> = {};
       regs.forEach((reg) => {
@@ -73,7 +89,6 @@ export default function RegisterPage() {
       .maybeSingle();
     return !!data;
   };
-
 
   const handleSubmit = async (e: React.FormEvent, regId: number) => {
     e.preventDefault();
@@ -156,46 +171,43 @@ export default function RegisterPage() {
     <main className="min-vh-100" style={{ backgroundColor: "#f0f2f5", marginTop: "68px" }}>
       <Navbar />
 
-      {/* Header with Search and Create Button */}
-      <div className="container-fluid px-4 mt-4 mb-4">
+      {/* Sticky Header with Search and Create Button - SQUARED AND STICKY */}
+      <div 
+        className="container-fluid px-4 py-3"
+        style={{
+          position: "sticky",
+          top: "68px",
+          zIndex: 1020,
+          backgroundColor: "#f0f2f5",
+          borderBottom: "1px solid #dee2e6"
+        }}
+      >
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
-          {/* Search Bar - Left */}
+          {/* Search Bar - Left - SQUARED */}
           <div className="flex-grow-1" style={{ maxWidth: "400px" }}>
-            <div className="position-relative">
-              <input
-                type="text"
-                className="form-control form-control-lg rounded-pill shadow-sm"
-                placeholder="Search Registrations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  paddingLeft: "45px",
-                  border: "none",
-                  backgroundColor: "white"
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: "18px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#6c757d",
-                  fontSize: "1.1rem"
-                }}
-              >        
-              </div>
-            </div>
+            <input
+              type="text"
+              className="form-control form-control-lg shadow-sm"
+              placeholder="Search Registrations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                border: "1px solid #dee2e6",
+                borderRadius: "8px",
+                backgroundColor: "white"
+              }}
+            />
           </div>
 
           {/* Create Button - Right */}
           <button
             onClick={() => navigate("/registrations")}
-            className="btn btn-primary btn-lg rounded-pill shadow-sm px-4 py-2"
+            className="btn btn-primary btn-lg shadow-sm px-4 py-2"
             style={{
               background: "linear-gradient(135deg, #35962e 0%, #863131 100%)",
               border: "none",
-              fontWeight: "600"
+              fontWeight: "600",
+              borderRadius: "8px"
             }}
           >
             + Have a squad? Create a registration here
@@ -232,6 +244,14 @@ export default function RegisterPage() {
               };
               const isSubmitting = submitting[reg.id] || false;
               const message = messages[reg.id] || null;
+              
+              // Calculate total budget
+              // Calculate total budget based on max players, not current teams
+const totalBudget = reg.max_players * reg.registration_amount;
+              
+              // Get host/sponsor profile
+              const hostProfile = reg.created_by ? profilesMap[reg.created_by] : null;
+              const hostName = hostProfile?.display_name || hostProfile?.username || reg.created_by?.slice(0, 8) || "Anonymous";
 
               return (
                 <div key={reg.id} className="col-12">
@@ -293,6 +313,12 @@ export default function RegisterPage() {
                       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
                         <div className="d-flex gap-4 flex-wrap">
                           <div>
+                            <small className="text-muted d-block">Total Budget</small>
+                            <strong className="fs-5 text-primary">
+                              KES {totalBudget.toLocaleString()}
+                            </strong>
+                          </div>
+                          <div>
                             <small className="text-muted d-block">Entry Fee</small>
                             <strong className="fs-5 text-primary">KES {reg.registration_amount}</strong>
                           </div>
@@ -303,6 +329,12 @@ export default function RegisterPage() {
                           <div>
                             <small className="text-muted d-block">Created</small>
                             <strong className="fs-5">{new Date(reg.created_at).toLocaleDateString()}</strong>
+                          </div>
+                          <div>
+                            <small className="text-muted d-block">Host/Sponsor</small>
+                            <strong className="fs-5 text-primary">
+                              {hostName}
+                            </strong>
                           </div>
                         </div>
                         <div className="mt-2 mt-sm-0">
