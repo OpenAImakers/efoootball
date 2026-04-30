@@ -8,6 +8,7 @@ const TournamentList = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"live" | "finished">("live");
 
   const fetchTournaments = useCallback(async (currentUser: any) => {
     setLoading(true);
@@ -36,12 +37,23 @@ const TournamentList = () => {
         );
       }
 
-      const mapped = tData.map((t) => ({
-        ...t,
-        follower_count: t.tournament_followers?.length || 0,
-        isFollowing: t.tournament_followers?.some((f: any) => f.user_id === currentUser?.id),
-        host_name: idToDisplay[t.created_by] || "System",
-      }));
+      const mapped = tData.map((t) => {
+        // Calculate tournament budget
+        const first = parseFloat(t.first_place_prize) || 0;
+        const second = parseFloat(t.second_place_prize) || 0;
+        const third = parseFloat(t.third_place_prize) || 0;
+        const totalBudget = first + second + third;
+
+        return {
+          ...t,
+          total_budget: totalBudget,
+          follower_count: t.tournament_followers?.length || 0,
+          isFollowing: t.tournament_followers?.some(
+            (f: any) => f.user_id === currentUser?.id
+          ),
+          host_name: idToDisplay[t.created_by] || "System",
+        };
+      });
 
       setTournaments(mapped);
     } catch (err) {
@@ -72,7 +84,8 @@ const TournamentList = () => {
           ? {
               ...t,
               isFollowing: !isFollowing,
-              follower_count: t.follower_count + (isFollowing ? -1 : 1),
+              follower_count:
+                t.follower_count + (isFollowing ? -1 : 1),
             }
           : t
       )
@@ -95,129 +108,255 @@ const TournamentList = () => {
     }
   };
 
-  const filtered = tournaments.filter((t) =>
-    t.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = tournaments
+    .filter((t) =>
+      t.name?.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((t) => t.status === statusFilter);
 
   return (
-    <div className="min-vh-100 w-100" style={{ backgroundColor: "#020617", color: "#f8fafc" }}>
-      <div className="container-fluid container-lg py-4">
-
-        {/* Search bar wrapper - ensure no horizontal scroll */}
-        <div className="mb-5 px-2">
+    <div
+      className="min-vh-100 w-100"
+      style={{ backgroundColor: "#020617", color: "#f8fafc" }}
+    >
+      <div className="w-100 py-4">
+        {/* Search */}
+        <div className="mb-4 px-3">
           <input
             type="text"
             className="form-control bg-transparent border-0 text-white shadow-none p-0"
             placeholder="SEARCH TOURNAMENTS..."
             style={{
-              fontSize: "clamp(1.2rem, 5vw, 1.5rem)", // Fluid font size
+              fontSize: "clamp(1.2rem, 5vw, 1.5rem)",
               fontWeight: 900,
               fontStyle: "italic",
               borderLeft: "6px solid #ffffff",
               paddingLeft: "1.25rem",
               letterSpacing: "1.5px",
+              width: "100%",
             }}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
+        {/* Status Filter */}
+        <div className="d-flex gap-2 px-3 mb-4">
+          <button
+            className={`btn ${
+              statusFilter === "live"
+                ? "btn-primary"
+                : "btn-outline-light"
+            }`}
+            onClick={() => setStatusFilter("live")}
+          >
+            Live
+          </button>
+
+          <button
+            className={`btn ${
+              statusFilter === "finished"
+                ? "btn-primary"
+                : "btn-outline-light"
+            }`}
+            onClick={() => setStatusFilter("finished")}
+          >
+            Finished
+          </button>
+        </div>
+
         {loading && tournaments.length === 0 ? (
           <div className="text-center py-5">
-            <div className="spinner-border text-info" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+            <div className="spinner-border text-info" role="status" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center text-secondary py-5">
+            No {statusFilter} tournaments found.
           </div>
         ) : (
-          <div className="row g-3 mx-0"> {/* Row handles the gap and ensures full width */}
+          <div className="w-100">
             {filtered.map((t) => (
-              <div key={t.id} className="col-12 px-0">
+              <div key={t.id} className="w-100 mb-3 px-3">
                 <div
                   className="card border-0 shadow-lg overflow-hidden w-100"
                   style={{
                     backgroundColor: "#0f172a",
-                    borderRadius: "4px",
+                    borderRadius: "8px",
+                    width: "100%",
                   }}
                 >
-                  <div className="row g-0 align-items-stretch">
-                    {/* Thumbnail */}
-                    <div className="col-12 col-md-3 col-lg-2">
+                  <div className="row g-0 w-100 m-0">
+
+                    {/* Image */}
+                    <div className="col-12 col-md-3 col-lg-2 p-0">
                       <div
-                        className="h-100 w-100"
+                        className="w-100"
                         style={{
-                          minHeight: "160px",
-                          backgroundImage: `url(${t.tournament_avatar || "https://via.placeholder.com/400x250?text=Arena"})`,
+                          minHeight: "200px",
+                          height: "100%",
+                          backgroundImage: `url(${
+                            t.tournament_avatar ||
+                            "https://via.placeholder.com/400x250?text=Arena"
+                          })`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                         }}
                       />
                     </div>
 
-                    {/* Main Info */}
-                    <div className="col-12 col-md-6 col-lg-7 px-4 py-3 py-md-4 d-flex flex-column justify-content-center">
-                      <div className="mb-1">
+                    {/* Info */}
+                    <div className="col-12 col-md-6 col-lg-7 p-3 p-md-4 d-flex flex-column justify-content-center">
+
+                      {/* Status Badge */}
+                      <div className="mb-2">
                         <span
-                          className="text-info fw-bold font-monospace"
-                          style={{ fontSize: "0.75rem", fontStyle: "italic" }}
+                          className={`badge px-3 py-2 ${
+                            t.status === "live"
+                              ? "bg-success"
+                              : "bg-secondary"
+                          }`}
+                          style={{ fontSize: "0.7rem", fontWeight: 600 }}
                         >
-                          {t.tournament_type?.replace(/_/g, " ").toUpperCase() || "TOURNAMENT"}
+                          {t.status?.toUpperCase()}
                         </span>
                       </div>
 
-                      <h3
-                        className="h5 fw-black text-white mb-3 text-uppercase text-break"
-                        style={{ fontStyle: "italic", letterSpacing: "0.5px" }}
-                      >
+                      <span className="text-info fw-bold font-monospace mb-2" style={{ fontSize: "0.7rem", letterSpacing: "1px" }}>
+                        {t.tournament_type
+                          ?.replace(/_/g, " ")
+                          .toUpperCase() || "TOURNAMENT"}
+                      </span>
+
+                      <h3 className="h4 fw-black text-white mb-3 text-uppercase" style={{ fontWeight: 900 }}>
                         {t.name}
                       </h3>
 
-                      <div className="d-flex flex-wrap gap-3 gap-md-4">
-                        <div className="flex-shrink-0">
-                          <span className="d-block text-secondary fw-bold extra-small">START</span>
-                          <span className="text-white fw-medium small">
-                            {t.start_time ? new Date(t.start_time).toLocaleDateString() : "TBD"}
+                      <div className="d-flex flex-wrap gap-4 mb-3">
+                        <div>
+                          <span className="text-secondary" style={{ fontSize: "0.65rem", letterSpacing: "1px" }}>
+                            START
                           </span>
+                          <div className="fw-semibold" style={{ fontSize: "0.85rem" , color: "#ffffff" }}>
+                            {t.start_time
+                              ? new Date(
+                                  t.start_time
+                                ).toLocaleDateString()
+                              : "TBD"}
+                          </div>
                         </div>
-                        <div className="flex-shrink-0">
-                          <span className="d-block text-secondary fw-bold extra-small">ENDS</span>
-                          <span className="text-white fw-medium small">
-                            {t.end_time ? new Date(t.end_time).toLocaleDateString() : "TBD"}
+
+                        <div>
+                          <span className="text-secondary" style={{ fontSize: "0.65rem", letterSpacing: "1px" }}>
+                            END
                           </span>
+                          <div className="fw-semibold " style={{ fontSize: "0.85rem" , color: t.end_time && new Date(t.end_time) < new Date() ? "#ef4444" : "#ffffff"}}>
+                            {t.end_time
+                              ? new Date(
+                                  t.end_time
+                                ).toLocaleDateString()
+                              : "TBD"}
+                          </div>
                         </div>
-                        <div className="flex-shrink-0">
-                          <span className="d-block text-secondary fw-bold extra-small">ORGANIZER</span>
-                          <span className="fw-bold small text-break" style={{ color: "#a5b4fc" }}>
+
+                        <div>
+                          <span className="text-secondary" style={{ fontSize: "0.65rem", letterSpacing: "1px" }}>
+                            HOST
+                          </span>
+                          <div className="fw-semibold" style={{ color: "#a5b4fc", fontSize: "0.85rem" }}>
                             {t.host_name}
-                          </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Prizes Section */}
+                      <div className="d-flex flex-wrap gap-4 mb-3">
+                        <div>
+                          <span className="text-secondary" style={{ fontSize: "0.65rem", letterSpacing: "1px" }}>1ST</span>
+                          <div className="text-warning fw-bold" style={{ fontSize: "1.1rem" }}>
+                            KSH {t.first_place_prize ? parseFloat(t.first_place_prize).toLocaleString() : "00"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-secondary" style={{ fontSize: "0.65rem", letterSpacing: "1px" }}>2ND</span>
+                          <div className="text-light fw-bold" style={{ fontSize: "1.1rem" }}>
+                            KSH {t.second_place_prize ? parseFloat(t.second_place_prize).toLocaleString() : "00"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-secondary" style={{ fontSize: "0.65rem", letterSpacing: "1px" }}>3RD</span>
+                          <div className="text-danger fw-bold" style={{ fontSize: "1.1rem" }}>
+                            KSH {t.third_place_prize ? parseFloat(t.third_place_prize).toLocaleString() : "00"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* TOTAL BUDGET PER TOURNAMENT */}
+                      <div
+                        className="mt-2 p-3 rounded"
+                        style={{
+                          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                          borderLeft: "4px solid #fbbf24",
+                          borderRight: "1px solid #334155",
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                          <div>
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                letterSpacing: "2px",
+                                fontWeight: 700,
+                                color: "#94a3b8",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Total Budget
+                            </span>
+                            <div
+                              style={{
+                                fontSize: "1.5rem",
+                                fontWeight: 900,
+                                color: "#fbbf24",
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              KSH {t.total_budget.toLocaleString()}
+                            </div>
+                          </div>
+
+                      
                         </div>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="col-12 col-md-3 px-4 py-3 py-md-4 d-flex align-items-center justify-content-between justify-content-md-end gap-4 border-top border-md-top-0" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                      <div className="text-center text-md-end">
-                        <span className="d-block text-secondary fw-bold extra-small">FOLLOWERS</span>
-                        <span
-                          className="text-white fw-black"
-                          style={{ fontSize: "1.6rem", lineHeight: 1 }}
-                        >
-                          {t.follower_count}
+                    <div className="col-12 col-md-3 p-3 p-md-4 d-flex flex-column align-items-start justify-content-between gap-3">
+                      <div>
+                        <span className="text-primary" style={{ fontSize: "0.65rem", letterSpacing: "1px" }}>
+                          FOLLOWERS
                         </span>
+                        <div className="fw-bold text-primary" style={{ fontSize: "1.3rem" }}>
+                          {t.follower_count}
+                        </div>
                       </div>
 
                       <button
-                        onClick={() => handleFollow(t.id, t.isFollowing)}
-                        className={`btn pes-action-btn d-flex align-items-center gap-2 ${t.isFollowing ? "following" : ""}`}
+                        onClick={() =>
+                          handleFollow(t.id, t.isFollowing)
+                        }
+                        className={`btn ${
+                          t.isFollowing
+                            ? "btn-secondary"
+                            : "btn-light"
+                        } w-100 py-2`}
+                        style={{ fontWeight: 600 }}
                       >
-                        <i
-                          className={`bi ${t.isFollowing ? "bi-person-check-fill" : "bi-person-plus"}`}
-                          style={{ fontSize: "1.2rem" }}
-                        ></i>
-                        <span className="action-text">
-                          {t.isFollowing ? "Following" : "Follow"}
-                        </span>
+                        {t.isFollowing ? "Following" : "Follow"}
                       </button>
                     </div>
+
                   </div>
                 </div>
               </div>
@@ -225,60 +364,6 @@ const TournamentList = () => {
           </div>
         )}
       </div>
-
-      <style>{`
-        .extra-small {
-          font-size: 0.6rem;
-          letter-spacing: 1px;
-        }
-
-        .pes-action-btn {
-          background: #ffffff;
-          color: #000000;
-          border: none;
-          padding: 0.5rem 1.5rem;
-          font-weight: 900;
-          font-style: italic;
-          transition: all 0.2s ease;
-          clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
-          letter-spacing: 1px;
-          font-size: 0.85rem;
-          min-width: 130px;
-        }
-
-        .pes-action-btn:hover {
-          background: #3b82f6;
-          color: white;
-          transform: translateY(-2px);
-        }
-
-        .pes-action-btn.following {
-          background: #1e293b;
-          color: #94a3b8;
-          border: 1px solid #334155;
-          clip-path: none;
-        }
-
-        .pes-action-btn.following:hover {
-          background: #ef4444;
-          color: white;
-          border-color: #ef4444;
-        }
-
-        input::placeholder {
-          color: rgba(255, 255, 255, 0.2) !important;
-        }
-
-        @media (max-width: 767px) {
-          .pes-action-btn {
-            min-width: 110px;
-            padding: 0.5rem 1rem;
-          }
-          .action-text {
-            font-size: 0.75rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };

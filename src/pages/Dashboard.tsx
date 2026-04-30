@@ -26,28 +26,26 @@ function Home() {
   ];
 
   return (
-    <div className="w-100 m-0 p-0 overflow-x-hidden" style={{ minHeight: "100vh", backgroundColor: "#F8F9FD" }}>
+    <div className="w-100 m-0 p-0 overflow-x-hidden" style={{ minHeight: "100vh", backgroundColor: "#020617" }}>
       <Navbar />
 
-      {/* 1. FIXED SECONDARY NAVBAR (This stays at the top always) */}
+      {/* 1. FIXED SECONDARY NAVBAR - Round & Centered, No White Background */}
       <div 
         className="fixed-top w-100 d-flex justify-content-center align-items-center py-2 px-2" 
         style={{ 
-          top: "56px", // Adjust this to exactly match your main Navbar height
-          zIndex: 1020, 
-          backgroundColor: "rgba(255, 255, 255, 0.95)", 
-          backdropFilter: "blur(10px)",
-          borderBottom: "1px solid #eee",
-          height: "65px"
+          top: "56px", // Adjust this to match your main Navbar height
+          zIndex: 1020,
+          backgroundColor: "transparent", // Changed from rgba white to transparent
         }}
       >
         <div 
-          className="d-flex w-100 shadow-sm" 
+          className="d-flex shadow-lg" 
           style={{ 
             maxWidth: "600px", 
+            width: "90%", // Responsive width
             backgroundColor: BRAND.NAVY, 
             borderRadius: "100px", 
-            padding: "4px"
+            padding: "4px",
           }}
         >
           {tabs.map((tab) => (
@@ -71,7 +69,7 @@ function Home() {
         </div>
       </div>
 
-      {/* 2. SPACER (Prevents content from being hidden under the fixed bar) */}
+      {/* 2. SPACER (Prevents content from hiding under fixed bar) */}
       <div style={{ height: "125px" }}></div> 
 
       {/* 3. FULL WIDTH CONTENT AREA */}
