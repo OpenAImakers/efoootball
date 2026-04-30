@@ -23,6 +23,14 @@ export default function ProfilePage() {
   const [profilePic, setProfilePic] = useState<string | null>(null);
 
   const [previewTeam, setPreviewTeam] = useState<{ id: number; name: string; team_code: string } | null>(null);
+  
+  // Dummy transactions for account tab
+  const [transactions] = useState([
+    { id: 1, type: "Prize", amount: "000", status: "Pending", description: "Tournament X - 1st Place", date: "2024-01-15" },
+    { id: 2, type: "Registration", amount: "000", status: "Completed", description: "Tournament X - 1st Place", date: "2024-01-10" },
+    { id: 3, type: "Refund", amount: "000", status: "Completed", description: "Tournament Y - 1st Place", date: "2024-01-05" },
+    { id: 4, type: "Prize", amount: "000", status: "Pending", description: "Tournament Z - 3rd Place", date: "2024-01-02" },
+  ]);
 
   useEffect(() => {
     fetchProfile();
@@ -215,10 +223,16 @@ export default function ProfilePage() {
                   Player Activity
                 </div>
                 <button
+                  onClick={() => { setActiveTab("account"); setIsEditing(false); }}
+                  className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'account' ? 'active' : ''}`}
+                >
+                  Wallet
+                </button>
+                <button
                   onClick={() => { setActiveTab("myteam"); setIsEditing(false); }}
                   className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'myteam' ? 'active' : ''}`}
                 >
-                  My Teams ⚽
+                  My Teams 
                 </button>
                 <button
                   onClick={() => { setActiveTab("tournaments"); setIsEditing(false); }}
@@ -273,7 +287,7 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="d-flex align-items-center justify-content-center h-100 text-center">
+                  <div className="d-flex align-items-start justify-content-center h-100 text-center">
                     <div className="fade-in w-100">
                       {activeTab === "welcome" && (
                         <>
@@ -282,12 +296,62 @@ export default function ProfilePage() {
                         </>
                       )}
 
+                      {activeTab === "account" && (
+                        <div>
+                          {/* Account Balance - Zero */}
+                          <div className="text-center mb-4 pb-3 border-bottom">
+                            <p className="text-muted small text-uppercase mb-1">Account Balance</p>
+                            <h2 className="fw-bold display-4 text-primary">KES 0.00</h2>
+                          </div>
+
+                          {/* Transactions / Receipts */}
+                          <div className="text-start">
+                            <h5 className="fw-bold text-primary mb-3">Transactions</h5>
+                            <div className="table-responsive">
+                              <table className="table table-hover align-middle">
+                                <thead className="bg-light">
+                                  <tr>
+                                    <th className="small text-muted">Date</th>
+                                    <th className="small text-muted">Type</th>
+                                    <th className="small text-muted">Description</th>
+                                    <th className="small text-muted text-end">Amount</th>
+                                    <th className="small text-muted text-center">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {transactions.map((tx) => (
+                                    <tr key={tx.id}>
+                                      <td className="small">{tx.date}</td>
+                                      <td>
+                                        <span className={`badge ${tx.type === 'Prize' ? 'bg-success' : tx.type === 'Registration' ? 'bg-info' : 'bg-secondary'}`}>
+                                          {tx.type}
+                                        </span>
+                                       </td>
+                                      <td className="small">{tx.description}</td>
+                                      <td className="text-end fw-bold">KES {tx.amount}</td>
+                                      <td className="text-center">
+                                        <span className={`badge ${tx.status === 'Completed' ? 'bg-success' : 'bg-warning text-dark'}`}>
+                                          {tx.status}
+                                        </span>
+                                       </td>
+                                     </tr>
+                                   ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <div className="text-center mt-4 p-3 bg-light rounded">
+                              <small className="text-muted">This is a demo account. Real transactions will appear here after tournament participation.</small>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {activeTab === "myteam" && (
                         <div className="p-2">
                           {/* 1. LIST OF TEAMS */}
                           {teams.length > 0 && (
                             <div className="mb-5">
-                              <h5 className="fw-bold text-start mb-3 text-muted text-uppercase small">Your Linked Squads</h5>
+                              <h5 className="fw-bold text-start mb-3 text-muted text-uppercase small">Your Linked Teams</h5>
                               <div className="row g-3">
                                 {teams.map((t) => (
                                   <div key={t.id} className="col-sm-6">
@@ -329,8 +393,9 @@ export default function ProfilePage() {
                                 <div className="bg-light rounded-circle d-inline-flex p-3 mb-3">
                                   <i className="bi bi-plus-circle text-primary fs-3"></i>
                                 </div>
-                                <h4 className="fw-bold">Link a New Team</h4>
-                                <p className="text-muted small">Enter a secret code to add another squad to your profile.</p>
+                                <h4 className="fw-bold">Link Your Teams in All tournaments Participated</h4>
+                                <p className="text-muted small">Dont have a code ?? contact your Admin</p>
+                                <p className="text-muted small">Enter Your Team code to add to your profile.</p>
                               </div>
                               <div className="input-group mb-3 shadow-sm border rounded-pill overflow-hidden">
                                 <input
@@ -349,8 +414,27 @@ export default function ProfilePage() {
                         </div>
                       )}
 
-                      {activeTab === "tournaments" && <h5 className="text-muted border-bottom pb-2">Tournaments will appear here</h5>}
-                      {activeTab === "predictions" && <h5 className="text-muted border-bottom pb-2">Predictions will appear here</h5>}
+                      {activeTab === "tournaments" && (
+                        <div>
+                          <h5 className="text-muted border-bottom pb-2 mb-3">Tournaments Created</h5>
+                          <div className="text-center py-5 text-muted">
+                            <i className="bi bi-trophy fs-1 opacity-25"></i>
+                            <p className="mt-2">No tournaments created yet</p>
+                            <small>When you create tournaments, they will appear here</small>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {activeTab === "predictions" && (
+                        <div>
+                          <h5 className="text-muted border-bottom pb-2 mb-3">Your Predictions</h5>
+                          <div className="text-center py-5 text-muted">
+                            <i className="bi bi-chat-dots fs-1 opacity-25"></i>
+                            <p className="mt-2">No predictions made yet</p>
+                            <small>Your match predictions will appear here</small>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

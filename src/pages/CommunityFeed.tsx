@@ -1,19 +1,12 @@
-"use client";
-
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 import { Link } from "react-router-dom";
 
-const BRAND = {
-  NAVY: "#1A2251",
-  ORANGE: "#F38D1F",
-  CYAN: "#00B4D8",
-  WHITE: "#FFFFFF",
-  LIGHT_BG: "#F8F9FD"
-};
-
+// ──────────────────────────────────────────────
+//  Helpers for avatar
+// ──────────────────────────────────────────────
 const getAvatarColor = (name: string) => {
-  const colors = [BRAND.CYAN, BRAND.ORANGE, "#7c3aed", "#db2777", "#16a34a"];
+  const colors = ["#007bff", "#6610f2", "#6f42c1", "#e83e8c", "#dc3545", "#fd7e14", "#ffc107", "#28a745", "#20c997", "#17a2b8"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -21,178 +14,394 @@ const getAvatarColor = (name: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const renderAvatar = (profile: any, size: number, hasRing = false) => {
+const renderAvatar = (profile: any, size: number) => {
   const name = profile?.display_name || profile?.username || "?";
   const firstLetter = name.charAt(0).toUpperCase();
 
+  if (profile?.profile_pic) {
+    return (
+      <img
+        src={profile.profile_pic}
+        alt={name}
+        className="rounded-circle border"
+        style={{ 
+          width: `${size}px`, 
+          height: `${size}px`, 
+          objectFit: "cover",
+          border: "1px solid #dee2e6"
+        }}
+      />
+    );
+  }
+
   return (
-    <div style={{ padding: hasRing ? '3px' : '0' }}>
-      {profile?.profile_pic ? (
-        <img
-          src={profile.profile_pic}
-          alt={name}
-          className="rounded-circle shadow-sm"
-          style={{ 
-            width: `${size}px`, 
-            height: `${size}px`, 
-            objectFit: "cover",
-            border: hasRing ? `2px solid ${BRAND.ORANGE}` : `1px solid #eee`
-          }}
-        />
-      ) : (
-        <div
-          className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
-          style={{
-            width: `${size}px`,
-            height: `${size}px`,
-            fontSize: `${size / 2.2}px`,
-            backgroundColor: getAvatarColor(name),
-            border: hasRing ? `2px solid ${BRAND.ORANGE}` : `1px solid #fff`
-          }}
-        >
-          {firstLetter}
-        </div>
-      )}
+    <div
+      className="rounded-circle d-flex align-items-center justify-content-center border text-white fw-bold shadow-sm"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        fontSize: `${size / 2.2}px`,
+        backgroundColor: getAvatarColor(name),
+        border: "1px solid #dee2e6"
+      }}
+    >
+      {firstLetter}
     </div>
   );
 };
 
-export default function CommunityFeed({ user }: { user: any }) {
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [myFollowing, setMyFollowing] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
+function CommunityFeed({ user }: { user: any }) {
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; display_name: string } | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const { data: profs } = await supabase
-      .from("profiles")
-      .select(`
-        id, username, display_name, profile_pic,
-        followers!following_id (count)
-      `)
-      .not("username", "is", null)
-      .order("created_at", { ascending: false });
-
-    if (profs) setProfiles(profs);
-
-    if (user) {
-      const { data: follows } = await supabase
-        .from("followers")
-        .select("following_id")
-        .eq("follower_id", user.id);
-      if (follows) setMyFollowing(follows.map(f => f.following_id));
-    }
-    setLoading(false);
-  }, [user]);
+  // Drag to reply state
+  const [dragX, setDragX] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const startX = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchComments();
 
-  const handleFollow = async (e: React.MouseEvent, targetId: string) => {
-    e.preventDefault(); 
-    if (!user) return alert("Please sign in to follow members!");
+    const subscription = supabase
+      .channel('comments-channel')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'comments' },
+        () => {
+          fetchComments();
+        }
+      )
+      .subscribe();
 
-    const isFollowing = myFollowing.includes(targetId);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
-    if (isFollowing) {
-      const { error } = await supabase.from("followers").delete().eq("follower_id", user.id).eq("following_id", targetId);
-      if (!error) setMyFollowing(prev => prev.filter(id => id !== targetId));
+  const fetchComments = async () => {
+    const { data, error } = await supabase
+      .from("comments")
+      .select(`
+        id, 
+        content, 
+        created_at, 
+        user_id, 
+        images,
+        profiles (id, username, display_name, profile_pic)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Fetch comments error:", error);
     } else {
-      const { error } = await supabase.from("followers").insert({ follower_id: user.id, following_id: targetId });
-      if (!error) setMyFollowing(prev => [...prev, targetId]);
+      setComments(data || []);
     }
-    fetchData();
   };
 
-  const filteredProfiles = profiles.filter(p => 
-    p.username?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.display_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  if (loading) return <div className="p-5 text-center fw-bold" style={{color: BRAND.NAVY}}>REFRESHING COMMUNITY...</div>;
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+    const filePath = `comments/${fileName}`;
+
+    setUploading(true);
+
+    const { error: uploadError } = await supabase.storage
+      .from("images")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    setUploading(false);
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      alert("Failed to upload image: " + uploadError.message);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(filePath);
+    return urlData.publicUrl;
+  };
+
+  const postComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || (!commentText.trim() && !selectedFile)) return;
+
+    let imageUrl: string | null = null;
+
+    if (selectedFile) {
+      imageUrl = await uploadImage(selectedFile);
+    }
+
+    const contentToSend = replyingTo
+      ? `@${replyingTo.username} ${commentText.trim()}`
+      : commentText.trim();
+
+    const { error } = await supabase.from("comments").insert({
+      user_id: user.id,
+      content: contentToSend,
+      images: imageUrl,
+    });
+
+    if (!error) {
+      setCommentText("");
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setReplyingTo(null);
+      fetchComments();
+    } else {
+      console.error("Post error:", error);
+      alert("Failed to post comment");
+    }
+  };
+
+  const handleReply = (profile: any) => {
+    setReplyingTo({ 
+      id: profile.id, 
+      username: profile.username,
+      display_name: profile.display_name 
+    });
+    // Focus the input field
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Drag-to-reply logic
+  const handleDragStart = (e: any, id: string) => {
+    startX.current = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+    setActiveId(id);
+  };
+
+  const handleDragMove = (e: any) => {
+    if (activeId === null) return;
+    const currentX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+    const diff = currentX - startX.current;
+    if (diff > 0 && diff < 150) setDragX(diff);
+  };
+
+  const handleDragEnd = (id?: string, profile?: any) => {
+    if (dragX > 60 && id && profile) {
+      handleReply(profile);
+    }
+    setDragX(0);
+    setActiveId(null);
+  };
+
+  // Insert @mention into input
+  const insertMention = (username: string) => {
+    const mention = `@${username} `;
+    setCommentText(prev => {
+      // If there's already text, add space, otherwise just add mention
+      return prev ? `${prev} ${mention}` : mention;
+    });
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
 
   return (
-    <div className="d-flex flex-column w-100" style={{ backgroundColor: BRAND.LIGHT_BG, minHeight: '60vh' }}>
+    <div className="d-flex flex-column vh-100 overflow-hidden bg-light">
       
-      {/* 1. SEARCH BAR AREA */}
-      <div className="bg-white p-3 border-bottom w-100 sticky-top" style={{ top: "125px", zIndex: 10 }}>
-         <input 
-            type="text" 
-            className="form-control rounded-pill border-0 shadow-sm px-4" 
-            placeholder="Search members..." 
-            style={{ backgroundColor: "#f1f3f9", fontSize: '0.9rem' }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-         />
-      </div>
+      {/* MESSAGE LIST */}
+      <div
+        className="flex-grow-1 p-3 overflow-auto d-flex flex-column-reverse"
+        onMouseMove={handleDragMove}
+        onMouseUp={() => handleDragEnd()}
+        onTouchMove={handleDragMove}
+        onTouchEnd={() => handleDragEnd()}
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {comments.map((c) => {
+          const isMe = user?.id === c.user_id;
+          const isDragging = activeId === c.id;
 
-      {/* 2. STORIES SCROLLER */}
-      <div className="bg-white border-bottom py-3 px-3 overflow-auto d-flex gap-4 no-scrollbar w-100" style={{ flexShrink: 0 }}>
-        {profiles.slice(0, 10).map((p, index) => (
-          <Link key={index} to={`/profile/${p.username}`} className="text-center text-decoration-none" style={{ minWidth: "65px" }}>
-            <div className="mx-auto mb-1 d-flex justify-content-center">{renderAvatar(p, 58, true)}</div>
-            <small className="d-block text-dark fw-bold text-truncate" style={{ fontSize: "0.65rem" }}>
-              {p.display_name?.split(' ')[0] || p.username}
-            </small>
-          </Link>
-        ))}
-      </div>
-
-      {/* 3. PROFILE GRID */}
-      <div className="p-3 w-100">
-        <div className="row g-3 w-100 m-0">
-          {filteredProfiles.map((p, index) => (
-            <div key={index} className="col-12 col-md-6 col-lg-4 px-1">
-                <div className="card border-0 shadow-sm p-3 profile-card w-100" style={{ borderRadius: '15px', backgroundColor: BRAND.WHITE }}>
-                  <div className="d-flex align-items-center justify-content-between">
-                    <Link to={`/profile/${p.username}`} className="d-flex align-items-center gap-3 text-decoration-none flex-grow-1 overflow-hidden">
-                      {renderAvatar(p, 50)}
-                      <div className="overflow-hidden">
-                        <h6 className="mb-0 fw-bold text-dark text-truncate">{p.display_name || p.username}</h6>
-                        <div className="d-flex align-items-center gap-2">
-                           <small className="text-muted" style={{ fontSize: '0.7rem' }}>@{p.username}</small>
-                           <div className="px-2 py-0 rounded-pill bg-light border" style={{ fontSize: '0.65rem' }}>
-                              <span className="text-muted fw-bold">RANK </span>
-                              <span className="fw-black text-dark">00</span>
-                           </div>
-                        </div>
-                      </div>
-                    </Link>
-
-                    <div className="d-flex flex-column align-items-end gap-1">
-                      {user?.id !== p.id && (
-                         <button 
-                           onClick={(e) => handleFollow(e, p.id)}
-                           className="btn btn-sm fw-black rounded-pill px-3"
-                           style={{ 
-                              fontSize: '0.65rem', 
-                              backgroundColor: myFollowing.includes(p.id) ? "#eee" : BRAND.NAVY,
-                              color: myFollowing.includes(p.id) ? "#666" : BRAND.WHITE 
-                           }}
-                         >
-                           {myFollowing.includes(p.id) ? "FOLLOWING" : "FOLLOW"}
-                         </button>
-                      )}
-                      <small className="fw-black text-muted" style={{ fontSize: '0.6rem', letterSpacing: '0.5px' }}>
-                         {p.followers?.[0]?.count || 0} FOLLOWERS
-                      </small>
-                    </div>
-                  </div>
+          return (
+            <div key={c.id} className={`d-flex mb-3 ${isMe ? "justify-content-end" : "justify-content-start"}`}>
+              {!isMe && (
+                <div className="me-2" style={{ alignSelf: 'flex-end' }}>
+                  <Link to={`/profile/${c.profiles?.username}`}>
+                    {renderAvatar(c.profiles, 32)}
+                  </Link>
                 </div>
+              )}
+              <div
+                onMouseDown={(e) => handleDragStart(e, c.id)}
+                onTouchStart={(e) => handleDragStart(e, c.id)}
+                onMouseUp={() => handleDragEnd(c.id, c.profiles)}
+                onTouchEnd={() => handleDragEnd(c.id, c.profiles)}
+                className="p-3 rounded shadow-sm"
+                style={{
+                  maxWidth: "75%",
+                  transform: `translateX(${isDragging ? dragX : 0}px)`,
+                  transition: isDragging ? "none" : "transform 0.2s",
+                  backgroundColor: isMe ? "#DCF8C6" : "#ffffff",
+                  cursor: "grab",
+                  borderRadius: "18px",
+                }}
+              >
+                {!isMe && (
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <Link
+                      to={`/profile/${c.profiles?.username}`}
+                      className="fw-bold small text-decoration-none text-primary"
+                    >
+                      {c.profiles?.display_name || c.profiles?.username}
+                    </Link>
+                    <span className="text-muted" style={{ fontSize: "0.6rem" }}>
+                      {new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <button
+                      onClick={() => insertMention(c.profiles?.username)}
+                      className="btn btn-sm btn-link text-muted p-0 ms-1"
+                      style={{ fontSize: "0.65rem", textDecoration: "none" }}
+                    >
+                      Reply
+                    </button>
+                  </div>
+                )}
+
+                <p className="m-0" style={{ fontSize: "0.9rem", wordBreak: "break-word" }}>
+                  {c.content}
+                </p>
+
+                {c.images && (
+                  <div className="mt-2">
+                    <img
+                      src={c.images}
+                      alt="Comment attachment"
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "200px",
+                        borderRadius: "12px",
+                        cursor: "pointer"
+                      }}
+                      onClick={() => window.open(c.images, '_blank')}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
+
+                {isMe && (
+                  <div className="d-flex justify-content-end mt-1">
+                    <small className="text-muted" style={{ fontSize: "0.6rem" }}>
+                      {new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </small>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
+        
+        {comments.length === 0 && (
+          <div className="text-center py-5">
+            <div className="mb-3" style={{ fontSize: "3rem" }}>💬</div>
+            <p className="text-muted">No messages yet</p>
+            <small className="text-muted">Be the first to start a conversation!</small>
+          </div>
+        )}
       </div>
 
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .fw-black { font-weight: 900 !important; }
-        .profile-card:hover { transform: translateY(-3px); transition: 0.2s; box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; }
-        .w-100 { width: 100% !important; }
-      `}</style>
+      {/* INPUT AREA */}
+      <div className="p-3 bg-white border-top">
+        {replyingTo && (
+          <div className="alert alert-secondary py-2 px-3 d-flex justify-content-between align-items-center mb-2 rounded-pill">
+            <small className="text-truncate">
+              Replying to <strong>@{replyingTo.username}</strong>
+            </small>
+            <button
+              className="btn-close"
+              style={{ width: "0.5em", height: "0.5em" }}
+              onClick={() => setReplyingTo(null)}
+            />
+          </div>
+        )}
+
+        {user ? (
+          <form onSubmit={postComment} className="d-flex flex-column gap-2">
+            {previewUrl && (
+              <div className="position-relative" style={{ maxWidth: "100px" }}>
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  style={{ maxHeight: "80px", borderRadius: "8px", objectFit: "cover" }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger position-absolute top-0 end-0 rounded-circle"
+                  style={{ width: "20px", height: "20px", fontSize: "12px", padding: 0 }}
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            <div className="input-group">
+              <input
+                ref={inputRef}
+                type="text"
+                className="form-control"
+                placeholder="Type a message..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                style={{ borderRadius: "25px 0 0 25px" }}
+                disabled={uploading}
+              />
+
+              <label className="btn btn-outline-secondary px-3 d-flex align-items-center mb-0" style={{ cursor: 'pointer' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                  disabled={uploading}
+                />
+                📷
+              </label>
+
+              <button
+                className="btn btn-primary px-4"
+                type="submit"
+                disabled={uploading || (!commentText.trim() && !selectedFile)}
+                style={{ borderRadius: "0 25px 25px 0" }}
+              >
+                {uploading ? "Uploading..." : "Send"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="text-center py-2">
+            <p className="text-muted small m-0">Please log in to join the conversation</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+export default CommunityFeed;

@@ -251,7 +251,11 @@ const KenyaEfootballHub: React.FC = () => {
           clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
         }
       `}</style>
+      <div className="text-center py-3 px-4" style={{ fontSize: "0.7rem", color: "#64748b", maxWidth: "900px", margin: "0 auto" }}>
+  <strong>Disclaimer:</strong> This platform is an independent fan-operated initiative and is not officially affiliated with, authorized, maintained, sponsored, or endorsed by KONAMI, its subsidiaries, affiliates, licensors, or any related entities. All tournament registrations, team management features, and community activities are organized solely by independent player communities. Any references to KONAMI products, brands, or intellectual property are for identification purposes only and do not imply any official connection or endorsement. We operate as a passionate fan-driven service dedicated to enhancing the gaming community experience.
+</div>
     </div>
+    
   );
 };
 
