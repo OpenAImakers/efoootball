@@ -27,6 +27,7 @@ import LandingPage  from "./pages/leagues/LandingLeaguePage.tsx";
 import RegistrationsAdmin from "./pages/RegistrationsAdmin.tsx";
 import  LeagueManagement from "./pages/leagues/Manageleague.tsx";
 import AddLeague from "./pages/leagues/Addleague.tsx";
+import Registrations from "./pages/CreateRegistrations.tsx";
 
 function App() {
   // Detect PWA vs browser
@@ -73,9 +74,24 @@ useEffect(() => {
   }
 />
 
-
-
       {/* leagues routes end */}
+
+
+
+     {/* Registration route */}
+
+
+         <Route
+        path="/registrations"
+        element={
+          <ProtectedRoute>
+               <Registrations />
+          </ProtectedRoute>
+        }
+      />
+
+     {/* Registration routes */}
+
 
          <Route
         path="/registrations-admin"
