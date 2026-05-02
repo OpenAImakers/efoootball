@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../supabase";
+
+const CACHE_KEY = "tournament_list_cache";
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 Minutes
 
 const TournamentList = () => {
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -9,9 +12,20 @@ const TournamentList = () => {
   const [user, setUser] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"live" | "finished">("live");
+  
+    const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchTournaments = useCallback(async (currentUser: any) => {
-    setLoading(true);
+  // Load Initial Cache on Mount
+  useEffect(() => {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data } = JSON.parse(cached);
+      if (data) setTournaments(data);
+    }
+  }, []);
+
+  const fetchTournaments = useCallback(async (currentUser: any, isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const { data: tData, error: tError } = await supabase
         .from("tournaments")
@@ -38,7 +52,6 @@ const TournamentList = () => {
       }
 
       const mapped = tData.map((t) => {
-        // Calculate tournament budget
         const first = parseFloat(t.first_place_prize) || 0;
         const second = parseFloat(t.second_place_prize) || 0;
         const third = parseFloat(t.third_place_prize) || 0;
@@ -56,6 +69,13 @@ const TournamentList = () => {
       });
 
       setTournaments(mapped);
+      
+      // Update Cache
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: mapped,
+        timestamp: Date.now()
+      }));
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -68,8 +88,18 @@ const TournamentList = () => {
       const { data } = await supabase.auth.getUser();
       setUser(data.user);
       fetchTournaments(data.user);
+
+      // Set up 5-minute auto-refresh
+      refreshTimer.current = setInterval(() => {
+        fetchTournaments(data.user, true);
+      }, REFRESH_INTERVAL);
     };
+    
     init();
+
+    return () => {
+      if (refreshTimer.current) clearInterval(refreshTimer.current);
+    };
   }, [fetchTournaments]);
 
   const handleFollow = async (tournamentId: number, isFollowing: boolean) => {
@@ -78,18 +108,24 @@ const TournamentList = () => {
       return;
     }
 
-    setTournaments((prev) =>
-      prev.map((t) =>
-        t.id === tournamentId
-          ? {
-              ...t,
-              isFollowing: !isFollowing,
-              follower_count:
-                t.follower_count + (isFollowing ? -1 : 1),
-            }
-          : t
-      )
+    // Optimistic Update
+    const updatedTournaments = tournaments.map((t) =>
+      t.id === tournamentId
+        ? {
+            ...t,
+            isFollowing: !isFollowing,
+            follower_count: t.follower_count + (isFollowing ? -1 : 1),
+          }
+        : t
     );
+    
+    setTournaments(updatedTournaments);
+    
+    // Update cache immediately so state persists on refresh
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data: updatedTournaments,
+      timestamp: Date.now()
+    }));
 
     try {
       if (isFollowing) {
@@ -105,6 +141,7 @@ const TournamentList = () => {
       }
     } catch (err) {
       console.error("Follow action failed:", err);
+      // Revert on error could be added here, but keep it simple as requested
     }
   };
 
@@ -325,8 +362,6 @@ const TournamentList = () => {
                               KSH {t.total_budget.toLocaleString()}
                             </div>
                           </div>
-
-                      
                         </div>
                       </div>
                     </div>

@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+"use client";
+
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../../supabase";
 import { useNavigate } from "react-router-dom";
 
@@ -11,6 +13,8 @@ const BRAND = {
 };
 
 const STAGES = ["ALL", "GROUP", "QUARTER", "SEMI", "FINAL", "THIRD_PLACE"];
+const CACHE_KEY = "matches_list_cache";
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 Minutes
 
 export default function MatchesList() {
   const [tournaments, setTournaments] = useState<{ id: any; name: string }[]>([]);
@@ -18,16 +22,19 @@ export default function MatchesList() {
   const [matches, setMatches] = useState<any[]>([]);
   const [stats, setStats] = useState<{ [key: number]: any }>({});
   const [userVotes, setUserVotes] = useState<{ [key: number]: string }>({});
-  const [stage, setStage] = useState("ALL"); // Now being used
+  const [stage, setStage] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load Initial Cache on Mount
   useEffect(() => {
-    async function loadTournaments() {
-      const { data } = await supabase.from("tournaments").select("id, name").order("created_at", { ascending: false });
-      if (data) setTournaments([{ id: "all", name: "All Matches" }, ...data]);
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { tournaments: cTours, matches: cMatches } = JSON.parse(cached);
+      if (cTours) setTournaments(cTours);
+      if (cMatches) setMatches(cMatches);
     }
-    loadTournaments();
   }, []);
 
   const fetchStatsAndVotes = useCallback(async () => {
@@ -54,24 +61,66 @@ export default function MatchesList() {
     }
   }, []);
 
-  useEffect(() => {
-    async function fetchMatches() {
-      setLoading(true);
+  const fetchMatches = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    try {
+      // 1. Fetch Tournaments if not already loaded or for refresh
+      const { data: tourData } = await supabase
+        .from("tournaments")
+        .select("id, name, status")
+        .neq("status", "finished")
+        .order("created_at", { ascending: false });
+
+      const finalTours = tourData ? [{ id: "all", name: "All Matches" }, ...tourData] : [];
+      setTournaments(finalTours);
+
+      // 2. Fetch Matches
       let query = supabase.from("matches").select(`
-        id, home_team:home_team_id(name), away_team:away_team_id(name),
-        stage, played, tournament:tournament_id(name)
-      `).eq("played", false);
+        id, 
+        home_team:home_team_id(name), 
+        away_team:away_team_id(name),
+        stage, 
+        played, 
+        tournament:tournament_id(name, status)
+      `)
+      .eq("played", false)
+      .neq("tournament.status", "finished");
 
       if (selectedTournamentId !== "all") query = query.eq("tournament_id", Number(selectedTournamentId));
       if (stage !== "ALL") query = query.eq("stage", stage);
 
-      const { data } = await query.order("id", { ascending: true });
-      setMatches(data || []);
-      fetchStatsAndVotes();
+      const { data: matchData } = await query.order("id", { ascending: true });
+      const activeMatches = (matchData || []).filter((m: any) => m.tournament?.status !== "finished");
+
+      setMatches(activeMatches);
+      
+      // Update Cache
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        tournaments: finalTours,
+        matches: activeMatches,
+        timestamp: Date.now()
+      }));
+
+      await fetchStatsAndVotes();
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
       setLoading(false);
     }
-    fetchMatches();
   }, [selectedTournamentId, stage, fetchStatsAndVotes]);
+
+  // Set up auto-refresh and initial fetch
+  useEffect(() => {
+    fetchMatches();
+
+    refreshTimer.current = setInterval(() => {
+      fetchMatches(true); // silent refresh every 5 mins
+    }, REFRESH_INTERVAL);
+
+    return () => {
+      if (refreshTimer.current) clearInterval(refreshTimer.current);
+    };
+  }, [fetchMatches]);
 
   const handleVote = async (matchId: number, choice: "home" | "draw" | "away") => {
     const { data: authData } = await supabase.auth.getUser();
@@ -111,7 +160,7 @@ export default function MatchesList() {
         ))}
       </div>
 
-      {/* 2. STAGE FILTERS (Fixes the "unused" warning) */}
+      {/* 2. STAGE FILTERS */}
       <div className="d-flex overflow-auto pb-3 no-scrollbar mb-4" style={{ gap: '8px' }}>
         {STAGES.map((s) => (
           <button
@@ -131,10 +180,10 @@ export default function MatchesList() {
       </div>
 
       <div className="row g-4">
-        {loading ? (
+        {loading && matches.length === 0 ? (
           <div className="text-center py-5"><div className="spinner-border" style={{color: BRAND.ORANGE}} /></div>
         ) : matches.length === 0 ? (
-          <div className="text-center py-5 text-muted">No matches found for this selection.</div>
+          <div className="text-center py-5 text-muted">No active matches found.</div>
         ) : matches.map((m) => (
           <div key={m.id} className="col-12 col-md-6 col-xl-4">
             <div className="card border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden' }}>

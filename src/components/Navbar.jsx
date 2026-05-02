@@ -4,13 +4,27 @@ import { supabase } from "../supabase";
 
 export default function Navbar() {
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
   
-  // State for language toggle: false = English (Default), true = French
-  const [isFrench, setIsFrench] = useState(false);
+  // Cache Keys
+  const ROLE_CACHE_KEY = "efootball_user_role";
+  const LANG_CACHE_KEY = "efootball_lang_fr";
 
-  const toggleLanguage = () => setIsFrench(!isFrench);
+  // Initialize from cache if available
+  const [isAdmin, setIsAdmin] = useState(() => {
+    return sessionStorage.getItem(ROLE_CACHE_KEY) === "admin";
+  });
+  
+  const [loading, setLoading] = useState(!sessionStorage.getItem(ROLE_CACHE_KEY));
+  
+  const [isFrench, setIsFrench] = useState(() => {
+    return sessionStorage.getItem(LANG_CACHE_KEY) === "true";
+  });
+
+  const toggleLanguage = () => {
+    const newLang = !isFrench;
+    setIsFrench(newLang);
+    sessionStorage.setItem(LANG_CACHE_KEY, newLang.toString());
+  };
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -19,6 +33,7 @@ export default function Navbar() {
 
         if (!user) {
           setIsAdmin(false);
+          sessionStorage.removeItem(ROLE_CACHE_KEY);
           return;
         }
 
@@ -31,8 +46,11 @@ export default function Navbar() {
         if (error) {
           console.error("Error fetching profile role:", error);
           setIsAdmin(false);
+          sessionStorage.removeItem(ROLE_CACHE_KEY);
         } else if (profile) {
-          setIsAdmin(profile.role === "admin");
+          const roleStatus = profile.role === "admin";
+          setIsAdmin(roleStatus);
+          sessionStorage.setItem(ROLE_CACHE_KEY, profile.role);
         }
       } catch (err) {
         console.error("Auth/role check failed:", err);
@@ -42,11 +60,16 @@ export default function Navbar() {
       }
     };
 
+    // Run check regardless to ensure cache is fresh
     checkUserRole();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) checkUserRole();
-      else setIsAdmin(false);
+      if (session) {
+        checkUserRole();
+      } else {
+        setIsAdmin(false);
+        sessionStorage.removeItem(ROLE_CACHE_KEY);
+      }
     });
 
     return () => {
@@ -118,7 +141,6 @@ export default function Navbar() {
       <div className="container-fluid px-3 px-md-4 px-lg-5">
         <div className="d-flex align-items-center w-100">
           
-          {/* Brand - Redirects to Leagues */}
           <Link
             className="navbar-brand fw-black text-decoration-none me-3 me-lg-4 flex-shrink-0 brand-logo"
             to="/leagues"
@@ -136,7 +158,6 @@ export default function Navbar() {
             efootball
           </Link>
 
-          {/* Scrollable Nav Links */}
           <div
             className="d-flex align-items-center flex-nowrap overflow-auto flex-grow-1"
             style={{
@@ -194,17 +215,12 @@ export default function Navbar() {
             `}</style>
 
             <NavLink to="/dashboard" label={isFrench ? "Accueil" : "Home"} currentPath={location.pathname} />
-            <NavLink 
-  to="/teams" 
-  label={isFrench ? "Calendrier" : "FIXTURES"} 
-  currentPath={location.pathname} 
-/>
+            <NavLink to="/teams" label={isFrench ? "Calendrier" : "FIXTURES"} currentPath={location.pathname} />
             {isAdmin && <NavLink to="/admin" label="Admin" currentPath={location.pathname} />}
             <NavLink to="/register" label={isFrench ? "S'inscrire" : "Register"} currentPath={location.pathname} />
             <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>
 
-          {/* Language Toggle */}
           <div className="ms-3 flex-shrink-0">
             <button 
               onClick={toggleLanguage}
