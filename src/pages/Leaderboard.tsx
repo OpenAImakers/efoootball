@@ -2,8 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import Advert from "../components/Advert";
 import { supabase } from "../supabase";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+// Cache Config
+const CACHE_KEY = "efootball_hub_data";
+const CACHE_TTL = 1000 * 60 * 15; // 15 Minutes
 
 interface LeaderboardRow {
   rank: number;
@@ -33,12 +40,23 @@ const KenyaEfootballHub: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"rankings" | "leagues">("rankings");
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [leagues, setLeagues] = useState<League[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_TTL) {
+        setRows(data.rows);
+        setLeagues(data.leagues);
+        return;
+      }
+    }
     fetchHubData();
   }, []);
 
   const fetchHubData = async () => {
+    setLoading(true);
     try {
       const [profilesRes, leaguesRes] = await Promise.all([
         supabase.from("profiles").select(`
@@ -48,6 +66,9 @@ const KenyaEfootballHub: React.FC = () => {
         `),
         supabase.from("leagues").select("*").order("id", { ascending: true })
       ]);
+
+      let finalRows: LeaderboardRow[] = [];
+      let finalLeagues: League[] = [];
 
       if (profilesRes.data) {
         const aggregated = profilesRes.data.map((p: any) => {
@@ -63,7 +84,6 @@ const KenyaEfootballHub: React.FC = () => {
             { mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }
           );
 
-          // Calculate Win Rate: (Wins / Matches Played) * 100
           const winRate = stats.mp > 0 ? (stats.w / stats.mp) * 100 : 0;
 
           return {
@@ -80,23 +100,115 @@ const KenyaEfootballHub: React.FC = () => {
           };
         });
 
-        // Sort by Win Rate primarily
         const sorted = aggregated.sort((a, b) => b.win_rate - a.win_rate || b.gd - a.gd);
-        setRows(sorted.map((row, i) => ({ ...row, rank: i + 1 })));
+        finalRows = sorted.map((row, i) => ({ ...row, rank: i + 1 }));
+        setRows(finalRows);
       }
       
-      if (leaguesRes.data) setLeagues(leaguesRes.data);
+      if (leaguesRes.data) {
+        finalLeagues = leaguesRes.data;
+        setLeagues(finalLeagues);
+      }
+
+      // Save to Cache
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: { rows: finalRows, leagues: finalLeagues },
+        timestamp: Date.now()
+      }));
+
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const exportToPDF = () => {
+    if (rows.length === 0) return;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    
+    doc.setFillColor(3, 10, 26); 
+    doc.rect(0, 0, pageWidth, 40, "F");
+
+    doc.setFontSize(20);
+    doc.setTextColor(255, 255, 255);
+    doc.text("KENYA EFOOTBALL RANKINGS", 14, 25);
+
+    autoTable(doc, {
+      startY: 45,
+      head: [["Rank", "Player", "Teams", "MP", "W", "L", "GD", "Win %"]],
+      body: rows.map(r => [r.rank, r.display_name, r.tournaments_played, r.mp, r.w, r.l, r.gd, `${r.win_rate}%`]),
+      theme: "grid",
+      headStyles: { fillColor: [13, 110, 253] }
+    });
+
+    // footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      
+      // Footer Horizontal Line
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+
+      // Skyla Text
+      doc.setFontSize(10);
+      doc.setTextColor(10, 26, 94); // Navy
+      doc.setFont("helvetica", "bold");
+      doc.text("Skyla", 14, pageHeight - 10);
+      
+      // Trademark symbol (®) as superscript
+      const skylaWidth = doc.getTextWidth("Skyla");
+      doc.setFontSize(6); // Smaller font for superscript
+      doc.text("®", 14 + skylaWidth + 0.5, pageHeight - 12); // Slightly higher (y - 12 instead of 10)
+
+      // Smart Ecosystem Text
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      // Adjusted X position to account for the trademark symbol space
+      doc.text("|  smart ecosystem", 14 + skylaWidth + 4, pageHeight - 10);
+
+      // Page numbers (Right aligned)
+      doc.setFontSize(8);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        pageWidth - 14,
+        pageHeight - 10,
+        { align: "right" }
+      );
+    }
+
+
+    doc.save(`Kenya_eFootball_Rankings_${new Date().toLocaleDateString()}.pdf`);
   };
 
   return (
     <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5">
       <Advert />
 
-      {/* FULL WIDTH CONTAINER */}
       <div className="container-fluid px-4 pt-5 mt-4">
+        {/* ACTION BUTTONS AT THE TOP */}
+        <div className="d-flex justify-content-end gap-2 mb-4">
+          <button 
+            className="btn btn-outline-info btn-sm rounded-pill px-3"
+            onClick={fetchHubData}
+            disabled={loading}
+          >
+            <i className={`bi bi-arrow-clockwise me-1 ${loading ? 'spinner-border spinner-border-sm' : ''}`}></i>
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button 
+            className="btn btn-outline-success btn-sm rounded-pill px-3"
+            onClick={exportToPDF}
+          >
+            <i className="bi bi-download me-1"></i> Download PDF
+          </button>
+        </div>
+
         <div className="d-flex justify-content-center mb-5">
           <div className="tab-switcher p-1 bg-black bg-opacity-50 rounded-pill border border-primary border-opacity-25">
             <button 
@@ -252,10 +364,9 @@ const KenyaEfootballHub: React.FC = () => {
         }
       `}</style>
       <div className="text-center py-3 px-4" style={{ fontSize: "0.7rem", color: "#64748b", maxWidth: "900px", margin: "0 auto" }}>
-  <strong>Disclaimer:</strong> This platform is an independent fan-operated initiative and is not officially affiliated with, authorized, maintained, sponsored, or endorsed by KONAMI, its subsidiaries, affiliates, licensors, or any related entities. All tournament registrations, team management features, and community activities are organized solely by independent player communities. Any references to KONAMI products, brands, or intellectual property are for identification purposes only and do not imply any official connection or endorsement. We operate as a passionate fan-driven service dedicated to enhancing the gaming community experience.
-</div>
+        <strong>Disclaimer:</strong> This platform is an independent fan-operated initiative and is not officially affiliated with, authorized, maintained, sponsored, or endorsed by KONAMI, its subsidiaries, affiliates, licensors, or any related entities. All tournament registrations, team management features, and community activities are organized solely by independent player communities. Any references to KONAMI products, brands, or intellectual property are for identification purposes only and do not imply any official connection or endorsement. We operate as a passionate fan-driven service dedicated to enhancing the gaming community experience.
+      </div>
     </div>
-    
   );
 };
 
