@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabase";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
+
+const REGISTRATION_CACHE_KEY = "registrations_cache";
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 Minutes
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -17,10 +20,24 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState<Record<number, boolean>>({});
   const [messages, setMessages] = useState<Record<number, { type: string; text: string } | null>>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch data
+  // Load Initial Cache on Mount
   useEffect(() => {
-    const fetchData = async () => {
+    const cached = localStorage.getItem(REGISTRATION_CACHE_KEY);
+    if (cached) {
+      const { registrations: cRegs, teamsMap: cTeamsMap, profilesMap: cProfilesMap } = JSON.parse(cached);
+      if (cRegs) setRegistrations(cRegs);
+      if (cTeamsMap) setTeamsMap(cTeamsMap);
+      if (cProfilesMap) setProfilesMap(cProfilesMap);
+    }
+  }, []);
+
+  const fetchData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    
+    try {
       const {
         data: { user: userData },
       } = await supabase.auth.getUser();
@@ -36,13 +53,14 @@ export default function RegisterPage() {
 
       // Fetch profiles for created_by users
       const userIds = regs.map(reg => reg.created_by).filter(Boolean);
+      let profilesObj: Record<string, any> = {};
+      
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("*")
           .in("id", userIds);
         
-        const profilesObj: Record<string, any> = {};
         profiles?.forEach(profile => {
           profilesObj[profile.id] = profile;
         });
@@ -70,10 +88,33 @@ export default function RegisterPage() {
         grouped[team.registration_id].push(team);
       });
       setTeamsMap(grouped);
-    };
 
-    fetchData();
+      // Update Cache
+      localStorage.setItem(REGISTRATION_CACHE_KEY, JSON.stringify({
+        registrations: regs,
+        teamsMap: grouped,
+        profilesMap: profilesObj,
+        timestamp: Date.now()
+      }));
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
   }, []);
+
+  // Set up auto-refresh and initial fetch
+  useEffect(() => {
+    fetchData();
+
+    refreshTimer.current = setInterval(() => {
+      fetchData(true); // silent refresh every 5 mins
+    }, REFRESH_INTERVAL);
+
+    return () => {
+      if (refreshTimer.current) clearInterval(refreshTimer.current);
+    };
+  }, [fetchData]);
 
   // Filter registrations based on search
   const filteredRegistrations = registrations.filter(reg =>
@@ -151,6 +192,14 @@ export default function RegisterPage() {
         ...prev,
         [regId]: { team_name: "", username: "", whatsapp: "+254" },
       }));
+      
+      // Update cache after mutation
+      localStorage.setItem(REGISTRATION_CACHE_KEY, JSON.stringify({
+        registrations,
+        teamsMap: { ...teamsMap, [regId]: [inserted, ...(teamsMap[regId] || [])] },
+        profilesMap,
+        timestamp: Date.now()
+      }));
     } catch (err: any) {
       setMessages((prev) => ({
         ...prev,
@@ -217,7 +266,13 @@ export default function RegisterPage() {
 
       {/* Main Content */}
       <div className="container-fluid px-4 py-3">
-        {filteredRegistrations.length === 0 ? (
+        {loading && registrations.length === 0 ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        ) : filteredRegistrations.length === 0 ? (
           <div className="text-center py-5">
             <h5 className="text-muted">
               {searchTerm ? "No tournaments match your search" : "No active tournaments"}
