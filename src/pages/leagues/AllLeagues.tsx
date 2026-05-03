@@ -5,6 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../supabase";
 import LeaguesNavbar from "./Leaguenav";
 
+const BRAND = {
+  WHITE: "#FFFFFF",
+  BLACK: "#000000",
+  LIGHT_GRAY: "#F5F5F5",
+  MID_GRAY: "#E0E0E0",
+  DARK_GRAY: "#333333"
+};
+
 interface League {
   id: number;
   name: string;
@@ -41,15 +49,16 @@ export default function Leagues() {
   };
 
   return (
-    <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5">
+    <div className="min-vh-100 pb-5" style={{ backgroundColor: BRAND.LIGHT_GRAY }}>
       <LeaguesNavbar />
       <div className="container-fluid px-4" style={{marginTop: "20px"}}>
         {loading ? (
           <div className="d-flex justify-content-center py-5">
-            <div className="konami-loader"></div>
+            <div className="spinner-border" style={{ color: BRAND.BLACK }} role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
           </div>
         ) : (
-          /* Responsive Grid System */
           <div className="row g-4">
             {leagues.map((league) => (
               <div key={league.id} className="col-12 col-md-6 col-xl-4 col-xxl-3">
@@ -57,13 +66,10 @@ export default function Leagues() {
                   className="league-card"
                   onClick={() => navigate(`/league/${league.id}`)}
                 >
-                  {/* Card Background Decoration */}
-                  <div className="card-glitch-overlay"></div>
-                  
                   {/* Top Bar: Season & Region */}
                   <div className="card-header-info d-flex justify-content-between p-3">
-                    <span className="small-tag season-tag">{league.season || "S1"}</span>
-                    <span className="small-tag region-tag">{league.country || "KENYA"}</span>
+                    <span className="season-tag">{league.season || "S1"}</span>
+                    <span className="region-tag">{league.country || "KENYA"}</span>
                   </div>
 
                   {/* Main Avatar Section */}
@@ -79,10 +85,10 @@ export default function Leagues() {
                       </div>
                     </div>
 
-                    <h4 className="league-title text-uppercase italic fw-bold mb-1">
+                    <h4 className="league-title mb-1">
                       {league.name}
                     </h4>
-                    <p className="league-intro smaller opacity-75">
+                    <p className="league-intro">
                       {league.short_intro || "Initializing sector data..."}
                     </p>
                   </div>
@@ -105,29 +111,12 @@ export default function Leagues() {
       </div>
 
       <style>{`
-        /* Core Variable Definitions */
-        :root {
-          --k-blue: #0d6efd;
-          --k-glow: #58a6ff;
-          --k-dark: #030a1a;
-          --k-card-bg: rgba(13, 110, 253, 0.05);
-          --k-border: rgba(13, 110, 253, 0.4);
-        }
-
-        .bg-konami-dark {
-          background-color: var(--k-dark);
-          background-image: 
-            linear-gradient(rgba(13, 110, 253, 0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(13, 110, 253, 0.02) 1px, transparent 1px),
-            radial-gradient(circle at 50% 50%, #051a3d 0%, #030a1a 100%);
-          background-size: 40px 40px, 40px 40px, auto;
-        }
-
-        /* Tactical Card Styling */
+        /* League Card Styling */
         .league-card {
           position: relative;
-          background: var(--k-card-bg);
-          border: 1px solid var(--k-border);
+          background: ${BRAND.WHITE};
+          border: 1px solid ${BRAND.MID_GRAY};
+          border-radius: 16px;
           height: 100%;
           min-height: 280px;
           display: flex;
@@ -135,23 +124,24 @@ export default function Leagues() {
           cursor: pointer;
           transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
           overflow: hidden;
-          clip-path: polygon(0 0, 92% 0, 100% 8%, 100% 100%, 8% 100%, 0 92%);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .league-card:hover {
-          background: rgba(13, 110, 253, 0.12);
-          border-color: var(--k-glow);
           transform: translateY(-5px);
-          box-shadow: 0 0 20px rgba(13, 110, 253, 0.2);
+          box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+          border-color: ${BRAND.BLACK};
         }
 
         .league-card::before {
           content: '';
           position: absolute;
-          top: 0; left: 0;
-          width: 4px; height: 100%;
-          background: var(--k-blue);
-          box-shadow: 0 0 10px var(--k-blue);
+          top: 0;
+          left: 0;
+          width: 4px;
+          height: 100%;
+          background: ${BRAND.BLACK};
+          border-radius: 16px 0 0 16px;
         }
 
         /* Avatar Hexagonal Styling */
@@ -164,96 +154,132 @@ export default function Leagues() {
         .card-avatar-hex {
           width: 100px;
           height: 100px;
-          background: #000;
-          border: 2px solid var(--k-blue);
-          clip-path: polygon(25% 5%, 75% 5%, 95% 50%, 75% 95%, 25% 95%, 5% 50%);
+          background: ${BRAND.LIGHT_GRAY};
+          border: 2px solid ${BRAND.BLACK};
+          border-radius: 20px;
+          transform: rotate(45deg);
+          overflow: hidden;
           position: relative;
+          transition: all 0.3s ease;
         }
 
         .card-img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          transform: rotate(-45deg) scale(1.4);
           transition: transform 0.5s ease;
         }
 
         .league-card:hover .card-img {
-          transform: scale(1.15) rotate(3deg);
+          transform: rotate(-45deg) scale(1.5);
         }
 
-        /* Typography & Tags */
-        .small-tag {
-          font-size: 0.65rem;
-          font-weight: 800;
-          padding: 2px 8px;
-          background: rgba(0,0,0,0.5);
-          border: 1px solid var(--k-border);
-          letter-spacing: 1px;
+        /* Tags */
+        .season-tag {
+          font-size: 0.7rem;
+          font-weight: 700;
+          padding: 4px 12px;
+          background: ${BRAND.BLACK};
+          color: ${BRAND.WHITE};
+          border-radius: 20px;
+          letter-spacing: 0.5px;
         }
 
-        .season-tag { color: var(--k-glow); }
-        .region-tag { color: #fff; }
+        .region-tag {
+          font-size: 0.7rem;
+          font-weight: 700;
+          padding: 4px 12px;
+          background: ${BRAND.DARK_GRAY};
+          color: ${BRAND.WHITE};
+          border-radius: 20px;
+          letter-spacing: 0.5px;
+        }
 
         .league-title {
-          letter-spacing: -0.5px;
-          color: #fff;
-          text-shadow: 0 0 8px rgba(13, 110, 253, 0.5);
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: ${BRAND.BLACK};
+          text-transform: uppercase;
+          margin: 0;
+          letter-spacing: -0.3px;
         }
 
         .league-intro {
+          font-size: 0.8rem;
+          color: ${BRAND.DARK_GRAY};
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
           line-height: 1.4;
           height: 2.8em;
-          padding: 0 10px;
+          margin-top: 8px;
         }
 
         .card-footer-terminal {
-          background: rgba(0,0,0,0.4);
-          border-top: 1px solid var(--k-border);
+          background: ${BRAND.LIGHT_GRAY};
+          border-top: 1px solid ${BRAND.MID_GRAY};
+          margin-top: auto;
         }
 
         .tiny-label {
-          font-size: 0.55rem;
-          color: var(--k-glow);
-          letter-spacing: 2px;
-          font-weight: 900;
+          font-size: 0.6rem;
+          color: ${BRAND.DARK_GRAY};
+          letter-spacing: 1px;
+          font-weight: 700;
         }
 
         .organizer-name {
           font-size: 0.8rem;
           text-transform: uppercase;
+          color: ${BRAND.BLACK};
+          font-weight: 700;
         }
 
-        .badge-status {
-          font-size: 0.7rem;
-          font-weight: 900;
-          color: #00ff88;
-          border: 1px solid #00ff88;
-          padding: 4px 10px;
-          clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        .card-action-icon {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: ${BRAND.BLACK};
+          border-radius: 50%;
+          transition: all 0.3s ease;
+        }
+
+        .league-card:hover .card-action-icon {
+          background: ${BRAND.DARK_GRAY};
+          transform: translateX(3px);
+        }
+
+        .card-action-icon i {
+          color: ${BRAND.WHITE};
+          font-size: 0.9rem;
         }
 
         /* Loading Animation */
-        .konami-loader {
+        .spinner-border {
           width: 50px;
           height: 50px;
-          border: 3px solid var(--k-card-bg);
-          border-top: 3px solid var(--k-glow);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
+          border-width: 3px;
         }
 
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .card-avatar-hex {
+            width: 80px;
+            height: 80px;
+          }
+          
+          .league-title {
+            font-size: 1rem;
+          }
+          
+          .league-intro {
+            font-size: 0.75rem;
+          }
         }
-
-        .smaller { font-size: 0.75rem; }
-        .fw-black { font-weight: 900; }
-        .tracking-tighter { letter-spacing: -1px; }
       `}</style>
     </div>
   );

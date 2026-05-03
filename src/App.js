@@ -16,8 +16,6 @@ import Winner from "./pages/Winner.tsx";
 import UpgradeToAdmin from "./pages/UpgradeToAdmin.tsx";
 import TournamentCreation from "./pages/TournamentCreation.tsx";
 import TournamentList from "./pages/TournamentList.tsx";
-import NoLeaderboardState from "./pages/NoLeaderboardState.tsx";
-import LeaderboardList from "./pages/LeaderboardList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 import Register from "./pages/Register.tsx";
 import Leagues from "./pages/leagues/AllLeagues.tsx";
@@ -28,6 +26,7 @@ import RegistrationsAdmin from "./pages/RegistrationsAdmin.tsx";
 import  LeagueManagement from "./pages/leagues/Manageleague.tsx";
 import AddLeague from "./pages/leagues/Addleague.tsx";
 import Registrations from "./pages/CreateRegistrations.tsx";
+import CachePlayground from "./pages/Cacheplayground";
 
 function App() {
   // Detect PWA vs browser
@@ -47,6 +46,7 @@ useEffect(() => {
 }, []);
   return (
     <Routes>
+      <Route path="/cache-playground" element={<CachePlayground />} />
       {/* leagues routes */}
 
    <Route
@@ -115,14 +115,6 @@ useEffect(() => {
 
 
       {/* Other existing routes unchanged */}
-      <Route
-        path="/leaderboard-list"
-        element={
-          <ProtectedRoute>
-            <LeaderboardList />
-          </ProtectedRoute>
-        }
-      />
          <Route
   path="/league/:id"
   element={
@@ -185,19 +177,6 @@ useEffect(() => {
         element={
           <ProtectedRoute>
             <TournamentList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/leaderboard-admin"
-        element={
-          <ProtectedRoute>
-            <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-              <Navbar />
-              <div style={{ flex: 1, marginTop: "65px" }}>
-                <NoLeaderboardState />
-              </div>
-            </div>
           </ProtectedRoute>
         }
       />

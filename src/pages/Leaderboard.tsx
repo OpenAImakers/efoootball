@@ -188,6 +188,7 @@ const KenyaEfootballHub: React.FC = () => {
 
   return (
     <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5">
+    
       <Advert />
 
       <div className="container-fluid px-4 pt-5 mt-4">

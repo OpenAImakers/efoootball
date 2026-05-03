@@ -71,12 +71,6 @@ const UpgradeToAdmin: React.FC<UpgradeToAdminProps> = ({ role }) => {
             CREATE TOURNAMENT
           </button>
           
-          <button 
-            onClick={() => window.location.href = '/leaderboard-admin'} 
-            style={adminButtonStyle(false)}
-          >
-            MANAGE LEADERBOARD
-          </button>
           
           <button 
             onClick={() => window.location.href = '/registrations-admin'} 
@@ -89,7 +83,7 @@ const UpgradeToAdmin: React.FC<UpgradeToAdminProps> = ({ role }) => {
             onClick={() => window.location.href = '/tournament-list'} 
             style={adminButtonStyle(false)}
           >
-            PASSKEY ENTRY
+            TOURNAMENT MANAGEMENT
           </button>
         </div>
       </div>
