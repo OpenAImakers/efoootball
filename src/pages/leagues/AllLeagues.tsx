@@ -83,7 +83,7 @@ export default function Leagues() {
                       {league.name}
                     </h4>
                     <p className="league-intro smaller opacity-75">
-                      {league.short_intro || "Initializing sector data..."}
+                      {league.short_intro || "No description provided"}
                     </p>
                   </div>
 
