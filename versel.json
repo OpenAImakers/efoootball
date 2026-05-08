@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/share/:path*",
+      "destination": "https://bkmdutrvxugyrwthmtjb.supabase.co/functions/v1/share/:path*"
+    }
+  ]
+}

@@ -283,9 +283,7 @@ export default function RegisterPage() {
                   style={{ cursor: "pointer", transition: "0.2s" }}
                   onClick={async () => {
                     // If you use the Edge Function fix, put that URL here instead
-                     const shareUrl = `https://bkmdutrvxugyrwthmtjb.supabase.co/functions/v1/share?id=${reg.id}`;
-  
-
+                    const shareUrl = `https://efootballkenyaleague.website/share?id=${reg.id}`;
                     
                     if (navigator.share) {
                       try {
