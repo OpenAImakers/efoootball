@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/share/:path*",
-      "destination": "https://bkmdutrvxugyrwthmtjb.supabase.co/functions/v1/share/:path*"
+      "source": "/join/:id",
+      "destination": "https://bkmdutrvxugyrwthmtjb.supabase.co/functions/v1/share?id=:id"
     }
   ]
 }

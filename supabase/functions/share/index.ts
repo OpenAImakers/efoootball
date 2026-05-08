@@ -28,7 +28,7 @@ serve(async (req) => {
   
   // The destination URL on your main React site
   const redirectUrl = `https://efootballkenyaleague.website/registration/${id}`;
-
+  
   // 4. THE MAGIC: Return HTML with Meta Tags for Bots + Redirect for Humans
   const html = `
     <!DOCTYPE html>
