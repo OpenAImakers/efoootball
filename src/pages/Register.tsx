@@ -14,11 +14,7 @@ export default function RegisterPage() {
   // State
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [teamsMap, setTeamsMap] = useState<Record<number, any[]>>({});
-  const [user, setUser] = useState<any>(null);
   const [profilesMap, setProfilesMap] = useState<Record<string, any>>({});
-  const [formData, setFormData] = useState<Record<number, any>>({});
-  const [submitting, setSubmitting] = useState<Record<number, boolean>>({});
-  const [messages, setMessages] = useState<Record<number, { type: string; text: string } | null>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,11 +34,6 @@ export default function RegisterPage() {
     if (!isSilent) setLoading(true);
     
     try {
-      const {
-        data: { user: userData },
-      } = await supabase.auth.getUser();
-      setUser(userData || null);
-
       const { data: regs } = await supabase
         .from("registrations")
         .select("*")
@@ -66,16 +57,6 @@ export default function RegisterPage() {
         });
         setProfilesMap(profilesObj);
       }
-
-      const initialFormData: Record<number, any> = {};
-      regs.forEach((reg) => {
-        initialFormData[reg.id] = {
-          team_name: "",
-          username: "",
-          whatsapp: "+254",
-        };
-      });
-      setFormData(initialFormData);
 
       const { data: teams } = await supabase
         .from("tournament_registrations")
@@ -121,106 +102,11 @@ export default function RegisterPage() {
     reg.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const checkUserRegistered = async (regId: number, userId: string) => {
-    const { data } = await supabase
-      .from("tournament_registrations")
-      .select("id")
-      .eq("registration_id", regId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    return !!data;
-  };
-
-  const handleSubmit = async (e: React.FormEvent, regId: number) => {
-    e.preventDefault();
-    
-    setSubmitting((prev) => ({ ...prev, [regId]: true }));
-    setMessages((prev) => ({ ...prev, [regId]: null }));
-
-    const reg = registrations.find((r) => r.id === regId);
-    const teams = teamsMap[regId] || [];
-    const data = formData[regId];
-
-    if (teams.length >= reg.max_players) {
-      setMessages((prev) => ({
-        ...prev,
-        [regId]: { type: "danger", text: `${reg.name} is full! Max ${reg.max_players} teams.` }
-      }));
-      setSubmitting((prev) => ({ ...prev, [regId]: false }));
-      return;
-    }
-
-    if (user) {
-      const alreadyRegistered = await checkUserRegistered(regId, user.id);
-      if (alreadyRegistered) {
-        setMessages((prev) => ({
-          ...prev,
-          [regId]: { type: "danger", text: `You're already registered for ${reg.name}!` }
-        }));
-        setSubmitting((prev) => ({ ...prev, [regId]: false }));
-        return;
-      }
-    }
-
-    try {
-      const { data: inserted, error } = await supabase
-        .from("tournament_registrations")
-        .insert([
-          {
-            ...data,
-            registration_id: regId,
-            user_id: user?.id || null,
-            status: "pending",
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setMessages((prev) => ({
-        ...prev,
-        [regId]: { type: "success", text: "Registration Successful!" }
-      }));
-
-      setTeamsMap((prev) => ({
-        ...prev,
-        [regId]: [inserted, ...(prev[regId] || [])],
-      }));
-
-      setFormData((prev) => ({
-        ...prev,
-        [regId]: { team_name: "", username: "", whatsapp: "+254" },
-      }));
-      
-      // Update cache after mutation
-      localStorage.setItem(REGISTRATION_CACHE_KEY, JSON.stringify({
-        registrations,
-        teamsMap: { ...teamsMap, [regId]: [inserted, ...(teamsMap[regId] || [])] },
-        profilesMap,
-        timestamp: Date.now()
-      }));
-    } catch (err: any) {
-      setMessages((prev) => ({
-        ...prev,
-        [regId]: { type: "danger", text: err.message }
-      }));
-    } finally {
-      setSubmitting((prev) => ({ ...prev, [regId]: false }));
-    }
-  };
-
-  const getUserRegistrationForTournament = (regId: number) => {
-    const teams = teamsMap[regId] || [];
-    if (!user) return null;
-    return teams.find((team) => team.user_id === user.id);
-  };
-
   return (
     <main className="min-vh-100" style={{ backgroundColor: "#f0f2f5", marginTop: "68px" }}>
       <Navbar />
 
-      {/* Sticky Header with Search and Create Button - SQUARED AND STICKY */}
+      {/* Sticky Header with Search and Create Button */}
       <div 
         className="container-fluid px-4 py-3"
         style={{
@@ -232,7 +118,7 @@ export default function RegisterPage() {
         }}
       >
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
-          {/* Search Bar - Left - SQUARED */}
+          {/* Search Bar - Left */}
           <div className="flex-grow-1" style={{ maxWidth: "400px" }}>
             <input
               type="text"
@@ -291,18 +177,9 @@ export default function RegisterPage() {
             {filteredRegistrations.map((reg) => {
               const teams = teamsMap[reg.id] || [];
               const isFull = teams.length >= reg.max_players;
-              const userReg = getUserRegistrationForTournament(reg.id);
-              const currentFormData = formData[reg.id] || {
-                team_name: "",
-                username: "",
-                whatsapp: "+254",
-              };
-              const isSubmitting = submitting[reg.id] || false;
-              const message = messages[reg.id] || null;
               
               // Calculate total budget
-              // Calculate total budget based on max players, not current teams
-const totalBudget = reg.max_players * reg.registration_amount;
+              const totalBudget = reg.max_players * reg.registration_amount;
               
               // Get host/sponsor profile
               const hostProfile = reg.created_by ? profilesMap[reg.created_by] : null;
@@ -310,7 +187,7 @@ const totalBudget = reg.max_players * reg.registration_amount;
 
               return (
                 <div key={reg.id} className="col-12">
-                  {/* SINGLE CARD for entire registration */}
+                  {/* Tournament Card */}
                   <div className="card border-0 shadow rounded-4 overflow-hidden">
                     {/* Banner Section */}
                     <div
@@ -401,174 +278,50 @@ const totalBudget = reg.max_players * reg.registration_amount;
                             </span>
                           )}
                         </div>
-                      </div>
+                       <div 
+                  className="d-flex align-items-center justify-content-between bg-white p-3 rounded-4 shadow-sm border mb-3" 
+                  style={{ cursor: "pointer", transition: "0.2s" }}
+                  onClick={async () => {
+                    // If you use the Edge Function fix, put that URL here instead
+                     const shareUrl = `https://bkmdutrvxugyrwthmtjb.supabase.co/functions/v1/share?id=${reg.id}`;
+  
 
-                      {/* Two Column Layout */}
-                      <div className="row g-4">
-                        {/* Form Column */}
-                        <div className="col-12 col-lg-6">
-                          <div className="bg-light rounded-4 p-4 h-100">
-                            <h5 className="fw-bold text-primary mb-3">
-                              {userReg ? "Your Registration" : "Join Tournament"}
-                            </h5>
+                    
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: reg.name,
+                          text: `Join the ${reg.name} tournament! Entry: KES ${reg.registration_amount}`,
+                          url: shareUrl,
+                        });
+                      } catch (err) {
+                        console.log("Shared cancelled");
+                      }
+                    } else {
+                      navigator.clipboard.writeText(shareUrl);
+                      alert("Link copied! Paste it in WhatsApp.");
+                    }
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#fff"}
+                >
+                  <div>
+                    <h6 className="mb-0 fw-bold">Invite Players</h6>
+                    <small className="text-muted">Share this tournament link</small>
+                  </div>
+                  <div className="bg-primary bg-opacity-10 p-2 rounded-circle">
+                    <i className="bi bi-share-fill text-primary"></i>
+                  </div>
+                </div>
 
-                            {message && (
-                              <div className={`alert alert-${message.type} fw-bold small mb-3`}>
-                                {message.text}
-                              </div>
-                            )}
-
-                            {userReg ? (
-                              <div className="text-center py-4">
-                                <div className="bg-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: "80px", height: "80px" }}>
-                                  <span className="display-4">✓</span>
-                                </div>
-                                <h6 className="fw-bold mb-2">{userReg.team_name}</h6>
-                                <p className="text-muted small mb-2">@{userReg.username}</p>
-                                <span className="badge bg-success px-3 py-2">
-                                  {userReg.status.toUpperCase()}
-                                </span>
-                              </div>
-                            ) : isFull ? (
-                              <div className="text-center py-4">
-                                <div className="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: "80px", height: "80px" }}>
-                                  <span className="display-4">⚠️</span>
-                                </div>
-                                <h6 className="fw-bold">Tournament Full</h6>
-                                <p className="text-muted small mb-0">
-                                  Maximum of {reg.max_players} teams reached
-                                </p>
-                              </div>
-                            ) : (
-                              <form onSubmit={(e) => handleSubmit(e, reg.id)}>
-                                <div className="mb-3">
-                                  <label className="form-label small fw-bold text-secondary">
-                                    TEAM NAME
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control border-0 shadow-sm"
-                                    placeholder="Enter your team name"
-                                    value={currentFormData.team_name}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-                                        [reg.id]: {
-                                          ...currentFormData,
-                                          team_name: e.target.value,
-                                        },
-                                      })
-                                    }
-                                    required
-                                  />
-                                </div>
-
-                                <div className="mb-3">
-                                  <label className="form-label small fw-bold text-secondary">
-                                    USERNAME
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control border-0 shadow-sm"
-                                    placeholder="Choose a username"
-                                    value={currentFormData.username}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-                                        [reg.id]: {
-                                          ...currentFormData,
-                                          username: e.target.value,
-                                        },
-                                      })
-                                    }
-                                    required
-                                  />
-                                </div>
-
-                                <div className="mb-4">
-                                  <label className="form-label small fw-bold text-secondary">
-                                    WHATSAPP CONTACT
-                                  </label>
-                                  <input
-                                    type="tel"
-                                    className="form-control border-0 shadow-sm"
-                                    placeholder="+254 700 000000"
-                                    value={currentFormData.whatsapp}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-                                        [reg.id]: {
-                                          ...currentFormData,
-                                          whatsapp: e.target.value,
-                                        },
-                                      })
-                                    }
-                                    required
-                                  />
-                                </div>
-
-                                <button
-                                  type="submit"
-                                  className="btn btn-primary w-100 fw-bold py-2"
-                                  disabled={isSubmitting}
-                                  style={{
-                                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                                    border: "none"
-                                  }}
-                                >
-                                  {isSubmitting ? "Processing..." : `Register - KES ${reg.registration_amount}`}
-                                </button>
-                              </form>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Teams List Column */}
-                        <div className="col-12 col-lg-6">
-                          <div className="bg-light rounded-4 p-4 h-100">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <h5 className="fw-bold text-primary mb-0">Enlisted Teams</h5>
-                              <span className="badge bg-secondary rounded-pill px-3">
-                                {teams.length}
-                              </span>
-                            </div>
-
-                            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-                              {teams.length > 0 ? (
-                                teams.map((team, index) => (
-                                  <div
-                                    key={team.id || index}
-                                    className="d-flex justify-content-between align-items-center bg-white rounded-3 p-3 mb-2 shadow-sm"
-                                  >
-                                    <div className="d-flex align-items-center gap-3">
-                                      <div className="fw-bold text-primary" style={{ width: "30px" }}>
-                                        {index + 1}
-                                      </div>
-                                      <div>
-                                        <div className="fw-bold">{team.team_name}</div>
-                                        <small className="text-muted">@{team.username}</small>
-                                      </div>
-                                    </div>
-                                    <span
-                                      className={`badge ${
-                                        team.status === "confirmed"
-                                          ? "bg-success"
-                                          : "bg-warning text-dark"
-                                      } px-3 py-2`}
-                                    >
-                                      {team.status.toUpperCase()}
-                                    </span>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-center py-5 bg-white rounded-3">
-                                  <div className="mb-2" style={{ fontSize: "3rem" }}>🎮</div>
-                                  <p className="text-muted mb-0">No teams yet</p>
-                                  <small className="text-muted">Be the first to register!</small>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                        <div className="mt-2 mt-sm-0">
+                          {/* Register link - navigates to specific registration page */}
+                          <strong className="fs-5 text-primary">Register</strong>
+                          <i 
+                            className="bi bi-pencil-square ms-2 fs-5 text-primary" 
+                            style={{ cursor: "pointer" }} 
+                            onClick={() => navigate(`/registration/${reg.id}`)}
+                          />
                         </div>
                       </div>
                     </div>
@@ -616,25 +369,6 @@ const totalBudget = reg.max_players * reg.registration_amount;
 
         .card:hover {
           box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-        }
-
-        /* Custom scrollbar */
-        div[style*="maxHeight: 400px"]::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        div[style*="maxHeight: 400px"]::-webkit-scrollbar-track {
-          background: #e9ecef;
-          border-radius: 10px;
-        }
-
-        div[style*="maxHeight: 400px"]::-webkit-scrollbar-thumb {
-          background: #cbd5e0;
-          border-radius: 10px;
-        }
-
-        div[style*="maxHeight: 400px"]::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
         }
       `}</style>
     </main>

@@ -27,6 +27,7 @@ import  LeagueManagement from "./pages/leagues/Manageleague.tsx";
 import AddLeague from "./pages/leagues/Addleague.tsx";
 import Registrations from "./pages/CreateRegistrations.tsx";
 import CachePlayground from "./pages/Cacheplayground";
+import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 
 function App() {
   // Detect PWA vs browser
@@ -90,10 +91,16 @@ useEffect(() => {
         }
       />
 
-     {/* Registration routes */}
+      <Route
+        path="/registration/:id"
+        element={
+          <ProtectedRoute>
+            <SpecificRegistration />
+          </ProtectedRoute>
+        }
+      />
 
-
-         <Route
+        <Route
         path="/registrations-admin"
         element={
           <ProtectedRoute>
@@ -101,6 +108,22 @@ useEffect(() => {
           </ProtectedRoute>
         }
       />
+
+                  <Route
+        path="/register"
+        element={
+          <ProtectedRoute>
+            <Register/>
+          </ProtectedRoute>
+        }
+      />
+
+
+     {/* Registration routes */}
+
+
+
+      
       {/* PWA starts at /auth, browser starts at / (Advert) */}
       <Route
         path="/"
@@ -140,14 +163,7 @@ useEffect(() => {
         }
       />
       
-            <Route
-        path="/register"
-        element={
-          <ProtectedRoute>
-            <Register/>
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/teams"
         element={
