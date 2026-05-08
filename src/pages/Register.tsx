@@ -282,7 +282,7 @@ export default function RegisterPage() {
                   className="d-flex align-items-center justify-content-between bg-white p-3 rounded-4 shadow-sm border mb-3" 
                   style={{ cursor: "pointer", transition: "0.2s" }}
                   onClick={async () => {
-                 const shareUrl = `https://efootballkenyaleague.website/join/${reg.id}`;
+                 const shareUrl = `https://efootballkenyaleague.website/registration/${reg.id}`;
                     if (navigator.share) {
                       try {
                         await navigator.share({
