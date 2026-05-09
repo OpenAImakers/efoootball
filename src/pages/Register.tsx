@@ -285,9 +285,6 @@ export default function RegisterPage() {
     const regId = reg.id;
     const shareUrl = `https://efootballkenyaleague.website/registration/${regId}`;
     
-    // This is the direct Deno Deploy link (for better preview)
-    const ogUrl = `https://deno-efootball-5jt64p6f26hp.newton-oyweri.deno.net/?id=${regId}`;
-
     if (navigator.share) {
       try {
         await navigator.share({
