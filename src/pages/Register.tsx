@@ -278,37 +278,43 @@ export default function RegisterPage() {
                             </span>
                           )}
                         </div>
-                       <div 
-                  className="d-flex align-items-center justify-content-between bg-white p-3 rounded-4 shadow-sm border mb-3" 
-                  style={{ cursor: "pointer", transition: "0.2s" }}
-                  onClick={async () => {
-                 const shareUrl = `https://efootballkenyaleague.website/registration/${reg.id}`;
-                    if (navigator.share) {
-                      try {
-                        await navigator.share({
-                          title: reg.name,
-                          text: `Join the ${reg.name} tournament! Entry: KES ${reg.registration_amount}`,
-                          url: shareUrl,
-                        });
-                      } catch (err) {
-                        console.log("Shared cancelled");
-                      }
-                    } else {
-                      navigator.clipboard.writeText(shareUrl);
-                      alert("Link copied! Paste it in WhatsApp.");
-                    }
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#fff"}
-                >
-                  <div>
-                    <h6 className="mb-0 fw-bold">Invite Players</h6>
-                    <small className="text-muted">Share this tournament link</small>
-                  </div>
-                  <div className="bg-primary bg-opacity-10 p-2 rounded-circle">
-                    <i className="bi bi-share-fill text-primary"></i>
-                  </div>
-                </div>
+                  <div 
+  className="d-flex align-items-center justify-content-between bg-white p-3 rounded-4 shadow-sm border mb-3" 
+  style={{ cursor: "pointer", transition: "0.2s" }}
+  onClick={async () => {
+    const regId = reg.id;
+    const shareUrl = `https://efootballkenyaleague.website/registration/${regId}`;
+    
+    // This is the direct Deno Deploy link (for better preview)
+    const ogUrl = `https://deno-efootball-5jt64p6f26hp.newton-oyweri.deno.net/?id=${regId}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: reg.name || "eFootball Tournament",
+          text: `Entry Fee: KES ${reg.registration_amount}. Join the ${reg.name} squad!`,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.log("Share cancelled");
+      }
+    } else {
+      // Fallback: Copy clean URL
+      navigator.clipboard.writeText(shareUrl);
+      alert("Link copied! Paste it in WhatsApp or Telegram.");
+    }
+  }}
+  onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
+  onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#fff"}
+>
+  <div>
+    <h6 className="mb-0 fw-bold">Invite Players</h6>
+    <small className="text-muted">Share this tournament link</small>
+  </div>
+  <div className="bg-primary bg-opacity-10 p-2 rounded-circle">
+    <i className="bi bi-share-fill text-primary"></i>
+  </div>
+</div>
 
                         <div className="mt-2 mt-sm-0">
                           {/* Register link - navigates to specific registration page */}
