@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/registration/:id",
-      "destination": "https://deno-efootball-z0v07v806f4t.newton-oyweri.deno.net/?id=:id"
+      "destination": "https://deno-efootball-5jt64p6f26hp.newton-oyweri.deno.net/?id=:id"
     }
   ]
 }
