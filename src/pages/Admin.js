@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import Match from "./Matchfixer";
 import ManagerPanel from "./ManagerPanel";
 import { getActiveTournament } from "../Utils/TournamentSession";
+import EndTournament from "./EndTournament";
 
 function MatchManager() {
   const [tournaments, setTournaments] = useState([]);
@@ -17,6 +18,7 @@ function MatchManager() {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [addToGF, setAddToGF] = useState(0);
   const [addToGA, setAddToGA] = useState(0);
+  const [showEndModal, setShowEndModal] = useState(false);
 
   const activeSession = getActiveTournament();
 
@@ -26,7 +28,7 @@ function MatchManager() {
     window.location.reload();
   };
 
-// Load tournaments — no ownership filter + respect active session
+  // Load tournaments
   useEffect(() => {
     async function loadTournaments() {
       let query = supabase
@@ -34,7 +36,6 @@ function MatchManager() {
         .select("id, name")
         .order("created_at", { ascending: false });
 
-      // If active session exists → only load that tournament
       if (activeSession?.id) {
         query = query.eq("id", activeSession.id);
       }
@@ -48,19 +49,20 @@ function MatchManager() {
 
       setTournaments(data || []);
 
-      // Auto-select logic
       if (data?.length > 0) {
         if (activeSession?.id && data.some(t => t.id === activeSession.id)) {
           setSelectedTournamentId(activeSession.id);
-        } else if (!selectedTournamentId) {
-          setSelectedTournamentId(data[0].id);
+        } else {
+          // Fixed: Using functional update to avoid ESLint warning
+          setSelectedTournamentId((currentId) => {
+            return currentId ? currentId : data[0].id;
+          });
         }
       }
     }
 
     loadTournaments();
-    // Added dependencies here to clear the warning
-  }, [activeSession?.id, selectedTournamentId]);
+  }, [activeSession?.id]);
 
   // Load teams for selected tournament
   useEffect(() => {
@@ -144,8 +146,8 @@ function MatchManager() {
 
   return (
     <>
-      {/* SESSION HEADER - This shows they are currently "logged in" to a tournament */}
-      <div className="bg-dark  text-white py-2 px-4 d-flex justify-content-between align-items-center shadow-sm " style={{marginTop : '70px'}} >
+      {/* SESSION HEADER */}
+      <div className="bg-dark text-white py-2 px-4 d-flex justify-content-between align-items-center shadow-sm" style={{ marginTop: '70px' }}>
         <div className="d-flex align-items-center gap-2">
           <span className="badge bg-primary">ACTIVE SESSION</span>
           <span className="fw-bold">{currentTournament?.name || "Loading..."}</span>
@@ -166,7 +168,7 @@ function MatchManager() {
 
         <hr className="my-5" />
 
-        {/* Tournament Selector – hidden when in locked/session mode */}
+        {/* Tournament Selector */}
         {!activeSession && (
           <div className="mb-4">
             <label className="form-label fw-bold">Select Tournament</label>
@@ -176,7 +178,6 @@ function MatchManager() {
               onChange={(e) => {
                 const id = e.target.value ? Number(e.target.value) : null;
                 setSelectedTournamentId(id);
-                // Keep localStorage in sync
                 if (id) {
                   localStorage.setItem("active_tournament", JSON.stringify({ id, name: "" }));
                 } else {
@@ -229,11 +230,21 @@ function MatchManager() {
                 </div>
                 <div className="col-md-3">
                   <label className="form-label">Add to GF</label>
-                  <input type="number" className="form-control" value={addToGF} onChange={(e) => setAddToGF(e.target.value)} />
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={addToGF} 
+                    onChange={(e) => setAddToGF(e.target.value)} 
+                  />
                 </div>
                 <div className="col-md-3">
                   <label className="form-label">Add to GA</label>
-                  <input type="number" className="form-control" value={addToGA} onChange={(e) => setAddToGA(e.target.value)} />
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={addToGA} 
+                    onChange={(e) => setAddToGA(e.target.value)} 
+                  />
                 </div>
                 <button className="btn btn-success" onClick={addGoals}>Apply</button>
               </div>
@@ -265,6 +276,28 @@ function MatchManager() {
           </>
         )}
       </div>
+
+      {/* End Tournament Button - Bottom Right */}
+      {currentTournament && selectedTournamentId && (
+        <button
+          className="btn btn-primary  m-4 shadow"
+          style={{ zIndex: 1000 }}
+          onClick={() => setShowEndModal(true)}
+        >
+          End Tournament
+        </button>
+      )}
+
+      {/* End Tournament Modal */}
+      {selectedTournamentId && (
+        <EndTournament
+          tournamentId={selectedTournamentId}
+          tournamentName={currentTournament?.name || ""}
+          isOpen={showEndModal}
+          onClose={() => setShowEndModal(false)}
+          onSuccess={() => window.location.reload()}
+        />
+      )}
     </>
   );
 }
