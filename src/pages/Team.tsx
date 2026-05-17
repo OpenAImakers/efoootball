@@ -5,11 +5,13 @@ import Navbar from "../components/Navbar";
 import RoundRobinLayout from "../TournamentView/RobinRound";
 import SingleEliminationLayout from "../TournamentView/SingleElimination";
 import DoubleEliminationLayout from "../TournamentView/DoubleElimination";
+import Results from "./Results";
 
 export interface Tournament {
   id: number;
   name: string;
   tournament_type: string;
+  status: string;
 }
 
 export interface Team {
@@ -51,7 +53,8 @@ export default function Teams() {
           tournaments (
             id,
             name,
-            tournament_type
+            tournament_type,
+            status
           )
         `)
         .eq("user_id", user.id);
@@ -157,6 +160,12 @@ export default function Teams() {
               >
                 <div className="type-badge">{t.tournament_type.replace(/_/g, " ")}</div>
                 <div className="tournament-name text-white">{t.name.replace(/_/g, " ").toUpperCase()}</div>
+                
+                {t.status && (
+                  <div className={`status-badge ${t.status === 'finished' ? 'finished' : 'live'}`}>
+                    {t.status.toUpperCase()}
+                  </div>
+                )}
               </div>
             ))}
             {!loading && filteredTournaments.length === 0 && (
@@ -170,11 +179,34 @@ export default function Teams() {
             <div className="spinner-border text-info shadow-glow"></div>
           </div>
         ) : (
-          renderLayout()
+          <>
+            {renderLayout()}
+            <Results tournament={selectedTournament} teams={teams} />
+          </>
         )}
       </div>
 
       <style>{`
+              .status-badge {
+          font-size: 0.65rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          padding: 3px 10px;
+          border-radius: 20px;
+          display: inline-block;
+          margin-top: 6px;
+        }
+        .status-badge.live {
+          color: #4ade80;
+          background: rgba(74, 222, 128, 0.15);
+          border: 1px solid #4ade80;
+        }
+        .status-badge.finished {
+          color: #ff6b6b;
+          background: rgba(255, 107, 107, 0.15);
+          border: 1px solid #ff6b6b;
+        }
         .search-input { 
           border: 2px solid #333; 
           color: #fff !important; 
