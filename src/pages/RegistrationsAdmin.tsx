@@ -93,6 +93,39 @@ const AdminRegistrations = () => {
     }
   };
 
+  // NEW: Delete the entire parent registration event group
+  const deleteParentRegistration = async () => {
+    if (selectedParentId === 'all') return;
+
+    const targetEvent = parentRegistrations.find(p => p.id === selectedParentId);
+    if (!targetEvent) return;
+
+    const confirmed = window.confirm(
+      `⚠️ CRITICAL WARNING ⚠️\n\nAre you sure you want to permanently delete the entire registration event "${targetEvent.name.toUpperCase()}"?\n\nThis will instantly delete ALL player/team registrations tied to this event. This action cannot be reversed.`
+    );
+    if (!confirmed) return;
+
+    // Note: If your database schema doesn't have ON DELETE CASCADE set up for tournament_registrations, 
+    // we drop the child records first to avoid foreign key violations.
+    await supabase
+      .from("tournament_registrations")
+      .delete()
+      .eq("registration_id", selectedParentId);
+
+    const { error } = await supabase
+      .from("registrations")
+      .delete()
+      .eq("id", selectedParentId);
+
+    if (error) {
+      alert("Failed to delete registration event: " + error.message);
+    } else {
+      alert("Registration event and all associated sign-ups successfully wiped clean.");
+      setParentRegistrations(prev => prev.filter(p => p.id !== selectedParentId));
+      setSelectedParentId('all'); // Reset dropdown back to all
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch(status) {
       case 'confirmed': return 'check-circle-fill';
@@ -118,22 +151,33 @@ const AdminRegistrations = () => {
               <i className="bi bi-calendar-event me-2"></i>
               Registration Events
             </label>
-            <select 
-              className="form-select form-select-lg rounded-0 border-dark" 
-              value={selectedParentId}
-              onChange={(e) => setSelectedParentId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            >
-              <option value="all">
-                <i className="bi bi-grid-3x3-gap-fill me-2"></i>
-                All My Registrations
-              </option>
-              {parentRegistrations.map(p => (
-                <option key={p.id} value={p.id}>
-                  <i className="bi bi-trophy-fill me-2"></i>
-                  {p.name}
+            {/* Kept the layout perfectly intact using an input group for the drop-down + delete block */}
+            <div className="input-group">
+              <select 
+                className="form-select form-select-lg rounded-0 border-dark" 
+                value={selectedParentId}
+                onChange={(e) => setSelectedParentId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              >
+                <option value="all">
+                  All My Registrations
                 </option>
-              ))}
-            </select>
+                {parentRegistrations.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {selectedParentId !== 'all' && (
+                <button 
+                  className="btn btn-outline-danger rounded-0 fw-bold px-3 text-uppercase border-dark border-start-0"
+                  type="button"
+                  onClick={deleteParentRegistration}
+                  title="Delete Entire Event"
+                >
+                  <i className="bi bi-trash3-fill me-1"></i> Delete Event
+                </button>
+              )}
+            </div>
           </div>
           <div className="col-12 col-md-6">
             <div className="btn-group w-100 border">
