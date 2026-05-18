@@ -6,12 +6,15 @@ import RoundRobinLayout from "../TournamentView/RobinRound";
 import SingleEliminationLayout from "../TournamentView/SingleElimination";
 import DoubleEliminationLayout from "../TournamentView/DoubleElimination";
 import Results from "./Results";
+import CountdownTimer from "./CountdownTimer";
 
 export interface Tournament {
   id: number;
   name: string;
   tournament_type: string;
   status: string;
+  start_time: string | null; // Added
+  end_time: string | null;   // Added
 }
 
 export interface Team {
@@ -35,47 +38,51 @@ export default function Teams() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    const fetchFollowedTournaments = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+useEffect(() => {
+  const fetchFollowedTournaments = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
 
-      if (!user) {
-        setTournaments([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("tournament_followers")
-        .select(`
-          tournament_id,
-          tournaments (
-            id,
-            name,
-            tournament_type,
-            status
-          )
-        `)
-        .eq("user_id", user.id);
-
-      if (error) {
-        console.error("Error fetching followed tournaments:", error);
-      } else if (data) {
-        const followedList: Tournament[] = data
-          .map((item: any) => item.tournaments)
-          .filter(Boolean);
-
-        setTournaments(followedList);
-        if (followedList.length > 0) {
-          setSelectedTournament(followedList[0]);
-        }
-      }
+    if (!user) {
+      setTournaments([]);
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchFollowedTournaments();
-  }, []);
+    const { data, error } = await supabase
+      .from("tournament_followers")
+      .select(`
+        tournament_id,
+        tournaments (
+          id,
+          name,
+          tournament_type,
+          status,
+          start_time,
+          end_time
+        )
+      `)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error fetching followed tournaments:", error);
+    } else if (data) {
+      const followedList: Tournament[] = data
+        .map((item: any) => item.tournaments)
+        .filter(Boolean);
+
+      console.log("Fetched tournaments with times:", followedList); // Debug log
+      
+      setTournaments(followedList);
+      if (followedList.length > 0) {
+        setSelectedTournament(followedList[0]);
+      }
+    }
+    setLoading(false);
+  };
+
+  fetchFollowedTournaments();
+}, []);
 
   useEffect(() => {
     if (!selectedTournament) return;
@@ -151,27 +158,35 @@ export default function Teams() {
             />
           </div>
 
-          <div className="tournament-scroll-container d-flex gap-3 pb-3">
-            {filteredTournaments.map((t) => (
-              <div
-                key={t.id}
-                onClick={() => setSelectedTournament(t)}
-                className={`tournament-card ${selectedTournament?.id === t.id ? "active" : ""}`}
-              >
-                <div className="type-badge">{t.tournament_type.replace(/_/g, " ")}</div>
-                <div className="tournament-name text-white">{t.name.replace(/_/g, " ").toUpperCase()}</div>
-                
-                {t.status && (
-                  <div className={`status-badge ${t.status === 'finished' ? 'finished' : 'live'}`}>
-                    {t.status.toUpperCase()}
-                  </div>
-                )}
-              </div>
-            ))}
-            {!loading && filteredTournaments.length === 0 && (
-              <p className="text-white opacity-50 mx-auto">No tournaments found.</p>
-            )}
-          </div>
+                    <div className="tournament-scroll-container d-flex gap-3 pb-3">
+          {filteredTournaments.map((t) => (
+            <div
+              key={t.id}
+              onClick={() => setSelectedTournament(t)}
+              className={`tournament-card ${selectedTournament?.id === t.id ? "active" : ""}`}
+            >
+              <div className="type-badge">{t.tournament_type.replace(/_/g, " ")}</div>
+              <div className="tournament-name text-white">{t.name.replace(/_/g, " ").toUpperCase()}</div>
+              
+              {t.status && (
+                <div className={`status-badge ${t.status === 'finished' ? 'finished' : 'live'}`}>
+                  {t.status.toUpperCase()}
+                </div>
+              )}
+
+              {/* NEW LIVE TIMER COUNTDOWN PLACEMENT */}
+              <CountdownTimer 
+                startTime={t.start_time} 
+                endTime={t.end_time} 
+                status={t.status} 
+              />
+            </div>
+          ))}
+          {!loading && filteredTournaments.length === 0 && (
+            <p className="text-white opacity-50 mx-auto">No tournaments found.</p>
+          )}
+        </div>
+        
         </div>
 
         {loading ? (
@@ -187,6 +202,16 @@ export default function Teams() {
       </div>
 
       <style>{`
+      .timer-countdown-text {
+          font-size: 0.7rem;
+          font-family: 'Courier New', Courier, monospace;
+          font-weight: 700;
+          color: #0dcaf0;
+          text-shadow: 0 0 8px rgba(13, 202, 240, 0.4);
+          letter-spacing: 0.5px;
+          margin-top: 4px;
+          text-transform: uppercase;
+        }
               .status-badge {
           font-size: 0.65rem;
           font-weight: 800;
