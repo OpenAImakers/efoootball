@@ -222,7 +222,6 @@ export default function RegisterPage() {
                               objectFit: "cover",
                               cursor: "pointer",
                             }}
-                            onClick={() => navigate(`/tournament/${reg.id}`)}
                           />
                         </div>
                       </div>

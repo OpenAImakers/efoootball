@@ -26,7 +26,6 @@ import RegistrationsAdmin from "./pages/RegistrationsAdmin.tsx";
 import  LeagueManagement from "./pages/leagues/Manageleague.tsx";
 import AddLeague from "./pages/leagues/Addleague.tsx";
 import Registrations from "./pages/CreateRegistrations.tsx";
-import CachePlayground from "./pages/Cacheplayground";
 import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 
 function App() {
@@ -47,7 +46,6 @@ useEffect(() => {
 }, []);
   return (
     <Routes>
-      <Route path="/cache-playground" element={<CachePlayground />} />
       {/* leagues routes */}
 
    <Route
