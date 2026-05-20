@@ -59,6 +59,93 @@ const CreateRegistration = () => {
     return data.publicUrl;
   };
 
+  // Modernized success experience injection
+  const triggerSuccessModal = () => {
+    return new Promise<void>((resolve) => {
+      const modal = document.createElement('div');
+      modal.id = 'skyla-success-modal';
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center; z-index: 99999;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif; opacity: 0;
+        transition: opacity 0.3s ease;
+      `;
+
+      modal.innerHTML = `
+        <div style="
+          background: linear-gradient(145deg, #1e293b, #0f172a);
+          border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px;
+          padding: 40px; width: 90%; max-width: 460px; text-align: center;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+          transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        ">
+          <div style="
+            width: 72px; height: 72px; background: rgba(16, 185, 129, 0.1); 
+            border: 2px solid #10b981; border-radius: 50%; display: flex; 
+            align-items: center; justify-content: center; margin: 0 auto 24px;
+            color: #10b981; font-size: 32px; font-weight: bold;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+          ">✓</div>
+          
+          <h2 style="color: #fff; margin: 0 0 12px; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">
+            Registration Live!
+          </h2>
+          
+          <p style="color: #94a3b8; font-size: 15px; line-height: 1.6; margin: 0 0 28px;">
+            Your registration setup has been created successfully! Check your email inbox right away for administrative details.
+          </p>
+
+          <button id="close-skyla-modal" style="
+            background: #3b82f6; color: #fff; border: none; padding: 14px 28px;
+            font-size: 15px; font-weight: 600; border-radius: 12px; cursor: pointer;
+            width: 100%; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+          }">
+            Check My Email
+          </button>
+          
+          <div style="margin-top: 20px; font-size: 11px; color: #64748b; letter-spacing: 0.5px;">
+            Skyla™ Smart Gaming Ecosystem
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      setTimeout(() => {
+        modal.style.opacity = '1';
+        if (modal.children[0] instanceof HTMLElement) {
+          modal.children[0].style.transform = 'translateY(0)';
+        }
+      }, 10);
+
+      const closeButton = modal.querySelector('#close-skyla-modal');
+      closeButton?.addEventListener('mouseover', () => {
+        if (closeButton instanceof HTMLElement) {
+          closeButton.style.transform = 'scale(1.02)';
+          closeButton.style.backgroundColor = '#2563eb';
+        }
+      });
+      closeButton?.addEventListener('mouseout', () => {
+        if (closeButton instanceof HTMLElement) {
+          closeButton.style.transform = 'scale(1)';
+          closeButton.style.backgroundColor = '#3b82f6';
+        }
+      });
+
+      closeButton?.addEventListener('click', () => {
+        modal.style.opacity = '0';
+        if (modal.children[0] instanceof HTMLElement) {
+          modal.children[0].style.transform = 'translateY(20px)';
+        }
+        setTimeout(() => {
+          modal.remove();
+          resolve();
+        }, 300);
+      });
+    });
+  };
+
   const handleSubmit = async () => {
     const errorMsg = validatePlayers();
     if (errorMsg) return alert(errorMsg);
@@ -80,9 +167,10 @@ const CreateRegistration = () => {
 
       if (error) throw error;
 
-      alert("Created successfully!");
+      // Custom styled notice trigger replaces standard alert dialog block
+      await triggerSuccessModal();
       
-      // Navigate to admin page after successful creation
+      // Navigate to admin page after successful creation and modal closure
       navigate("/registrations-admin");
       
       // Note: No need to reset form since we're leaving the page
@@ -188,7 +276,7 @@ const CreateRegistration = () => {
 
               {/* Type */}
               <div className="mb-4">
-                <label className="form-label fw-semibold" style={{ color: "#e2e8f0" }}>Tournament Type</label>
+                <label className="form-label fw-semibold" style={{ color: "#e2e8f0" }}>Choose Tournament Type</label>
                 <select
                   className="form-select form-select-lg"
                   style={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }}
