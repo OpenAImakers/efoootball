@@ -8,7 +8,7 @@ import Navbar from "../components/Navbar";
 export default function SpecificRegistration() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [reg, setReg] = useState<any>(null);
   const [teams, setTeams] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -16,6 +16,17 @@ export default function SpecificRegistration() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Clean label formatting for database string fields
+  const getTournamentTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      single_elimination: "Single Elimination",
+      round_robin_single: "Round Robin (Single)",
+      round_robin_double: "Round Robin (Double)",
+      double_elimination: "Double Elimination",
+    };
+    return types[type] || type?.replace(/_/g, " ") || "Custom Tournament";
+  };
 
   // Fetch registration, user, and teams
   const fetchData = useCallback(async () => {
@@ -154,8 +165,15 @@ export default function SpecificRegistration() {
       <div className="container py-4">
         {/* Tournament Name Header */}
         <div className="mb-4">
-          <h2 className="fw-bold text-primary">{reg.name}</h2>
-          <p className="text-muted">Register for this tournament</p>
+          <h2 className="fw-bold text-primary mb-1">{reg.name}</h2>
+          {reg.tournament_type && (
+            <div className="mb-2">
+              <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-semibold px-2.5 py-1.5 rounded-2">
+                Format: {getTournamentTypeLabel(reg.tournament_type)}
+              </span>
+            </div>
+          )}
+          <p className="text-muted small mb-0">Register for this tournament</p>
         </div>
 
         {/* Two Column Layout */}

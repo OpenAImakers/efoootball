@@ -171,7 +171,7 @@ const CreateRegistration = () => {
       await triggerSuccessModal();
       
       // Navigate to admin page after successful creation and modal closure
-      navigate("/registrations-admin");
+      navigate("/admin");
       
       // Note: No need to reset form since we're leaving the page
     } catch (err) {
