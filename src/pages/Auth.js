@@ -116,6 +116,7 @@ export default function Auth() {
           <div style={styles.bgNavy}></div>
 
           <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
+            {/* Updated card to be larger - occupies 3/4 of screen */}
             <div className="card shadow-lg border-0 text-white" style={styles.authCard}>
               
               {/* 🌐 Language Switcher Tab */}
@@ -133,8 +134,8 @@ export default function Auth() {
 
               <div className="card-body p-5 text-center">
                 <div className="mb-5">
-                  <h1 className="display-5 fw-bold mb-0">efootball</h1>
-                  <div className="d-flex align-items-center justify-content-center mt-1" style={{ fontSize: "0.85rem", opacity: 0.9 }}>
+                  <h1 style={styles.logoTitle}>efootball</h1>
+                  <div className="d-flex align-items-center justify-content-center mt-2" style={{ fontSize: "1rem", opacity: 0.9 }}>
                     <span className="fw-bold me-2">Skyla ®</span>
                     <div style={styles.divider}></div>
                     <span className="ms-2 fw-light text-lowercase">{t[lang].ecosystem}</span>
@@ -152,11 +153,11 @@ export default function Auth() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit}>
-                    <h3 className="h5 mb-4 opacity-75">
+                    <h3 className="h4 mb-4 opacity-75">
                       {authMode === "login" ? t[lang].welcome : authMode === "signup" ? t[lang].create : t[lang].reset}
                     </h3>
 
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <input
                         type="email"
                         required
@@ -186,12 +187,12 @@ export default function Auth() {
                     {message && <div className="alert alert-success py-2 small bg-success bg-opacity-25 border-0 text-white mb-4">{message}</div>}
 
                     <div className="d-grid gap-3">
-                      <button type="submit" className="btn btn-lg fw-bold text-white border-0 shadow-sm" style={{ backgroundColor: "#00b5ad" }} disabled={loading}>
+                      <button type="submit" className="btn btn-lg fw-bold text-white border-0 shadow-sm" style={{ backgroundColor: "#00b5ad", padding: "14px" }} disabled={loading}>
                         {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : 
                          authMode === "login" ? t[lang].loginBtn : authMode === "signup" ? t[lang].signupBtn : t[lang].sendReset}
                       </button>
 
-                      <div className="d-flex flex-column gap-2 mt-2">
+                      <div className="d-flex flex-column gap-2 mt-3">
                         {authMode === "login" && (
                           <button type="button" style={styles.linkBtn} onClick={() => switchMode("reset")}>
                             {t[lang].forgot}
@@ -215,20 +216,118 @@ export default function Auth() {
 }
 
 const styles = {
-  // ... existing styles ...
-  viewport: { backgroundColor: "#eef2f3", height: "100vh", width: "100vw", overflow: "hidden", position: "relative" },
-  introVideo: { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 9999 },
-  bgOrange: { position: "absolute", width: "80%", height: "80%", top: "-10%", left: "-10%", backgroundColor: "#f7931e", clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)", opacity: 0.6, zIndex: 1 },
-  bgTeal: { position: "absolute", width: "70%", height: "90%", bottom: "-10%", right: "-10%", backgroundColor: "#00b5ad", clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)", mixBlendMode: "multiply", opacity: 0.7, zIndex: 2 },
-  bgNavy: { position: "absolute", width: "100%", height: "100%", backgroundColor: "rgba(10, 26, 68, 0.2)", zIndex: 3 },
-  authCard: { position: "relative", zIndex: 10, width: "100%", maxWidth: "420px", backgroundColor: "#0a1a44", borderRadius: "0", overflow: "hidden", boxShadow: "0 30px 60px rgba(0,0,0,0.5)" },
-  
-  // New Styles
-  langTabContainer: { position: "absolute", top: "15px", right: "20px", display: "flex", gap: "10px", alignItems: "center", zIndex: 11 },
-  langBtn: { background: "none", border: "none", fontSize: "0.75rem", fontWeight: "bold", cursor: "pointer", transition: "0.3s" },
-  divider: { width: "1px", height: "14px", background: "white", opacity: 0.5 },
-  
-  inputField: { border: "1px solid rgba(255,255,255,0.2)", borderRadius: "0", fontSize: "0.9rem", color: "white" },
-  linkBtn: { background: "none", border: "none", color: "white", fontSize: "0.85rem", opacity: 0.75, cursor: "pointer", textDecoration: "none" },
-  bottomBorder: { height: "6px", width: "100%", background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)" },
+  viewport: { 
+    backgroundColor: "#eef2f3", 
+    height: "100vh", 
+    width: "100vw", 
+    overflow: "hidden", 
+    position: "relative" 
+  },
+  introVideo: { 
+    position: "fixed", 
+    top: 0, 
+    left: 0, 
+    width: "100vw", 
+    height: "100vh", 
+    objectFit: "cover", 
+    zIndex: 9999 
+  },
+  bgOrange: { 
+    position: "absolute", 
+    width: "80%", 
+    height: "80%", 
+    top: "-10%", 
+    left: "-10%", 
+    backgroundColor: "#f7931e", 
+    clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)", 
+    opacity: 0.6, 
+    zIndex: 1 
+  },
+  bgTeal: { 
+    position: "absolute", 
+    width: "70%", 
+    height: "90%", 
+    bottom: "-10%", 
+    right: "-10%", 
+    backgroundColor: "#00b5ad", 
+    clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)", 
+    mixBlendMode: "multiply", 
+    opacity: 0.7, 
+    zIndex: 2 
+  },
+  bgNavy: { 
+    position: "absolute", 
+    width: "100%", 
+    height: "100%", 
+    backgroundColor: "rgba(10, 26, 68, 0.2)", 
+    zIndex: 3 
+  },
+  authCard: { 
+    position: "relative", 
+    zIndex: 10, 
+    width: "75%", // 3/4 of the screen width
+    maxWidth: "900px", // Maximum width for large screens
+    minWidth: "320px", // Minimum width for mobile
+    backgroundColor: "#0a1a44", 
+    borderRadius: "20px", // Rounded corners for modern look
+    overflow: "hidden", 
+    boxShadow: "0 30px 60px rgba(0,0,0,0.5)" 
+  },
+  langTabContainer: { 
+    position: "absolute", 
+    top: "20px", 
+    right: "25px", 
+    display: "flex", 
+    gap: "12px", 
+    alignItems: "center", 
+    zIndex: 11 
+  },
+  langBtn: { 
+    background: "none", 
+    border: "none", 
+    fontSize: "0.85rem", 
+    fontWeight: "bold", 
+    cursor: "pointer", 
+    transition: "0.3s" 
+  },
+  divider: { 
+    width: "2px", 
+    height: "20px", 
+    background: "white", 
+    opacity: 0.5 
+  },
+  inputField: { 
+    border: "1px solid rgba(255,255,255,0.2)", 
+    borderRadius: "12px", 
+    fontSize: "1rem", 
+    color: "white",
+    padding: "12px 16px",
+    transition: "all 0.3s"
+  },
+  linkBtn: { 
+    background: "none", 
+    border: "none", 
+    color: "white", 
+    fontSize: "0.9rem", 
+    opacity: 0.75, 
+    cursor: "pointer", 
+    textDecoration: "none",
+    transition: "all 0.3s",
+    padding: "8px"
+  },
+  bottomBorder: { 
+    height: "6px", 
+    width: "100%", 
+    background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)" 
+  },
+  logoTitle: {
+    fontSize: "4rem",
+    fontWeight: "bold",
+    marginBottom: "0",
+    letterSpacing: "2px",
+    background: "linear-gradient(135deg, #f7931e 0%, #00b5ad 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text"
+  }
 };

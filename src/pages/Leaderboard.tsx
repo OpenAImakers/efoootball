@@ -4,6 +4,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import Advert from "../components/Advert";
 import { supabase } from "../supabase";
@@ -202,16 +203,42 @@ const KenyaEfootballHub: React.FC = () => {
 
         <div className="container-fluid px-4 pt-5 mt-4">
           {/* Breadcrumb for SEO */}
-          <nav aria-label="breadcrumb" className="mb-3">
-            <ol className="breadcrumb bg-transparent">
-              <li className="breadcrumb-item">
-                <a href="/" className="text-primary text-decoration-none">Home</a>
-              </li>
-              <li className="breadcrumb-item active text-white-50" aria-current="page">
-                Kenya eFootball Rankings
-              </li>
-            </ol>
-          </nav>
+<nav aria-label="Registration steps" className="sticky-top bg-konami-dark pt-2 pb-2" style={{ top: 0, zIndex: 1020, marginBottom: 0 }}>
+  <div className="d-flex justify-content-between align-items-center w-100  bg-konami-dark">
+    
+    <Link
+      to="/"
+      className="text-primary text-decoration-none d-flex align-items-center gap-2"
+    >
+      <i className="bi bi-house-door-fill"></i>
+      <span>Home</span>
+    </Link>
+
+    <Link
+      to="/auth"
+      className="text-primary text-decoration-none d-flex align-items-center gap-2"
+    >
+      <i className="bi bi-person-plus-fill"></i>
+      <span>Register</span>
+    </Link>
+
+    <Link
+      to="/auth"
+      className="text-primary text-decoration-none d-flex align-items-center gap-2"
+    >
+      <i className="bi bi-person-circle"></i>
+      <span>Create Account</span>
+    </Link>
+
+    <Link
+      to="/auth"
+      className="text-primary text-decoration-none d-flex align-items-center gap-2"
+    >
+      <i className="bi bi-trophy-fill"></i>
+      <span>Create Tournament</span>
+    </Link>
+  </div>
+</nav>
 
           {/* ACTION BUTTONS AT THE TOP */}
           <div className="d-flex justify-content-end gap-2 mb-4">
