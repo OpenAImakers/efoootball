@@ -194,8 +194,8 @@ const KenyaEfootballHub: React.FC = () => {
     <>
       <SEOHead />
       <StructuredData rows={rows} leagues={leagues} />
-      
-      <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5" style={{ minWidth: "1000px", margin: "0 auto" }} >
+      {/* <div className="container-fluid px-4 pt-5 mt-4"> */}
+      <div className="min-vh-100 container-fluid bg-konami-dark text-white font-konami pb-5"  >
         <Advert />
         
         <div className="px-4 pt-5 mt-4" >
