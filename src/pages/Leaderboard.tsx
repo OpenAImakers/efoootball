@@ -191,53 +191,62 @@ const KenyaEfootballHub: React.FC = () => {
   };
 
   return (
-<>
+    <>
       <SEOHead />
       <StructuredData rows={rows} leagues={leagues} />
       
-      <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5">
+      <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5" style={{ minWidth: "1000px", margin: "0 auto" }} >
         <Advert />
-<div className="px-4 pt-5 mt-4" style={{ minWidth: "1000px", margin: "0 auto" }}>
-          {/* Breadcrumb for SEO */}
-<nav aria-label="Registration steps" className="sticky-top bg-konami-dark pt-2 pb-2" style={{ top: 0, zIndex: 1020, marginBottom: 0 }}>
-  <div className="d-flex justify-content-between align-items-center w-100  bg-konami-dark">
-    
-    <Link
-      to="/"
-      className="text-primary text-decoration-none d-flex align-items-center gap-2"
-    >
-      <i className="bi bi-house-door-fill"></i>
-      <span>Home</span>
-    </Link>
+        
+        <div className="px-4 pt-5 mt-4" >
+          {/* Breadcrumb for SEO - STICKY NAV */}
+          <nav 
+            aria-label="Registration steps" 
+            className="sticky-top pt-2 pb-2" 
+            style={{ 
+              top: 0, 
+              zIndex: 1020, 
+              marginBottom: 0,
+              backgroundColor: "#030a1a"
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-center w-100">
+              <Link
+                to="/"
+                className="text-primary text-decoration-none d-flex align-items-center gap-2"
+              >
+                <i className="bi bi-house-door-fill"></i>
+                <span>Home</span>
+              </Link>
 
-    <Link
-      to="/auth"
-      className="text-primary text-decoration-none d-flex align-items-center gap-2"
-    >
-      <i className="bi bi-person-plus-fill"></i>
-      <span>Register</span>
-    </Link>
+              <Link
+                to="/auth"
+                className="text-primary text-decoration-none d-flex align-items-center gap-2"
+              >
+                <i className="bi bi-person-plus-fill"></i>
+                <span>Register</span>
+              </Link>
 
-    <Link
-      to="/auth"
-      className="text-primary text-decoration-none d-flex align-items-center gap-2"
-    >
-      <i className="bi bi-person-circle"></i>
-      <span>Create Account</span>
-    </Link>
+              <Link
+                to="/auth"
+                className="text-primary text-decoration-none d-flex align-items-center gap-2"
+              >
+                <i className="bi bi-person-circle"></i>
+                <span>Create Account</span>
+              </Link>
 
-    <Link
-      to="/auth"
-      className="text-primary text-decoration-none d-flex align-items-center gap-2"
-    >
-      <i className="bi bi-trophy-fill"></i>
-      <span>Create Tournament</span>
-    </Link>
-  </div>
-</nav>
+              <Link
+                to="/auth"
+                className="text-primary text-decoration-none d-flex align-items-center gap-2"
+              >
+                <i className="bi bi-trophy-fill"></i>
+                <span>Create Tournament</span>
+              </Link>
+            </div>
+          </nav>
 
           {/* ACTION BUTTONS AT THE TOP */}
-          <div className="d-flex justify-content-end gap-2 mb-4">
+          <div className="d-flex justify-content-end gap-2 my-4">
             <button 
               className="btn btn-outline-info btn-sm rounded-pill px-3"
               onClick={fetchHubData}
@@ -373,7 +382,12 @@ const KenyaEfootballHub: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+
+          {/* Disclaimer - NOW INSIDE the main content div */}
+          <div className="text-center py-3 px-4 mt-5" style={{ fontSize: "0.7rem", color: "#64748b", maxWidth: "900px", margin: "0 auto" }}>
+            <strong>Disclaimer:</strong> This platform is an independent fan-operated initiative and is not officially affiliated with, authorized, maintained, sponsored, or endorsed by KONAMI, its subsidiaries, affiliates, licensors, or any related entities. All tournament registrations, team management features, and community activities are organized solely by independent player communities. Any references to KONAMI products, brands, or intellectual property are for identification purposes only and do not imply any official connection or endorsement. We operate as a passionate fan-driven service dedicated to enhancing the gaming community experience.
+          </div>
+        </div> {/* Closing the main content div */}
 
         <style>{`
           :root {
@@ -430,18 +444,9 @@ const KenyaEfootballHub: React.FC = () => {
             border: 1px solid #00ff88; padding: 4px 10px;
             clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
           }
-          /* Breadcrumb styling */
-          .breadcrumb-item + .breadcrumb-item::before {
-            color: #6c757d;
-            content: "›";
-          }
         `}</style>
-        
-        <div className="text-center py-3 px-4" style={{ fontSize: "0.7rem", color: "#64748b", maxWidth: "900px", margin: "0 auto" }}>
-          <strong>Disclaimer:</strong> This platform is an independent fan-operated initiative and is not officially affiliated with, authorized, maintained, sponsored, or endorsed by KONAMI, its subsidiaries, affiliates, licensors, or any related entities. All tournament registrations, team management features, and community activities are organized solely by independent player communities. Any references to KONAMI products, brands, or intellectual property are for identification purposes only and do not imply any official connection or endorsement. We operate as a passionate fan-driven service dedicated to enhancing the gaming community experience.
-        </div>
       </div>
-      </>
+    </>
   );
 };
 
