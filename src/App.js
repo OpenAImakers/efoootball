@@ -29,6 +29,7 @@ import AddLeague from "./pages/leagues/Addleague.tsx";
 import Registrations from "./pages/CreateRegistrations.tsx";
 import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 import SendSms from "./pages/sms/Sendsms";
+import Announcements from "./pages/Announcement/Announcement";
 
 function App() {
   // Detect PWA vs browser
@@ -57,6 +58,15 @@ useEffect(() => {
     <ProtectedRoute>
       <SendSms />
     </ProtectedRoute>
+  }
+/>
+{/* announcement routes */}
+
+            <Route
+  path="/announcements"
+  element={
+   
+      <Announcements />
   }
 />
 
