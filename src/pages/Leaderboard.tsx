@@ -1,11 +1,8 @@
-// Updated KenyaEfootballHub component with SEO
-// KenyaEfootballHub.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { HelmetProvider } from "react-helmet-async";
 import Advert from "../components/Advert";
 import { supabase } from "../supabase";
 import jsPDF from "jspdf";
@@ -194,14 +191,13 @@ const KenyaEfootballHub: React.FC = () => {
   };
 
   return (
-    <HelmetProvider>
+<>
       <SEOHead />
       <StructuredData rows={rows} leagues={leagues} />
       
       <div className="min-vh-100 bg-konami-dark text-white font-konami pb-5">
         <Advert />
-
-        <div className="container-fluid px-4 pt-5 mt-4">
+<div className="px-4 pt-5 mt-4" style={{ minWidth: "1000px", margin: "0 auto" }}>
           {/* Breadcrumb for SEO */}
 <nav aria-label="Registration steps" className="sticky-top bg-konami-dark pt-2 pb-2" style={{ top: 0, zIndex: 1020, marginBottom: 0 }}>
   <div className="d-flex justify-content-between align-items-center w-100  bg-konami-dark">
@@ -445,7 +441,7 @@ const KenyaEfootballHub: React.FC = () => {
           <strong>Disclaimer:</strong> This platform is an independent fan-operated initiative and is not officially affiliated with, authorized, maintained, sponsored, or endorsed by KONAMI, its subsidiaries, affiliates, licensors, or any related entities. All tournament registrations, team management features, and community activities are organized solely by independent player communities. Any references to KONAMI products, brands, or intellectual property are for identification purposes only and do not imply any official connection or endorsement. We operate as a passionate fan-driven service dedicated to enhancing the gaming community experience.
         </div>
       </div>
-    </HelmetProvider>
+      </>
   );
 };
 
