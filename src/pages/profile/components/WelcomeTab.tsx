@@ -6,7 +6,7 @@ export default function WelcomeTab({ profile }: WelcomeTabProps) {
   return (
     <>
       <h4 className="fw-bold text-primary">Welcome, {profile?.display_name || profile?.username}!</h4>
-      <p className="text-muted">Explore your stats using the tabs on the left.</p>
+      <p className="text-muted">Explore your stats using the tabs.</p>
     </>
   );
 }

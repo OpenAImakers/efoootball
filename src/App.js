@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
+
 import Auth from "./pages/Auth";
 import TournamentAdmin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard.tsx";
