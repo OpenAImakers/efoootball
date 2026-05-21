@@ -24,7 +24,7 @@ interface LeaderboardRow {
   d: number;
   l: number;
   gd: number;
-  win_rate: number;
+  points: number;
 }
 
 interface League {
@@ -77,12 +77,12 @@ const KenyaEfootballHub: React.FC = () => {
               l: acc.l + (team.l || 0),
               gf: acc.gf + (team.gf || 0),
               ga: acc.ga + (team.ga || 0),
+              points: acc.points + ((team.w || 0) * 3 + (team.d || 0) * 1),
             }),
-            { mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }
+            { mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, points: 0 }
           );
 
-          const winRate = stats.mp > 0 ? (stats.w / stats.mp) * 100 : 0;
-
+        
           return {
             rank: 0,
             username: p.username,
@@ -93,11 +93,11 @@ const KenyaEfootballHub: React.FC = () => {
             d: stats.d,
             l: stats.l,
             gd: stats.gf - stats.ga,
-            win_rate: parseFloat(winRate.toFixed(1))
+            points: stats.points
           };
         });
 
-        const sorted = aggregated.sort((a, b) => b.win_rate - a.win_rate || b.gd - a.gd);
+        const sorted = aggregated.sort((a, b) => b.points - a.points || b.gd - a.gd);
         finalRows = sorted.map((row, i) => ({ ...row, rank: i + 1 }));
         setRows(finalRows);
         updatePageTitle(finalRows);
@@ -150,8 +150,8 @@ const KenyaEfootballHub: React.FC = () => {
 
     autoTable(doc, {
       startY: 45,
-      head: [["Rank", "Player", "Teams", "MP", "W", "L", "GD", "Win %"]],
-      body: rows.map(r => [r.rank, r.display_name, r.tournaments_played, r.mp, r.w, r.l, r.gd, `${r.win_rate}%`]),
+      head: [["Rank", "Player", "Teams", "MP", "W", "L", "GD", "Points"]],
+      body: rows.map(r => [r.rank, r.display_name, r.tournaments_played, r.mp, r.w, r.l, r.gd, r.points]),
       theme: "grid",
       headStyles: { fillColor: [13, 110, 253] }
     });
@@ -311,7 +311,7 @@ const KenyaEfootballHub: React.FC = () => {
                         <th className="text-center text-success">W</th>
                         <th className="text-center text-danger">L</th>
                         <th className="text-center">GD</th>
-                        <th className="text-center pe-4">Win %</th>
+                        <th className="text-center pe-4">Points</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -330,7 +330,7 @@ const KenyaEfootballHub: React.FC = () => {
                           <td className="text-center text-danger opacity-75">{row.l}</td>
                           <td className="text-center opacity-75">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
                           <td className="text-center pe-4 fw-black text-warning">
-                            {row.win_rate}%
+                            {row.points}
                           </td>
                         </tr>
                       ))}
