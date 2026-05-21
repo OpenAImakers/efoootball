@@ -5,7 +5,7 @@ import TournamentAdmin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard.tsx";
 import Teams from "./pages/Team.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Account from "./pages/Account";  
+import Account from "./pages/profile/Account";  
 import ProfileView from "./pages/ProfileView.tsx";
 import MatchVote from "./pages/MatchVote.tsx";   
 import UpdatePassword from "./pages/UpdatePassword.js";
