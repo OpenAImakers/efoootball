@@ -24,7 +24,7 @@ import TeamMatches  from "./pages/TeamMatches.tsx";
 import SpecificLeague from "./pages/leagues/SpecificLeague.tsx";
 import LandingPage  from "./pages/leagues/LandingLeaguePage.tsx";
 import RegistrationsAdmin from "./pages/RegistrationsAdmin.tsx";
-import  LeagueManagement from "./pages/leagues/Manageleague.tsx";
+import LeagueManagement from "./pages/leagues/Manageleague.tsx";
 import AddLeague from "./pages/leagues/Addleague.tsx";
 import Registrations from "./pages/CreateRegistrations.tsx";
 import SpecificRegistration from "./pages/SpecificRegistration.tsx";

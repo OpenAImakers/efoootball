@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { getActiveTournament } from "../Utils/TournamentSession";
+import UpdateMatchScore from "./UpdateMatch"; // Import the new component
 
 function MatchScheduler() {
   const [tournaments, setTournaments] = useState([]);
@@ -15,18 +16,27 @@ function MatchScheduler() {
   const [awayTeamId, setAwayTeamId] = useState("");
   const [stage, setStage] = useState("GROUP");
   const [stagegroup, setStagegroup] = useState("");
-  // --- ADDED ROUND STATE ---
   const [round, setRound] = useState(0); 
-
-  // Update Result State
-  const [selectedMatchId, setSelectedMatchId] = useState("");
-  const [homeGoals, setHomeGoals] = useState(0);
-  const [awayGoals, setAwayGoals] = useState(0);
 
   // Delete Match State
   const [matchToDeleteId, setMatchToDeleteId] = useState("");
 
   const activeSession = getActiveTournament(); // null or { id, name }
+
+  // Helper function to refresh matches used across operations
+  const refreshMatches = async () => {
+    if (!selectedTournamentId) return;
+    const { data } = await supabase
+      .from("matches")
+      .select(`
+        id, home_team:home_team_id(name), away_team:away_team_id(name), 
+        played, stage, round, group_id
+      `)
+      .eq("tournament_id", selectedTournamentId)
+      .order("id", { ascending: false });
+
+    setMatches(data || []);
+  };
 
   // 1. Load tournaments — no ownership filter + respect active session
   useEffect(() => {
@@ -96,7 +106,7 @@ function MatchScheduler() {
           stage,
           round,
           group_id
-        `) // --- ADDED round TO SELECT ---
+        `)
         .eq("tournament_id", selectedTournamentId)
         .order("id", { ascending: false });
 
@@ -123,7 +133,6 @@ function MatchScheduler() {
     const awayName = teams.find(t => t.id === awayTeamId)?.name || "?";
     const stageText = stage === "GROUP" ? `Group ${stagegroup || "?"}` : stage;
 
-    // --- ADDED ROUND TO CONFIRMATION ---
     if (!window.confirm(`Schedule:\n${homeName} vs ${awayName}\nStage: ${stageText}\nRound: ${round}`)) return;
 
     const { error } = await supabase.from("matches").insert({
@@ -131,7 +140,7 @@ function MatchScheduler() {
       home_team_id: homeTeamId,
       away_team_id: awayTeamId,
       stage,
-      round, // --- ADDED ROUND TO INSERT ---
+      round,
       played: false,
       group_id: stagegroup || null,
     });
@@ -148,51 +157,7 @@ function MatchScheduler() {
     setStagegroup("");
     setRound(1); // Reset round
 
-    // Refresh matches
-    const { data } = await supabase
-      .from("matches")
-      .select(`
-        id, home_team:home_team_id(name), away_team:away_team_id(name), 
-        played, stage, round, group_id
-      `)
-      .eq("tournament_id", selectedTournamentId)
-      .order("id", { ascending: false });
-
-    setMatches(data || []);
-  };
-
-  const handleUpdateResult = async () => {
-    if (!selectedMatchId) return alert("Select a match first.");
-
-    const { error } = await supabase
-      .from("matches")
-      .update({
-        home_goals: Number(homeGoals),
-        away_goals: Number(awayGoals),
-        played: true,
-      })
-      .eq("id", selectedMatchId);
-
-    if (error) {
-      alert("Error: " + error.message);
-      return;
-    }
-
-    alert("Score saved!");
-    setSelectedMatchId("");
-    setHomeGoals(0);
-    setAwayGoals(0);
-
-    const { data } = await supabase
-      .from("matches")
-      .select(`
-        id, home_team:home_team_id(name), away_team:away_team_id(name), 
-        played, stage, round, group_id
-      `)
-      .eq("tournament_id", selectedTournamentId)
-      .order("id", { ascending: false });
-
-    setMatches(data || []);
+    refreshMatches();
   };
 
   const handleDeleteMatch = async () => {
@@ -212,16 +177,7 @@ function MatchScheduler() {
     alert("Match deleted.");
     setMatchToDeleteId("");
 
-    const { data } = await supabase
-      .from("matches")
-      .select(`
-        id, home_team:home_team_id(name), away_team:away_team_id(name), 
-        played, stage, round, group_id
-      `)
-      .eq("tournament_id", selectedTournamentId)
-      .order("id", { ascending: false });
-
-    setMatches(data || []);
+    refreshMatches();
   };
 
   const isLockedMode = !!activeSession?.id;
@@ -271,7 +227,6 @@ function MatchScheduler() {
           <div className="mb-5 card p-4 shadow-sm">
             <h5 className="mb-3">Schedule New Match</h5>
             <div className="row g-3">
-              {/* --- UPDATED STAGE SELECTOR --- */}
               <div className="col-md-4">
                 <label className="form-label small fw-bold">Stage</label>
                 <select
@@ -292,7 +247,6 @@ function MatchScheduler() {
                 </select>
               </div>
 
-              {/* --- NEW ROUND SELECTOR (1-30) --- */}
               <div className="col-md-4">
                 <label className="form-label small fw-bold">Round</label>
                 <select
@@ -353,49 +307,12 @@ function MatchScheduler() {
             </div>
           </div>
 
-          {/* UPDATE SCORE */}
-          <div className="mb-5 card p-4 shadow-sm">
-            <h5 className="mb-3">Update Match Score</h5>
-            <select
-              className="form-select mb-3"
-              value={selectedMatchId}
-              onChange={(e) => setSelectedMatchId(e.target.value)}
-            >
-              <option value="">Select unplayed match</option>
-              {matches.filter((m) => !m.played).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.home_team?.name} vs {m.away_team?.name} ({m.stage} - R{m.round})
-                </option>
-              ))}
-            </select>
-
-            {selectedMatchId && (
-              <div className="d-flex align-items-center gap-3 flex-wrap">
-                <input
-                  type="number"
-                  min="0"
-                  className="form-control text-center"
-                  style={{ width: "90px" }}
-                  value={homeGoals}
-                  onChange={(e) => setHomeGoals(Number(e.target.value))}
-                  placeholder="Home"
-                />
-                <span className="fw-bold fs-4">-</span>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-control text-center"
-                  style={{ width: "90px" }}
-                  value={awayGoals}
-                  onChange={(e) => setAwayGoals(Number(e.target.value))}
-                  placeholder="Away"
-                />
-                <button className="btn btn-primary" onClick={handleUpdateResult}>
-                  Submit Score
-                </button>
-              </div>
-            )}
-          </div>
+          {/* RENDER NEW SUB-COMPONENT */}
+          <UpdateMatchScore 
+            matches={matches} 
+            selectedTournamentId={selectedTournamentId} 
+            onMatchUpdated={refreshMatches} 
+          />
 
           {/* DELETE MATCH */}
           <div className="card p-4 shadow-sm">

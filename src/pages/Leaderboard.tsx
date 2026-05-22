@@ -299,44 +299,48 @@ const KenyaEfootballHub: React.FC = () => {
                     </p>
                   )}
                 </div>
-                
-                <div className="table-responsive rounded-3 border border-secondary border-opacity-25 bg-black bg-opacity-40 shadow-lg">
-                  <table className="table table-dark table-hover align-middle mb-0">
-                    <thead className="bg-dark shadow-sm">
-                      <tr className="smaller text-konami-blue opacity-75 text-uppercase">
-                        <th className="ps-4">Rank</th>
-                        <th>Player</th>
-                        <th className="text-center">Teams</th>
-                        <th className="text-center">MP</th>
-                        <th className="text-center text-success">W</th>
-                        <th className="text-center text-danger">L</th>
-                        <th className="text-center">GD</th>
-                        <th className="text-center pe-4">Points</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row) => (
-                        <tr 
-                          key={row.username} 
-                          onClick={() => navigate(`/team/${row.username}/matches`)} 
-                          style={{ cursor: "pointer" }}
-                          aria-label={`View ${row.display_name}'s matches`}
-                        >
-                          <td className="ps-4 fw-bold">{row.rank}</td>
-                          <td className="fw-bold text-info">{row.display_name}</td>
-                          <td className="text-center opacity-50">{row.tournaments_played}</td>
-                          <td className="text-center opacity-50">{row.mp}</td>
-                          <td className="text-center text-success opacity-75">{row.w}</td>
-                          <td className="text-center text-danger opacity-75">{row.l}</td>
-                          <td className="text-center opacity-75">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
-                          <td className="text-center pe-4 fw-black text-warning">
-                            {row.points}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+       <div className="table-responsive rounded-3 border border-secondary border-opacity-25 bg-black bg-opacity-40 shadow-lg">
+  <table className="table table-dark table-hover align-middle mb-0">
+    <thead className="bg-dark shadow-sm">
+      <tr className="smaller text-konami-blue opacity-75 text-uppercase">
+        <th className="ps-4">Rank</th>
+        <th>Player</th>
+        <th className="text-center">Teams</th>
+        <th className="text-center">MP</th>
+        <th className="text-center text-success">W</th>
+        <th className="text-center text-danger">L</th>
+        <th className="text-center">GD</th>
+        <th className="text-center pe-4">Points</th>
+       </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr 
+          key={row.username} 
+          onClick={() => navigate(`/team/${row.username}/matches`)} 
+          style={{ cursor: "pointer" }}
+          aria-label={`View ${row.display_name}'s matches`}
+        >
+          <td className="ps-4 fw-bold">{row.rank}</td>
+          <td className="fw-bold text-info">
+            <div className="d-flex align-items-center gap-2">
+              <i className="bi bi-arrow-right-circle-fill text-primary" style={{ fontSize: "1.1rem" }}></i>
+              {row.display_name}
+            </div>
+          </td>
+          <td className="text-center opacity-50">{row.tournaments_played}</td>
+          <td className="text-center opacity-50">{row.mp}</td>
+          <td className="text-center text-success opacity-75">{row.w}</td>
+          <td className="text-center text-danger opacity-75">{row.l}</td>
+          <td className="text-center opacity-75">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
+          <td className="text-center pe-4 fw-black text-warning">
+            {row.points}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
               </div>
             ) : (
               <div className="row g-4">
