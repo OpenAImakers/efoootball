@@ -62,7 +62,7 @@ const InstallBar = () => {
         </Link>
 
         <Link to="/announcements" style={styles.webBtn}>
-          Announcements
+          Blog
         </Link>
       </div>
 
