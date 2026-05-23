@@ -77,6 +77,7 @@ const TeamsFeed: React.FC = () => {
   const [fadeState, setFadeState] = useState<"visible" | "exiting" | "entering">("visible");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const rotationRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -463,11 +464,13 @@ const TeamsFeed: React.FC = () => {
     }
   }, [generateAchievementMessage, generateComparisonMessage, generateLeagueStandingMessage, generateMilestoneMessage]);
   
+  // Handled database polling context properly without infinite recursion loops
   useEffect(() => {
     fetchTeamsData();
     
     const scheduleRefresh = () => {
-      const delay = randomBetween(25000, 40000);
+      // Adjusted polling interval cleanly to 30-45 seconds
+      const delay = Math.floor(Math.random() * (45000 - 30000 + 1) + 30000);
       intervalRef.current = setTimeout(() => {
         fetchTeamsData();
         scheduleRefresh();
@@ -478,10 +481,10 @@ const TeamsFeed: React.FC = () => {
     
     return () => {
       if (intervalRef.current) clearTimeout(intervalRef.current);
-      if (rotationRef.current) clearTimeout(rotationRef.current);
     };
   }, [fetchTeamsData]);
   
+  // Handles text line cross-fade cycles contextually
   useEffect(() => {
     if (activities.length <= 1) return;
     
@@ -489,10 +492,7 @@ const TeamsFeed: React.FC = () => {
       setFadeState("exiting");
       
       setTimeout(() => {
-        setCurrentIndex((prevIndex) => {
-          const increment = Math.random() < 0.15 ? randomBetween(1, 2) : 1;
-          return (prevIndex + increment) % activities.length;
-        });
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % activities.length);
         setFadeState("entering");
         
         setTimeout(() => {
@@ -503,7 +503,7 @@ const TeamsFeed: React.FC = () => {
     
     const rotate = () => {
       rotateActivity();
-      const delay = randomBetween(4500, 8500);
+      const delay = Math.floor(Math.random() * (8500 - 5500 + 1) + 5500);
       rotationRef.current = setTimeout(rotate, delay);
     };
     
@@ -519,13 +519,13 @@ const TeamsFeed: React.FC = () => {
       case "exiting":
         return {
           opacity: 0,
-          transform: `translateY(-${randomBetween(8, 15)}px)`,
+          transform: `translateY(-10px)`,
           transition: "transform 0.4s ease-in, opacity 0.4s ease-in"
         };
       case "entering":
         return {
           opacity: 0,
-          transform: `translateY(${randomBetween(8, 15)}px)`,
+          transform: `translateY(10px)`,
           transition: "none"
         };
       case "visible":
@@ -541,14 +541,9 @@ const TeamsFeed: React.FC = () => {
   if (isLoading && activities.length === 0) {
     return (
       <div style={styles.container}>
-        <div style={styles.header}>
-          <span style={styles.headerText}>TEAM STATISTICS FEED</span>
-        </div>
-        <div style={styles.tickerContainer}>
-          <span style={{ ...styles.tickerText, opacity: 0.6 }}>
-            Loading team performance data...
-          </span>
-        </div>
+        <span style={{ ...styles.tickerText, opacity: 0.6 }}>
+          Loading team performance data...
+        </span>
       </div>
     );
   }
@@ -556,20 +551,15 @@ const TeamsFeed: React.FC = () => {
   if (error && activities.length === 0) {
     return (
       <div style={styles.container}>
-        <div style={styles.header}>
-          <span style={styles.headerText}>TEAM STATISTICS FEED</span>
-        </div>
-        <div style={styles.tickerContainer}>
-          <span 
-            style={{ ...styles.tickerText, color: "#ff8866", cursor: "pointer" }}
-            onClick={() => fetchTeamsData()}
-            onKeyDown={(e) => e.key === "Enter" && fetchTeamsData()}
-            role="button"
-            tabIndex={0}
-          >
-            Error: {error} - Click to retry
-          </span>
-        </div>
+        <span 
+          style={{ ...styles.tickerText, color: "#ff8866", cursor: "pointer" }}
+          onClick={() => fetchTeamsData()}
+          onKeyDown={(e) => e.key === "Enter" && fetchTeamsData()}
+          role="button"
+          tabIndex={0}
+        >
+          Error: {error} - Click to retry
+        </span>
       </div>
     );
   }
@@ -578,100 +568,25 @@ const TeamsFeed: React.FC = () => {
   
   return (
     <div style={styles.container}>
-      <div style={styles.tickerContainer}>
-        <span style={{ ...styles.tickerText, ...getDynamicStyle() }}>
-          {currentActivity?.message || "Team statistics loading..."}
-        </span>
-      </div>
-      <div style={styles.footer}>
-        <span style={styles.footerDot}>●</span>
-      </div>
+      <span style={{ ...styles.tickerText, ...getDynamicStyle() }}>
+        {currentActivity?.message || "Team statistics loading..."}
+      </span>
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    width: "100%",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "6px 16px",
-    background: "rgba(0, 255, 136, 0.1)",
-    borderBottom: "1px solid rgba(0, 255, 136, 0.2)",
-  },
-  headerText: {
-    fontSize: "11px",
-    fontWeight: "700",
-    letterSpacing: "1px",
-    color: "#00ff88",
-    textTransform: "uppercase" as const,
-  },
-  teamCount: {
-    fontSize: "10px",
-    fontWeight: "600",
-    color: "#00ff88",
-    background: "rgba(0, 255, 136, 0.2)",
-    padding: "2px 8px",
-    borderRadius: "12px",
-  },
-  tickerContainer: {
-    width: "100%",
-    minHeight: "36px",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    padding: "8px 16px",
-    boxSizing: "border-box" as const,
+    display: "inline-block",
   },
   tickerText: {
     color: "#00ff88",
     fontSize: "13px",
     fontWeight: "600",
-    letterSpacing: "0.3px",
-    textAlign: "center" as const,
-    display: "inline-block",
-    textShadow: "0 0 8px rgba(0, 255, 136, 0.3)",
-    whiteSpace: "nowrap" as const,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    maxWidth: "100%",
     fontFamily: "'Courier New', monospace",
-  },
-  footer: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    padding: "4px 16px",
-    background: "rgba(0, 0, 0, 0.4)",
-    borderTop: "1px solid rgba(0, 255, 136, 0.1)",
-    fontSize: "8px",
-    fontWeight: "500",
-    letterSpacing: "1px",
-  },
-  footerText: {
-    color: "rgba(0, 255, 136, 0.6)",
-    fontSize: "8px",
-    fontWeight: "600",
-  },
-  footerDot: {
-    color: "#ff3366",
-    fontSize: "8px",
-    animation: "pulse 1s infinite",
-  },
-};
-
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  @keyframes pulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 1; }
+    textShadow: "0 0 8px rgba(0, 255, 136, 0.3)",
+    display: "inline-block",
   }
-`;
-document.head.appendChild(styleSheet);
+};
 
 export default TeamsFeed;
