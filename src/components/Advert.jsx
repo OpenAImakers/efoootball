@@ -80,11 +80,9 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     padding: "18px 20px",
-    background: "rgba(0,0,0,0.3)",
+    background: "#030a1a",
     backdropFilter: "blur(12px)",
-    borderTop: "1px solid rgba(255,255,255,0.08)",
     width: "100%",
-    boxSizing: "border-box",
   },
 
   buttonRow: {

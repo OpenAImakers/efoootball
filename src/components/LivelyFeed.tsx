@@ -78,7 +78,6 @@ const TeamsFeed: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const rotationRef = useRef<NodeJS.Timeout | null>(null);
 
   const randomBetween = (min: number, max: number): number => {
@@ -336,18 +335,38 @@ const TeamsFeed: React.FC = () => {
     
     return null;
   }, []);
-
-  const fetchTeamsData = useCallback(async () => {
+const fetchTeamsData = useCallback(async () => {
     try {
       setError(null);
       
-      const { data: teams, error: teamsError } = await supabase
-        .from("teams")
-        .select("*")
-        .order("name", { ascending: true });
+      const CACHE_KEY = "teams_feed_cache";
+      const CACHE_TIME_KEY = "teams_feed_cache_time";
+      const FIVE_MINUTES = 5 * 60 * 1000;
+
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
       
-      if (teamsError) throw teamsError;
-      if (!teams || teams.length === 0) {
+      let teams: any[] = [];
+
+      // Check if fresh cache exists to prevent a Supabase network request entirely
+      if (cachedData && cachedTime && Date.now() - Number(cachedTime) < FIVE_MINUTES) {
+        teams = JSON.parse(cachedData);
+      } else {
+        const { data: fetchedTeams, error: teamsError } = await supabase
+          .from("teams")
+          .select("*")
+          .order("name", { ascending: true });
+        
+        if (teamsError) throw teamsError;
+        
+        if (fetchedTeams && fetchedTeams.length > 0) {
+          teams = fetchedTeams;
+          localStorage.setItem(CACHE_KEY, JSON.stringify(fetchedTeams));
+          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        }
+      }
+      
+      if (teams.length === 0) {
         setActivities([{
           id: generateActivityId("empty"),
           message: "No teams registered yet. Waiting for teams to join!",
@@ -464,24 +483,10 @@ const TeamsFeed: React.FC = () => {
     }
   }, [generateAchievementMessage, generateComparisonMessage, generateLeagueStandingMessage, generateMilestoneMessage]);
   
-  // Handled database polling context properly without infinite recursion loops
+  // Cleaned effect hook runs EXACTLY once on mount. 
+  // No interval timers hitting your DB endpoint anymore!
   useEffect(() => {
     fetchTeamsData();
-    
-    const scheduleRefresh = () => {
-      // Adjusted polling interval cleanly to 30-45 seconds
-      const delay = Math.floor(Math.random() * (45000 - 30000 + 1) + 30000);
-      intervalRef.current = setTimeout(() => {
-        fetchTeamsData();
-        scheduleRefresh();
-      }, delay);
-    };
-    
-    scheduleRefresh();
-    
-    return () => {
-      if (intervalRef.current) clearTimeout(intervalRef.current);
-    };
   }, [fetchTeamsData]);
   
   // Handles text line cross-fade cycles contextually
