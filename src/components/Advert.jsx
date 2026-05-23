@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import LivelyFeed from "./LivelyFeed"; // Imported cleanly as its own concern
 
 const InstallBar = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // Detect if running as installed PWA
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true;
@@ -47,22 +47,27 @@ const InstallBar = () => {
     }
   };
 
-  // Hide when installed
   if (isStandalone) return null;
 
   return (
     <div style={styles.container}>
-      <button style={styles.downloadBtn} onClick={handleInstall}>
-        Download App
-      </button>
+      {/* Navigation & Action Controls */}
+      <div style={styles.buttonRow}>
+        <button style={styles.downloadBtn} onClick={handleInstall}>
+          Download App
+        </button>
 
-      <Link to="/auth" style={styles.webBtn}>
-        Continue to Website
-      </Link>
+        <Link to="/auth" style={styles.webBtn}>
+          Continue to Website
+        </Link>
 
-      <Link to="/announcements" style={styles.webBtn}>
-        Announcements
-      </Link>
+        <Link to="/announcements" style={styles.webBtn}>
+          Announcements
+        </Link>
+      </div>
+
+      {/* One line, smooth rising live feed line item */}
+      <LivelyFeed />
     </div>
   );
 };
@@ -70,14 +75,24 @@ const InstallBar = () => {
 const styles = {
   container: {
     display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "18px 20px",
+    background: "rgba(0,0,0,0.3)",
+    backdropFilter: "blur(12px)",
+    borderTop: "1px solid rgba(255,255,255,0.08)",
+    width: "100%",
+    boxSizing: "border-box",
+  },
+
+  buttonRow: {
+    display: "flex",
     gap: "12px",
     justifyContent: "center",
     alignItems: "center",
-    padding: "20px",
     flexWrap: "wrap",
-    background: "rgba(0,0,0,0.25)",
-    backdropFilter: "blur(10px)",
-    borderTop: "1px solid rgba(255,255,255,0.08)",
   },
 
   downloadBtn: {
