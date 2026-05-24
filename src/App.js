@@ -30,6 +30,7 @@ import Registrations from "./pages/CreateRegistrations.tsx";
 import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 import SendSms from "./pages/sms/Sendsms";
 import Announcements from "./pages/Announcement/Announcement";
+import Journalists from "./pages/Announcement/CreatePost";
 
 function App() {
   // Detect PWA vs browser
@@ -67,6 +68,16 @@ useEffect(() => {
   element={
    
       <Announcements />
+  }
+/>
+
+               <Route
+  path="/announcements/journalists"
+  element={
+     <ProtectedRoute> 
+   
+      <Journalists />
+       </ProtectedRoute>
   }
 />
 

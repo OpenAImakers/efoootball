@@ -2,14 +2,10 @@
 import React, { useEffect } from "react";
 
 interface NewsItem {
-  id: string;
+  id: number;
   title: string;
   summary: string;
-  category: "NATIONAL SQUAD" | "TRANSFERS" | "TOURNAMENTS" | "CAMPUS LEAGUE" | "ANNOUNCEMENTS";
-  source: string;
-  timeAgo: string;
-  location: string;
-  imageUrl: string;
+  image_url: string;
 }
 
 interface NewsOverlayProps {
@@ -18,7 +14,6 @@ interface NewsOverlayProps {
 }
 
 export default function NewsOverlay({ story, onClose }: NewsOverlayProps) {
-  // Prevent background scrolling when overlay is active
   useEffect(() => {
     if (story) {
       document.body.style.overflow = "hidden";
@@ -41,23 +36,22 @@ export default function NewsOverlay({ story, onClose }: NewsOverlayProps) {
         backdropFilter: "blur(4px)",
         transition: "all 0.3s ease-in-out",
       }}
-      onClick={onClose} // Closes when clicking outside the main panel
+      onClick={onClose}
     >
       <div
         className="h-100 d-flex flex-column"
         style={{
           width: "100%",
-          maxWidth: "75vw", // Exactly 3/4 width of the viewport on large screens
+          maxWidth: "75vw",
           backgroundColor: "#0b1d36",
           borderLeft: "1px solid rgba(77, 163, 255, 0.25)",
           boxShadow: "-10px 0 30px rgba(0, 0, 0, 0.5)",
           overflowY: "auto",
         }}
-        onClick={(e) => e.stopPropagation()} // Keeps click events inside the panel safe
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Action Bar */}
         <div 
-          className="d-flex justify-content-between align-items-center p-3 sticky-top"
+          className="d-flex justify-content-end align-items-center p-3 sticky-top"
           style={{ 
             backgroundColor: "#0b1d36", 
             borderBottom: "1px solid rgba(77, 163, 255, 0.15)" 
@@ -74,49 +68,40 @@ export default function NewsOverlay({ story, onClose }: NewsOverlayProps) {
           </button>
         </div>
 
-        {/* Full Story Content */}
-        <div className="p-4 p-md-5 mx-auto" style={{ maxWidth: "800px", fontFamily: "'Times New Roman', Times, serif" }}>
+        <div className="p-4 p-md-5 mx-auto" style={{ maxWidth: "800px", width: "100%", fontFamily: "'Times New Roman', Times, serif" }}>
           
-          {/* Metadata */}
-          <div className="mb-3" style={{ fontFamily: "system-ui, sans-serif" }}>
-            <span className="fw-bold text-uppercase tracking-wider" style={{ color: "#4da3ff", fontSize: "11px" }}>
-              {story.category}
-            </span>
-            <span className="mx-2" style={{ color: "rgba(77, 163, 255, 0.3)" }}>•</span>
-            <span className="text-white-50 font-monospace text-uppercase" style={{ fontSize: "11px" }}>{story.timeAgo}</span>
-          </div>
-
-          {/* Headline Title */}
           <h1 className="fw-bold mb-4 text-white" style={{ fontSize: "2.5rem", lineHeight: "1.15" }}>
             {story.title}
           </h1>
 
-          {/* Publisher / Wire Line */}
+          {/* Improved Image Container */}
           <div 
-            className="d-flex gap-3 mb-4 py-2 border-top border-bottom text-white-50" 
-            style={{ fontFamily: "system-ui, sans-serif", fontSize: "12px", borderColor: "rgba(77, 163, 255, 0.15) !important" }}
-          >
-            <div>Source: <strong className="text-white">{story.source.toUpperCase()}</strong></div>
-            <div>Location: <strong className="text-white">{story.location}</strong></div>
-          </div>
-
-          {/* Feature Image Frame */}
-          <div 
-            className="w-100 mb-4 overflow-hidden bg-dark"
+            className="w-100 mb-4 d-flex justify-content-center align-items-center"
             style={{ 
-              maxHeight: "400px", 
-              border: "1px solid rgba(77, 163, 255, 0.2)" 
+              backgroundColor: "#071426",
+              borderRadius: "8px",
+              minHeight: "300px",
+              maxHeight: "500px",
             }}
           >
             <img 
-              src={story.imageUrl} 
+              src={story.image_url} 
               alt={story.title} 
-              className="w-100 h-100"
-              style={{ objectFit: "cover", filter: "grayscale(10%) contrast(105%)" }}
+              style={{ 
+                maxWidth: "100%",
+                maxHeight: "500px",
+                width: "auto",
+                height: "auto",
+                objectFit: "contain",
+                display: "block",
+                borderRadius: "4px"
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/teamlogo.png";
+              }}
             />
           </div>
 
-          {/* Body Article Blocks */}
           <div 
             style={{ 
               color: "#cfe6ff", 
@@ -125,16 +110,7 @@ export default function NewsOverlay({ story, onClose }: NewsOverlayProps) {
               textAlign: "justify"
             }}
           >
-            <p>
-              <span className="fw-bold me-2" style={{ fontFamily: "system-ui, sans-serif", color: "#4da3ff" }}>
-                {story.location.toUpperCase()} —
-              </span>
-              {story.summary}
-            </p>
-            
-            {/* Added supplementary realistic content fills to simulate a "Full Read" experience */}
-            <p className="mt-4 text-white-50" style={{ fontSize: "15px", fontStyle: "italic" }}>
-          more information to be uploaded soon!  </p>
+            <p>{story.summary}</p>
           </div>
         </div>
       </div>

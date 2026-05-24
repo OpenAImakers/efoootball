@@ -1,34 +1,96 @@
 // NewspaperNewsPage.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import NewspaperMasthead from "./NewspaperMasthead";
 import NewsOverlay from "./NewsOverlay";
+import { supabase } from "../../supabase";
 
 interface NewsItem {
-  id: string;
+  id: number;
   title: string;
   summary: string;
-  category: "NATIONAL SQUAD" | "TRANSFERS" | "TOURNAMENTS" | "CAMPUS LEAGUE" | "ANNOUNCEMENTS";
-  source: string;
-  timeAgo: string;
-  location: string;
-  imageUrl: string;
+  image_url: string;
+  views: number;
+  created_at: string;
 }
-
-const KENYAN_EFOOTBALL_NEWS: NewsItem[] = [
-  {
-    "id": "news-rule-breakdown",
-    "title": "Seasonal Rankings schedule",
-    "summary": "The efootball rankings - the official tournament system, will be operating across two high-intensity seasons per year, competitive ranking points will be accumulated through local tournaments. At the end of every seasonal date, the Top 10 leaderboard players will earn direct placement to the Regional Championship Finals, a week long battle featuring premium prize pools, live match broadcasts, and official titles.",
-    "category": "ANNOUNCEMENTS",
-    "source": "kefR",
-    "timeAgo": "Today",
-    "location": "All",
-    "imageUrl": "/teamlogo.png"
-  }
-];
 
 export default function NewspaperNewsPage() {
   const [activeStory, setActiveStory] = useState<NewsItem | null>(null);
+  const [posts, setPosts] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          id,
+          title,
+          summary,
+          image_url,
+          views,
+          created_at
+        `)
+        .order('id', { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (err: any) {
+      console.error("Error fetching posts:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const openStory = async (story: NewsItem) => {
+    setActiveStory(story);
+
+    try {
+      await supabase.rpc("increment_post_views", {
+        post_id: story.id,
+      });
+
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === story.id
+            ? {
+                ...post,
+                views: (post.views || 0) + 1,
+              }
+            : post
+        )
+      );
+    } catch (err) {
+      console.error("Error incrementing views:", err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#071426", color: "#ffffff" }}>
+        <NewspaperMasthead />
+        <div className="container py-5 text-center">
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+            <div className="spinner-border text-primary mb-3" role="status" style={{ color: "#4da3ff" }}>
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -39,132 +101,145 @@ export default function NewspaperNewsPage() {
         fontFamily: "'Times New Roman', Times, serif",
       }}
     >
-      {/* SEPARATED STICKY MASTHEAD COMPONENT */}
       <NewspaperMasthead />
 
-      {/* NEWSPAPER ROW STREAM */}
       <div className="container py-5">
         <div className="d-flex flex-column" style={{ maxWidth: "850px", margin: "0 auto" }}>
-          {KENYAN_EFOOTBALL_NEWS.map((story, idx) => (
-            <div 
-              key={story.id}
-              className="d-flex flex-column flex-sm-row gap-4 py-4"
-              style={{ 
-                background: "transparent",
-                borderBottom: idx !== KENYAN_EFOOTBALL_NEWS.length - 1 ? "1px solid rgba(77, 163, 255, 0.2)" : "none",
-              }}
-            >
-              {/* Image Frame Box */}
+          {posts.length === 0 ? (
+            <div className="text-center py-5">
+              <p style={{ color: "#9bb9d4" }}>No posts yet.</p>
+            </div>
+          ) : (
+            posts.map((story, idx) => (
               <div 
-                className="overflow-hidden bg-dark"
+                key={story.id}
+                className="d-flex flex-column flex-sm-row gap-4 py-4"
                 style={{ 
-                  width: "100%", 
-                  maxWidth: "160px", 
-                  height: "110px", 
-                  flexShrink: 0,
-                  border: "1px solid rgba(77, 163, 255, 0.25)",
+                  background: "transparent",
+                  borderBottom: idx !== posts.length - 1 ? "1px solid rgba(77, 163, 255, 0.2)" : "none",
                 }}
               >
-                <img 
-                  src={story.imageUrl} 
-                  alt="News wire item representation" 
-                  className="w-100 h-100"
-                  style={{ objectFit: "cover", filter: "grayscale(20%) contrast(110%)" }}
-                />
-              </div>
-
-              {/* Newspaper Content Column */}
-              <div className="d-flex flex-column justify-content-between flex-grow-1">
-                <div>
-                  <div className="mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>
-                    <span className="fw-bold text-uppercase tracking-wider" style={{ color: "#4da3ff", fontSize: "10px" }}>
-                       〔 {story.category} 〕
-                    </span>
-                  </div>
-
-                  {/* Intercept anchor to trigger side-panel state */}
-                  <a 
-                    href={`#story-${story.id}`} 
-                    className="text-decoration-none"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveStory(story);
-                    }}
-                  >
-                    <h3 
-                      className="fw-bold mb-2" 
-                      style={{ 
-                        color: "#ffffff", 
-                        fontSize: "1.35rem", 
-                        lineHeight: "1.25", 
-                        transition: "color 0.1s" 
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#4da3ff")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "#ffffff")}
-                    >
-                      {story.title}
-                    </h3>
-                  </a>
-
-                  <p 
-                    className="mb-3 font-normal" 
-                    style={{ 
-                      color: "#cfe6ff", 
-                      fontSize: "14.5px", 
-                      lineHeight: "1.5",
-                      textAlign: "justify",
-                      opacity: 0.85
-                    }}
-                  >
-                    <span className="fw-bold me-1" style={{ fontFamily: "system-ui, sans-serif", fontSize: "12px", color: "#4da3ff" }}>
-                      {story.location.toUpperCase()} —
-                    </span>
-                    {story.summary}
-                  </p>
-                </div>
-
-                {/* Newspaper Meta Footer Row split between source details and the 'Read More' link */}
                 <div 
-                  className="d-flex justify-content-between align-items-center pt-1 border-top" 
+                  className="overflow-hidden bg-dark"
                   style={{ 
-                    fontFamily: "system-ui, sans-serif",
-                    borderColor: "rgba(77, 163, 255, 0.08)"
+                    width: "100%", 
+                    maxWidth: "160px", 
+                    height: "110px", 
+                    flexShrink: 0,
+                    border: "1px solid rgba(77, 163, 255, 0.25)",
                   }}
                 >
-                  {/* Left Side: Source Tracking */}
-                  <div className="d-flex align-items-center gap-2" style={{ color: "#9bb9d4", fontSize: "11px" }}>
-                    <span className="fw-bold text-white uppercase">{story.source}</span>
-                    <span style={{ color: "rgba(77, 163, 255, 0.3)" }}>•</span>
-                    <span className="font-monospace text-uppercase">{story.timeAgo}</span>
+                  <img 
+                    src={story.image_url} 
+                    alt="Post" 
+                    className="w-100 h-100"
+                    style={{ objectFit: "cover", filter: "grayscale(20%) contrast(110%)" }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/teamlogo.png";
+                    }}
+                  />
+                </div>
+
+                <div className="d-flex flex-column justify-content-between flex-grow-1">
+                  <div>
+                    <a 
+                      href={`#story-${story.id}`} 
+                      className="text-decoration-none"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openStory(story);
+                      }}
+                    >
+                      <h3 
+                        className="fw-bold mb-2" 
+                        style={{ 
+                          color: "#ffffff", 
+                          fontSize: "1.35rem", 
+                          lineHeight: "1.25", 
+                          transition: "color 0.1s" 
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "#4da3ff")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = "#ffffff")}
+                      >
+                        {story.title}
+                      </h3>
+                    </a>
+
+                    <p 
+                      className="mb-3" 
+                      style={{ 
+                        color: "#cfe6ff", 
+                        fontSize: "14.5px", 
+                        lineHeight: "1.5",
+                        textAlign: "justify",
+                        opacity: 0.85,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 4,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis"
+                      }}
+                    >
+                      {story.summary}
+                    </p>
                   </div>
 
-                  {/* Right Side: Read More Link Anchor mapped to side-panel state */}
-                  <a 
-                    href={`#story-${story.id}`} 
-                    className="text-decoration-none fw-bold"
-                    style={{ 
-                      fontSize: "11px", 
-                      color: "#4da3ff", 
-                      letterSpacing: "0.5px",
-                      transition: "opacity 0.15s"
+                  <div 
+                    className="d-flex justify-content-between align-items-center pt-2 border-top"
+                    style={{
+                      fontFamily: "system-ui, sans-serif",
+                      borderColor: "rgba(77, 163, 255, 0.08)",
                     }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveStory(story);
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                   >
-                    READ MORE ➔
-                  </a>
+                    <div
+                      className="d-flex align-items-center gap-3"
+                      style={{
+                        color: "#9bb9d4",
+                        fontSize: "11px",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      <span>
+                        {formatDate(story.created_at)}
+                      </span>
+
+                      <span
+                        className="d-flex align-items-center gap-1"
+                        style={{
+                          color: "#9bb9d4",
+                        }}
+                      >
+                        <i className="bi bi-eye" style={{ fontSize: "13px" }}></i>
+                        {story.views || 0}
+                      </span>
+                    </div>
+
+                    <a
+                      href={`#story-${story.id}`}
+                      className="text-decoration-none fw-bold"
+                      style={{
+                        fontSize: "11px",
+                        color: "#4da3ff",
+                        letterSpacing: "0.5px",
+                        transition: "opacity 0.15s",
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openStory(story);
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      READ MORE ➔
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
-      {/* RENDER THE OVERLAY PANEL DRIVEN BY SELECTION */}
       <NewsOverlay 
         story={activeStory} 
         onClose={() => setActiveStory(null)} 
