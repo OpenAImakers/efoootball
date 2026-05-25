@@ -1,4 +1,3 @@
-// NewspaperNewsPage.tsx
 import React, { useState, useEffect } from "react";
 import NewspaperMasthead from "./NewspaperMasthead";
 import NewsOverlay from "./NewsOverlay";
@@ -8,7 +7,7 @@ interface NewsItem {
   id: number;
   title: string;
   summary: string;
-  image_url: string;
+  image_url?: string; // Optional field now
   views: number;
   created_at: string;
 }
@@ -52,6 +51,26 @@ export default function NewspaperNewsPage() {
       month: "short",
       year: "numeric",
     });
+  };
+
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : null;
+  };
+
+  // Helper to find the first YouTube URL inside text
+  const extractFirstYouTubeId = (text: string) => {
+    if (!text) return null;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const matches = text.match(urlRegex);
+    if (matches) {
+      for (const url of matches) {
+        const id = getYouTubeId(url);
+        if (id) return id;
+      }
+    }
+    return null;
   };
 
   const openStory = async (story: NewsItem) => {
@@ -110,132 +129,148 @@ export default function NewspaperNewsPage() {
               <p style={{ color: "#9bb9d4" }}>No posts yet.</p>
             </div>
           ) : (
-            posts.map((story, idx) => (
-              <div 
-                key={story.id}
-                className="d-flex flex-column flex-sm-row gap-4 py-4"
-                style={{ 
-                  background: "transparent",
-                  borderBottom: idx !== posts.length - 1 ? "1px solid rgba(77, 163, 255, 0.2)" : "none",
-                }}
-              >
+            posts.map((story, idx) => {
+              const ytId = extractFirstYouTubeId(story.summary);
+              const hasImage = story.image_url && story.image_url.trim() !== "";
+
+              return (
                 <div 
-                  className="overflow-hidden bg-dark"
+                  key={story.id}
+                  className="d-flex flex-column flex-sm-row gap-4 py-4"
                   style={{ 
-                    width: "100%", 
-                    maxWidth: "160px", 
-                    height: "110px", 
-                    flexShrink: 0,
-                    border: "1px solid rgba(77, 163, 255, 0.25)",
+                    background: "transparent",
+                    borderBottom: idx !== posts.length - 1 ? "1px solid rgba(77, 163, 255, 0.25)" : "none",
                   }}
                 >
-                  <img 
-                    src={story.image_url} 
-                    alt="Post" 
-                    className="w-100 h-100"
-                    style={{ objectFit: "cover", filter: "grayscale(20%) contrast(110%)" }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/teamlogo.png";
-                    }}
-                  />
-                </div>
-
-                <div className="d-flex flex-column justify-content-between flex-grow-1">
-                  <div>
-                    <a 
-                      href={`#story-${story.id}`} 
-                      className="text-decoration-none"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openStory(story);
-                      }}
-                    >
-                      <h3 
-                        className="fw-bold mb-2" 
-                        style={{ 
-                          color: "#ffffff", 
-                          fontSize: "1.35rem", 
-                          lineHeight: "1.25", 
-                          transition: "color 0.1s" 
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#4da3ff")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = "#ffffff")}
-                      >
-                        {story.title}
-                      </h3>
-                    </a>
-
-                    <p 
-                      className="mb-3" 
+                  {/* Conditional Photo rendering */}
+                  {hasImage && (
+                    <div 
+                      className="overflow-hidden bg-dark flex-shrink-0 align-self-start"
                       style={{ 
-                        color: "#cfe6ff", 
-                        fontSize: "14.5px", 
-                        lineHeight: "1.5",
-                        textAlign: "justify",
-                        opacity: 0.85,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 4,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis"
+                        width: "100%", 
+                        maxWidth: "160px", 
+                        height: "110px", 
+                        border: "1px solid rgba(77, 163, 255, 0.25)",
                       }}
                     >
-                      {story.summary}
-                    </p>
-                  </div>
+                      <img 
+                        src={story.image_url} 
+                        alt="Post Layout" 
+                        className="w-100 h-100"
+                        style={{ objectFit: "cover", filter: "grayscale(20%) contrast(110%)" }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/teamlogo.png";
+                        }}
+                      />
+                    </div>
+                  )}
 
-                  <div 
-                    className="d-flex justify-content-between align-items-center pt-2 border-top"
-                    style={{
-                      fontFamily: "system-ui, sans-serif",
-                      borderColor: "rgba(77, 163, 255, 0.08)",
-                    }}
-                  >
-                    <div
-                      className="d-flex align-items-center gap-3"
-                      style={{
-                        color: "#9bb9d4",
-                        fontSize: "11px",
-                        letterSpacing: "0.5px",
-                      }}
-                    >
-                      <span>
-                        {formatDate(story.created_at)}
-                      </span>
-
-                      <span
-                        className="d-flex align-items-center gap-1"
-                        style={{
-                          color: "#9bb9d4",
+                  <div className="d-flex flex-column justify-content-between flex-grow-1 w-100">
+                    <div>
+                      <a 
+                        href={`#story-${story.id}`} 
+                        className="text-decoration-none"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openStory(story);
                         }}
                       >
-                        <i className="bi bi-eye" style={{ fontSize: "13px" }}></i>
-                        {story.views || 0}
-                      </span>
+                        <h3 
+                          className="fw-bold mb-2" 
+                          style={{ 
+                            color: "#ffffff", 
+                            fontSize: "1.35rem", 
+                            lineHeight: "1.25", 
+                            transition: "color 0.1s" 
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = "#4da3ff")}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "#ffffff")}
+                        >
+                          {story.title}
+                        </h3>
+                      </a>
+
+                      <p 
+                        className="mb-3" 
+                        style={{ 
+                          color: "#cfe6ff", 
+                          fontSize: "14.5px", 
+                          lineHeight: "1.5",
+                          textAlign: "justify",
+                          opacity: 0.85,
+                          display: "-webkit-box",
+                          WebkitLineClamp: ytId ? 2 : 4, // Make room for inline player if it exists
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis"
+                        }}
+                      >
+                        {story.summary.replace(/https?:\/\/\S+/g, "").trim() /* Remove URLs for summary preview */}
+                      </p>
+
+                      {/* Video Player Display in Feed List */}
+                      {ytId && (
+                        <div 
+                          className="ratio ratio-16x9 mb-3" 
+                          style={{ 
+                            maxWidth: "450px", 
+                            borderRadius: "6px", 
+                            overflow: "hidden", 
+                            border: "1px solid rgba(77, 163, 255, 0.2)" 
+                          }}
+                        >
+                          <iframe
+                            src={`https://www.youtube.com/embed/${ytId}`}
+                            title="Feed YouTube player"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      )}
                     </div>
 
-                    <a
-                      href={`#story-${story.id}`}
-                      className="text-decoration-none fw-bold"
+                    <div 
+                      className="d-flex justify-content-between align-items-center pt-2 border-top"
                       style={{
-                        fontSize: "11px",
-                        color: "#4da3ff",
-                        letterSpacing: "0.5px",
-                        transition: "opacity 0.15s",
+                        fontFamily: "system-ui, sans-serif",
+                        borderColor: "rgba(77, 163, 255, 0.08)",
                       }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openStory(story);
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
-                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                     >
-                      READ MORE ➔
-                    </a>
+                      <div
+                        className="d-flex align-items-center gap-3"
+                        style={{
+                          color: "#9bb9d4",
+                          fontSize: "11px",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        <span>{formatDate(story.created_at)}</span>
+                        <span className="d-flex align-items-center gap-1">
+                          <i className="bi bi-eye" style={{ fontSize: "13px" }}></i>
+                          {story.views || 0}
+                        </span>
+                      </div>
+
+                      <a
+                        href={`#story-${story.id}`}
+                        className="text-decoration-none fw-bold"
+                        style={{
+                          fontSize: "11px",
+                          color: "#4da3ff",
+                          letterSpacing: "0.5px",
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openStory(story);
+                        }}
+                      >
+                        READ MORE ➔
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

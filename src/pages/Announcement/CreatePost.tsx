@@ -31,7 +31,6 @@ export default function JournalistDashboard() {
   useEffect(() => {
     isMounted.current = true;
     
-    // Cleanup function moved inside useEffect
     const cleanupImagePreview = () => {
       if (imagePreview && imagePreview.startsWith('blob:')) {
         URL.revokeObjectURL(imagePreview);
@@ -62,7 +61,7 @@ export default function JournalistDashboard() {
       isMounted.current = false;
       cleanupImagePreview();
     };
-  }, [imagePreview]); // Now includes imagePreview dependency
+  }, [imagePreview]);
 
   const fetchPosts = async (userId: string) => {
     try {
@@ -103,7 +102,6 @@ export default function JournalistDashboard() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Clean up old preview
       if (imagePreview && imagePreview.startsWith('blob:')) {
         URL.revokeObjectURL(imagePreview);
       }
@@ -163,10 +161,12 @@ export default function JournalistDashboard() {
         finalImageUrl = data.image_url;
       } 
       else if (!imagePreview) {
+        // If the preview was explicitly cleared, flag the old remote image for removal
         if (editingPost && editingPost.image_url) {
           previousActiveUrlToClean = editingPost.image_url;
         }
-        finalImageUrl = '/teamlogo.png';
+        // Instead of falling back to '/teamlogo.png', save an empty string
+        finalImageUrl = '';
       }
 
       if (editingPost) {
@@ -218,7 +218,7 @@ export default function JournalistDashboard() {
     setTitle(post.title);
     setSummary(post.summary);
     setExistingImageUrl(post.image_url);
-    setImagePreview(post.image_url);
+    setImagePreview(post.image_url || null); // Avoid passing empty strings directly to preview state
     setImageFile(null);
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -418,17 +418,23 @@ export default function JournalistDashboard() {
             ) : (
               <div className="d-flex flex-column gap-3">
                 {posts.map((post) => (
-                  <div key={post.id} className="card border-0" style={{ backgroundColor: "#1A2251", transition: "transform 0.2s" }}>
+                  <div key={post.id} className="card border-0" style={{ backgroundColor: "#1A2251" }}>
                     <div className="card-body p-3">
                       <div className="d-flex gap-3 align-items-start">
-                        {/* Thumbnail */}
-                        <img 
-                          src={post.image_url || "/teamlogo.png"} 
-                          alt={post.title} 
-                          className="rounded-3"
-                          style={{ width: "80px", height: "80px", objectFit: "cover" }}
-                          onError={(e) => (e.target as HTMLImageElement).src = "/teamlogo.png"}
-                        />
+                        {/* Thumbnail Container */}
+                        <div style={{ width: "80px", height: "80px", backgroundColor: "#02061750" }} className="rounded-3 d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0">
+                          {post.image_url ? (
+                            <img 
+                              src={post.image_url} 
+                              alt={post.title} 
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                            />
+                          ) : (
+                            /* Placeholder icon or text if there is genuinely no image */
+                            <span className="text-white-50 xs">No Image</span>
+                          )}
+                        </div>
                         
                         {/* Content */}
                         <div className="flex-grow-1">
