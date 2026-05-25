@@ -202,7 +202,7 @@ const KenyaEfootballHub: React.FC = () => {
           {/* Breadcrumb for SEO - STICKY NAV */}
           <nav 
             aria-label="Registration steps" 
-            className="sticky-top pt-2 pb-2" 
+            className="sticky-top pt-4 pb-4" 
             style={{ 
               top: 0, 
               zIndex: 1020, 
@@ -387,10 +387,7 @@ const KenyaEfootballHub: React.FC = () => {
             )}
           </div>
 
-          {/* Disclaimer - NOW INSIDE the main content div */}
-          <div className="text-center py-3 px-4 mt-5" style={{ fontSize: "0.7rem", color: "#64748b", maxWidth: "900px", margin: "0 auto" }}>
-            <strong>Disclaimer:</strong> This platform is an independent fan-operated initiative and is not officially affiliated with, authorized, maintained, sponsored, or endorsed by KONAMI, its subsidiaries, affiliates, licensors, or any related entities. All tournament registrations, team management features, and community activities are organized solely by independent player communities. Any references to KONAMI products, brands, or intellectual property are for identification purposes only and do not imply any official connection or endorsement. We operate as a passionate fan-driven service dedicated to enhancing the gaming community experience.
-          </div>
+
         </div> {/* Closing the main content div */}
 
         <style>{`
