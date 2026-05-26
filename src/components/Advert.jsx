@@ -64,6 +64,10 @@ const InstallBar = () => {
         <Link to="/announcements" style={styles.webBtn}>
           Blog
         </Link>
+     <Link to="/fie" style={styles.fie}>
+  <div>FEDERATION INTERNATIONALE EFOOTBALL</div>
+</Link>
+       
       </div>
 
       {/* One line, smooth rising live feed line item */}
@@ -104,7 +108,16 @@ const styles = {
     boxShadow: "0 10px 25px rgba(0,0,0,0.35)",
     letterSpacing: "0.5px",
   },
-
+  fie:{
+    padding: "12px 22px",
+    background: "linear-gradient(135deg, #38b222, #ff9f1c)",
+    color: "#111",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "700",
+    borderRadius: "12px",
+    textDecoration: "none",
+  },
   webBtn: {
     padding: "12px 20px",
     background: "rgba(255,255,255,0.06)",

@@ -31,6 +31,7 @@ import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 import SendSms from "./pages/sms/Sendsms";
 import Announcements from "./pages/Announcement/Announcement";
 import Journalists from "./pages/Announcement/CreatePost";
+import Fie from "./fie/Fie.tsx";
 
 function App() {
   // Detect PWA vs browser
@@ -50,6 +51,13 @@ useEffect(() => {
 }, []);
   return (
     <Routes>
+      {/* fie routes */}
+      <Route
+        path="/fie"
+        element={
+            <Fie />
+        }
+      />
       {/* sms routes */}
 
 
