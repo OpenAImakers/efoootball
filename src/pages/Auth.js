@@ -20,6 +20,7 @@ export default function Auth() {
   // Dictionary for clean text management
   const t = {
     en: {
+      slogan: "Everything you need to run tournaments in one place",
       ecosystem: "smart ecosystem",
       welcome: "Welcome Back",
       create: "Create Account",
@@ -39,6 +40,7 @@ export default function Auth() {
       resetSent: "Password reset link sent to your email!"
     },
     fr: {
+      slogan: "Tout ce dont vous avez besoin pour gérer vos tournois en un seul endroit",
       ecosystem: "écosystème intelligent",
       welcome: "Bon retour",
       create: "Créer un compte",
@@ -136,9 +138,7 @@ export default function Auth() {
                 <div className="mb-5">
                   <h1 style={styles.logoTitle}>efootball</h1>
                   <div className="d-flex align-items-center justify-content-center mt-2" style={{ fontSize: "1rem", opacity: 0.9 }}>
-                
-                    Everything you need to run tournaments in one place.
-                
+                     {t[lang].slogan}
                   </div>
                 </div>
 
