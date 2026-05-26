@@ -388,8 +388,7 @@ const KenyaEfootballHub: React.FC = () => {
           </div>
 
 
-        </div> {/* Closing the main content div */}
-
+        </div> 
         <style>{`
           :root {
             --k-blue: #0d6efd;

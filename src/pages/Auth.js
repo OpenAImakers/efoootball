@@ -136,9 +136,9 @@ export default function Auth() {
                 <div className="mb-5">
                   <h1 style={styles.logoTitle}>efootball</h1>
                   <div className="d-flex align-items-center justify-content-center mt-2" style={{ fontSize: "1rem", opacity: 0.9 }}>
-                    <span className="fw-bold me-2">Skyla ®</span>
-                    <div style={styles.divider}></div>
-                    <span className="ms-2 fw-light text-lowercase">{t[lang].ecosystem}</span>
+                
+                    Everything you need to run tournaments in one place.
+                
                   </div>
                 </div>
 
