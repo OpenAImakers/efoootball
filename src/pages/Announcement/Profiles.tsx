@@ -274,6 +274,15 @@ export default function Profiles() {
                 </span>
               </div>
             </div>
+            {/* worth in ksh */}
+            <div className="text-center mb-3">
+              <div className="d-flex align-items-center justify-content-center gap-1">
+                <i className="bi bi-currency-dollar" style={{ fontSize: "12px", color: "#ff69b4" }}></i>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#da1b75" }}>
+                  Market Value: --
+                </span>
+              </div>
+            </div>
             
             {/* Follow Button */}
             <button
