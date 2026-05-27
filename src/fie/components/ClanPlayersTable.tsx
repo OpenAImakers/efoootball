@@ -1,108 +1,133 @@
 import React from "react";
 
-export default function ClanPlayersTable({ selected, setSelected }: any) {
-  const s = [
+export default function ClanPlayersProfile({ selected, setSelected }: any) {
+  const clans = [
     { name: "Alpha Warriors" },
     { name: "Goal Hunters" },
     { name: "Elite FC" },
   ];
 
-  // Added distinct country values while keeping the filtering property intact
   const players = [
-    { name: "Kevin", clan: "Alpha Warriors", place: "Kenya" },
-    { name: "Brian", clan: "Alpha Warriors", place: "Nigeria" },
-    { name: "Alex",  clan: "Goal Hunters",   place: "Ghana" },
-    { name: "Mike",  clan: "Elite FC",       place: "South Africa" },
-    { name: "John",  clan: "Elite FC",       place: "Egypt" },
+    { name: "Kevin", clan: "Alpha Warriors", place: "Kenya", age: 19 },
+    { name: "Brian", clan: "Alpha Warriors", place: "Nigeria", age: 21 },
+    { name: "Alex", clan: "Goal Hunters", place: "Ghana", age: 20 },
+    { name: "Mike", clan: "Elite FC", place: "South Africa", age: 22 },
+    { name: "John", clan: "Elite FC", place: "Egypt", age: 18 },
   ];
 
-  const styles = {
-    card: {
-      background: "transparent",
-      border: "none",
+  const filteredPlayers = players.filter((p) => p.clan === selected);
+
+  const styles: any = {
+    wrapper: {
       padding: "15px",
-      marginBottom: "20px",
       fontFamily: "'Rajdhani', 'Orbitron', 'Segoe UI', Arial, sans-serif",
-      color: "#111",
+      color: "#111111",
     },
 
     title: {
       fontSize: "20px",
       fontWeight: 800,
       letterSpacing: "1.2px",
-      textTransform: "uppercase" as const,
+      textTransform: "uppercase",
       marginBottom: "10px",
     },
 
-    table: {
-      width: "100%",
-      borderCollapse: "collapse" as const,
-      marginTop: "10px",
-      fontSize: "14px",
-      fontFamily: "'Rajdhani', 'Orbitron', 'Segoe UI', Arial, sans-serif",
-    },
-
-    th: {
-      padding: "10px",
-      textAlign: "left" as const,
-      fontWeight: 800,
-      letterSpacing: "1.5px",
-      textTransform: "uppercase" as const,
-      fontSize: "12px",
-    },
-
-    td: {
-      padding: "12px 10px",
-      fontWeight: 500,
-      letterSpacing: "0.5px",
+    filters: {
+      marginBottom: "15px",
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap",
     },
 
     filterBtn: {
-      marginRight: "10px",
       padding: "8px 12px",
       borderRadius: "10px",
       border: "none",
       cursor: "pointer",
-      fontFamily: "'Rajdhani', 'Orbitron', 'Segoe UI', Arial, sans-serif",
       fontWeight: 700,
       letterSpacing: "1px",
-      textTransform: "uppercase" as const,
+      textTransform: "uppercase",
       fontSize: "12px",
-      transition: "all 0.2s ease",
       background: "linear-gradient(135deg, #38b222, #ff9f1c)",
+    },
+
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+      gap: "18px",
+    },
+
+    card: {
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid rgba(0,0,0,0.1)",
+      borderRadius: "16px",
+      overflow: "hidden",
+      backdropFilter: "blur(10px)",
+      transition: "0.2s ease",
+    },
+
+    // ✅ Updated Image Styles
+    imageContainer: {
+      width: "100%",
+      padding: "20px 20px 10px 20px", // Gives breathing space
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      
+      background: "linear-gradient(135deg, #38b222, #ff9f1c)",
+    },
+
+    image: {
+      width: "100%",           // Full width of container
+      maxWidth: "180px",       // Controls max size
+      height: "180px",         // Fixed square size
+      objectFit: "contain",    // ✅ Fully visible, no cropping
+      borderRadius: "12px",
+      border: "3px solid rgba(255,255,255,0.1)",
+      boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+    },
+
+    content: {
+      padding: "12px 14px",
+    },
+
+    name: {
+      fontSize: "18px",
+      fontWeight: 900,
+      letterSpacing: "1px",
+      marginBottom: "10px",
+      textTransform: "uppercase" as const,
+    },
+
+    row: {
+      fontSize: "13px",
+      marginBottom: "6px",
+      opacity: 0.9,
+    },
+
+    label: {
+      fontWeight: 800,
+      marginRight: "5px",
     },
   };
 
-  // Filters by the player's assigned clan group
-  const filteredPlayers = players.filter((p) => p.clan === selected);
-
   return (
-    <div style={styles.card}>
+    <div style={styles.wrapper}>
       <h2 style={styles.title}>Clan Players</h2>
 
-      <div
-        style={{
-          marginBottom: "10px",
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}
-      >
-        {s.map((c: any, i: number) => {
-          const isActive = selected === c.name;
-
+      {/* Clan filters */}
+      <div style={styles.filters}>
+        {clans.map((c, i) => {
+          const active = selected === c.name;
           return (
             <button
               key={i}
+              onClick={() => setSelected(c.name)}
               style={{
                 ...styles.filterBtn,
-                border: isActive
-                  ? "2px solid #000"
-                  : "2px solid transparent",
-                opacity: isActive ? 1 : 0.75,
-                fontWeight: isActive ? 800 : 600,
+                opacity: active ? 1 : 0.7,
+                border: active ? "2px solid #000" : "2px solid transparent",
               }}
-              onClick={() => setSelected(c.name)}
             >
               {c.name}
             </button>
@@ -110,24 +135,35 @@ export default function ClanPlayersTable({ selected, setSelected }: any) {
         })}
       </div>
 
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            {/* Added width constraints to keep columns tightly aligned to the left */}
-            <th style={{ ...styles.th, width: "200px" }}>Player</th>
-            <th style={styles.th}>Place</th>
-          </tr>
-        </thead>
+      {/* Player Cards */}
+      <div style={styles.grid}>
+        {filteredPlayers.map((p, i) => (
+          <div key={i} style={styles.card}>
+            {/* Centered Image Container */}
+            <div style={styles.imageContainer}>
+              <img 
+                src="/profile.png" 
+                alt={p.name} 
+                style={styles.image} 
+              />
+            </div>
 
-        <tbody>
-          {filteredPlayers.map((p: any, i: number) => (
-            <tr key={i}>
-              <td style={styles.td}>{p.name}</td>
-              <td style={styles.td}>{p.place}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            <div style={styles.content}>
+              <div style={styles.name}>{p.name}</div>
+
+              <div style={styles.row}>
+                <span style={styles.label}>Country:</span>
+                {p.place}
+              </div>
+
+              <div style={styles.row}>
+                <span style={styles.label}>Age:</span>
+                {p.age}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

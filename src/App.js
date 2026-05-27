@@ -32,6 +32,8 @@ import SendSms from "./pages/sms/Sendsms";
 import Announcements from "./pages/Announcement/Announcement";
 import Journalists from "./pages/Announcement/CreatePost";
 import Fie from "./fie/Fie.tsx";
+import RegisterClans from "./fie/components/RegisterClans";
+import SpecificClanRegistration from "./fie/components/SpecificClanRegistration";
 
 function App() {
   // Detect PWA vs browser
@@ -58,6 +60,24 @@ useEffect(() => {
             <Fie />
         }
       />
+      <Route
+      path="/registerclans"
+      element={
+    <ProtectedRoute>
+        <RegisterClans />
+        </ProtectedRoute>
+      }
+      />
+      
+      <Route
+        path="/registerclans/:id"
+        element={
+          <ProtectedRoute>
+            <SpecificClanRegistration />
+          </ProtectedRoute>
+        }
+      />
+
       {/* sms routes */}
 
 
