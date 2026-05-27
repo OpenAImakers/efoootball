@@ -51,7 +51,7 @@ export default function NewspaperMasthead() {
     if (user) {
       window.location.href = `/profile/${profile?.username || user.id}`;
     } else {
-      window.location.href = "/login";
+      window.location.href = "/auth";
     }
   };
 
