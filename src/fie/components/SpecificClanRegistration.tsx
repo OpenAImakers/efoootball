@@ -36,6 +36,9 @@ export default function SpecificClanRegistration() {
   const [submitting, setSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasRegistered, setHasRegistered] = useState(false);
+  const [userPlayerData, setUserPlayerData] = useState<ClanPlayer | null>(null);
+  const [isMissingRequiredFields, setIsMissingRequiredFields] = useState(false);
+  const [missingFieldsList, setMissingFieldsList] = useState<string[]>([]);
   
   // Form state
   const [playerName, setPlayerName] = useState("");
@@ -44,6 +47,8 @@ export default function SpecificClanRegistration() {
   const [playerAvatar, setPlayerAvatar] = useState<File | null>(null);
   const [playerAvatarPreview, setPlayerAvatarPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const [, setIsEditingMode] = useState(false);
 
   const isMounted = useRef(true);
 
@@ -103,12 +108,54 @@ export default function SpecificClanRegistration() {
     };
   }, [fetchClanAndPlayers]);
 
-  // Separate effect to compute registration state only when players list or user ID actually changes
+  // Check registration status and missing fields
   const currentUserId = currentUser?.id;
   useEffect(() => {
     if (currentUserId && existingPlayers.length > 0) {
-      const userRegistered = existingPlayers.some(player => player.user_id === currentUserId);
-      setHasRegistered(!!userRegistered);
+      const userPlayer = existingPlayers.find(player => player.user_id === currentUserId);
+      
+      if (userPlayer) {
+        setHasRegistered(true);
+        setUserPlayerData(userPlayer);
+        
+        // Check for missing required fields
+        const missingFields: string[] = [];
+        
+        if (!userPlayer.player_avatar || userPlayer.player_avatar === "") {
+          missingFields.push("Avatar Photo");
+        }
+        if (!userPlayer.name || userPlayer.name.trim() === "") {
+          missingFields.push("Player Name");
+        }
+        if (!userPlayer.age || userPlayer.age <= 0) {
+          missingFields.push("Age");
+        }
+        if (!userPlayer.place || userPlayer.place.trim() === "") {
+          missingFields.push("Location");
+        }
+        
+        setMissingFieldsList(missingFields);
+        const hasMissingFields = missingFields.length > 0;
+        setIsMissingRequiredFields(hasMissingFields);
+        
+        // If there are missing fields, automatically enable editing mode
+        if (hasMissingFields) {
+          setIsEditingMode(true);
+          // Pre-fill form with existing data
+          setPlayerName(userPlayer.name || "");
+          setPlayerAge(userPlayer.age?.toString() || "");
+          setPlayerPlace(userPlayer.place || "");
+          // Note: Avatar preview can't be pre-filled for security reasons
+        } else {
+          setIsEditingMode(false);
+        }
+      } else {
+        setHasRegistered(false);
+        setUserPlayerData(null);
+        setIsMissingRequiredFields(false);
+        setMissingFieldsList([]);
+        setIsEditingMode(true); // Enable editing for new registration
+      }
     }
   }, [currentUserId, existingPlayers]);
 
@@ -135,15 +182,38 @@ export default function SpecificClanRegistration() {
     return data.image_url;
   };
 
+  const validatePassportPhoto = (file: File): boolean => {
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      setAvatarError("Please upload an image file");
+      return false;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError("Image size should be less than 5MB");
+      return false;
+    }
+
+    setAvatarError("");
+    return true;
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!validatePassportPhoto(file)) {
+        e.target.value = '';
+        return;
+      }
+
       if (playerAvatarPreview && playerAvatarPreview.startsWith('blob:')) {
         URL.revokeObjectURL(playerAvatarPreview);
       }
       
       setPlayerAvatar(file);
       setPlayerAvatarPreview(URL.createObjectURL(file));
+      setAvatarError("");
     }
   };
 
@@ -153,12 +223,112 @@ export default function SpecificClanRegistration() {
     }
     setPlayerAvatar(null);
     setPlayerAvatarPreview(null);
+    setAvatarError("");
     
     const fileInput = document.getElementById('avatar-input') as HTMLInputElement | null;
     if (fileInput) fileInput.value = '';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentUser) {
+      alert("Please login to update");
+      navigate("/login");
+      return;
+    }
+    
+    if (!userPlayerData) {
+      alert("No registration found to update");
+      return;
+    }
+    
+    // Check if updating is allowed (only if missing required fields)
+    if (!isMissingRequiredFields) {
+      alert("⚠️ Your registration is complete. No further edits are allowed!");
+      return;
+    }
+    
+    // Validate all fields are now filled
+    if (!playerName.trim()) {
+      alert("Please enter player name");
+      return;
+    }
+    
+    if (!playerAge) {
+      alert("Please enter player age");
+      return;
+    }
+    
+    if (!playerPlace.trim()) {
+      alert("Please enter player place/location");
+      return;
+    }
+    
+    // Make avatar mandatory if it's missing
+    if (!userPlayerData.player_avatar && !playerAvatar) {
+      alert("⚠️ Avatar photo is mandatory! Please upload a passport-style photo for gaming identification.");
+      return;
+    }
+    
+    setSubmitting(true);
+    
+    try {
+      let finalAvatarUrl = userPlayerData.player_avatar || "";
+      
+      // Upload new avatar if provided
+      if (playerAvatar) {
+        setUploading(true);
+        try {
+          finalAvatarUrl = await uploadImageToWorker(playerAvatar);
+        } catch (uploadError) {
+          alert("Failed to upload player avatar. Please try again.");
+          setSubmitting(false);
+          setUploading(false);
+          return;
+        } finally {
+          setUploading(false);
+        }
+      }
+      
+      // Update the existing record
+      const { error: updateError } = await supabase
+        .from("clan_players")
+        .update({
+          name: playerName.trim(),
+          player_avatar: finalAvatarUrl,
+          age: parseInt(playerAge),
+          place: playerPlace.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userPlayerData.id)
+        .eq("user_id", currentUser.id);
+      
+      if (updateError) throw updateError;
+      
+      // Clear form
+      setPlayerName("");
+      setPlayerAge("");
+      setPlayerPlace("");
+      if (playerAvatarPreview && playerAvatarPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(playerAvatarPreview);
+      }
+      setPlayerAvatar(null);
+      setPlayerAvatarPreview(null);
+      
+      await fetchClanAndPlayers();
+      
+      alert(`✅ Successfully updated your registration!\n\n⚠️ IMPORTANT: Now that all required fields are complete, no further edits will be allowed.`);
+      
+    } catch (error: any) {
+      console.error("Update error:", error);
+      alert(error.message || "Failed to update registration. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleNewRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!currentUser) {
@@ -167,8 +337,8 @@ export default function SpecificClanRegistration() {
       return;
     }
     
-    if (hasRegistered) {
-      alert("You have already registered for this clan!");
+    if (hasRegistered && !isMissingRequiredFields) {
+      alert("You have already completed registration for this clan!");
       return;
     }
     
@@ -184,6 +354,12 @@ export default function SpecificClanRegistration() {
     
     if (!playerPlace.trim()) {
       alert("Please enter player place/location");
+      return;
+    }
+    
+    // Make avatar mandatory
+    if (!playerAvatar) {
+      alert("⚠️ Avatar photo is mandatory! Please upload a passport-style photo for gaming identification.");
       return;
     }
     
@@ -216,6 +392,7 @@ export default function SpecificClanRegistration() {
             place: playerPlace.trim(),
             clan_id: id,
             user_id: currentUser.id,
+            registered_at: new Date().toISOString(),
           },
         ]);
       
@@ -232,7 +409,7 @@ export default function SpecificClanRegistration() {
       
       await fetchClanAndPlayers();
       
-      alert(`Successfully registered ${playerName} to ${clan?.clan_name}!`);
+      alert(`✅ Successfully registered ${playerName} to ${clan?.clan_name}!\n\n⚠️ IMPORTANT: Registration details cannot be edited after this point.`);
       
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -241,6 +418,8 @@ export default function SpecificClanRegistration() {
       setSubmitting(false);
     }
   };
+
+  const handleSubmit = isMissingRequiredFields ? handleUpdate : handleNewRegistration;
 
   if (loading) {
     return (
@@ -271,6 +450,10 @@ export default function SpecificClanRegistration() {
       </>
     );
   }
+
+  // Determine what to show
+  const showRegistrationForm = !hasRegistered || (hasRegistered && isMissingRequiredFields);
+  const showCompleteAlert = hasRegistered && !isMissingRequiredFields;
 
   return (
     <>
@@ -304,83 +487,145 @@ export default function SpecificClanRegistration() {
             </div>
           </div>
 
-          {hasRegistered ? (
-            <div className="alert alert-success text-center">
-              <h4>✓ You are registered for this clan!</h4>
+          {showCompleteAlert && (
+            <div className="alert alert-danger text-center" role="alert">
+              <h4>✓ YOU ARE FULLY REGISTERED FOR THIS CLAN!</h4>
+              <p className="mb-0 mt-2">
+                <strong>Registration is complete and cannot be modified or edited.</strong><br />
+                Your profile has all required information. No further changes are allowed.
+              </p>
             </div>
-          ) : (
+          )}
+
+          {isMissingRequiredFields && hasRegistered && (
+            <div className="alert alert-danger text-center" role="alert">
+              <h4>⚠️ INCOMPLETE REGISTRATION DETECTED!</h4>
+              <p className="mb-0 mt-2">
+                <strong>You are missing the following required fields:</strong><br />
+                {missingFieldsList.map(field => (
+                  <span key={field} className="badge bg-danger me-1 mt-2">❌ {field}</span>
+                ))}
+                <br /><br />
+                Please complete your registration below. <strong>This is your only chance to update your details.</strong> Once completed, no further edits will be allowed.
+              </p>
+            </div>
+          )}
+
+          {showRegistrationForm ? (
             <div className="row">
               <div className="col-md-5">
                 <div className="card">
                   <div className="card-body">
-                    <h4 className="mb-3">Register as Player</h4>
+                    <h4 className="mb-3">
+                      {isMissingRequiredFields ? "Complete Your Registration" : "Register as Player"}
+                    </h4>
                     
+                    {isMissingRequiredFields && (
+                      <div className="alert alert-warning" role="alert">
+                        <strong>⚠️ Action Required:</strong> Please provide all missing information below. This is your final opportunity to update your registration.
+                      </div>
+                    )}
+
+                    {!isMissingRequiredFields && (
+                      <div className="alert alert-info" role="alert">
+                        <strong>⚠️ Important:</strong> Registration details cannot be edited after submission. Please ensure all information is correct before registering.
+                      </div>
+                    )}
+
                     <form onSubmit={handleSubmit}>
                       <div className="mb-3">
-                        <label className="form-label">Avatar (Optional)</label>
+                        <label className="form-label">
+                          Avatar Photo <span className="text-danger">*Mandatory</span>
+                        </label>
                         <div className="border p-3 text-center">
-                          {playerAvatarPreview ? (
+                          {(playerAvatarPreview || (userPlayerData?.player_avatar && isMissingRequiredFields)) ? (
                             <div className="position-relative d-inline-block">
                               <img 
-                                src={playerAvatarPreview} 
+                                src={playerAvatarPreview || userPlayerData?.player_avatar} 
                                 alt="Preview" 
-                                style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "50%" }} 
+                                style={{ width: "120px", height: "150px", objectFit: "cover", border: "2px solid #ddd", borderRadius: "4px" }} 
                               />
-                              <button
-                                type="button"
-                                onClick={handleRemoveImage}
-                                className="btn btn-sm btn-danger position-absolute top-0 end-0"
-                              >
-                                ×
-                              </button>
+                              {(!userPlayerData?.player_avatar || isMissingRequiredFields) && (
+                                <button
+                                  type="button"
+                                  onClick={handleRemoveImage}
+                                  className="btn btn-sm btn-danger position-absolute top-0 end-0"
+                                  style={{ transform: "translate(50%, -50%)" }}
+                                >
+                                  ×
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <div>
                               <input 
                                 type="file" 
-                                accept="image/*" 
+                                accept="image/jpeg,image/png,image/jpg" 
                                 onChange={handleImageSelect} 
                                 className="d-none" 
                                 id="avatar-input" 
+                                required={!userPlayerData?.player_avatar}
                               />
                               <label htmlFor="avatar-input" className="btn btn-outline-primary">
-                                Upload Avatar
+                                📸 Upload Passport-Style Photo
                               </label>
                             </div>
                           )}
+                          {(!userPlayerData?.player_avatar && !playerAvatarPreview) && (
+                            <div className="text-danger mt-2 small">⚠️ Avatar is required</div>
+                          )}
                         </div>
+                        {avatarError && (
+                          <div className="text-danger mt-2 small">{avatarError}</div>
+                        )}
+                        <small className="text-muted d-block mt-2">
+                          📸 <strong>Passport-style photo required for gaming identification</strong><br />
+                          • Clear, front-facing photo<br />
+                          • Plain background preferred<br />
+                          • Max size: 5MB (JPG or PNG)<br />
+                          • This photo will be visible to all clan members
+                        </small>
                       </div>
 
                       <div className="mb-3">
-                        <label className="form-label">Player Name *</label>
+                        <label className="form-label">Player Name <span className="text-danger">*</span></label>
                         <input
                           type="text"
                           className="form-control"
                           value={playerName}
                           onChange={(e) => setPlayerName(e.target.value)}
+                          placeholder="Enter your in-game name"
                           required
+                          disabled={!isMissingRequiredFields && hasRegistered}
                         />
+                        <small className="text-muted">This will be your display name in the clan</small>
                       </div>
 
                       <div className="mb-3">
-                        <label className="form-label">Age *</label>
+                        <label className="form-label">Age <span className="text-danger">*</span></label>
                         <input
                           type="number"
                           className="form-control"
                           value={playerAge}
                           onChange={(e) => setPlayerAge(e.target.value)}
+                          placeholder="Enter your age"
+                          min="13"
+                          max="100"
                           required
+                          disabled={!isMissingRequiredFields && hasRegistered}
                         />
                       </div>
 
                       <div className="mb-3">
-                        <label className="form-label">Location *</label>
+                        <label className="form-label">Location <span className="text-danger">*</span></label>
                         <input
                           type="text"
                           className="form-control"
                           value={playerPlace}
                           onChange={(e) => setPlayerPlace(e.target.value)}
+                          placeholder="City, Country"
                           required
+                          disabled={!isMissingRequiredFields && hasRegistered}
                         />
                       </div>
 
@@ -389,8 +634,20 @@ export default function SpecificClanRegistration() {
                         className="btn btn-success w-100"
                         disabled={submitting || uploading}
                       >
-                        {submitting ? "Registering..." : uploading ? "Uploading..." : "Register"}
+                        {submitting ? "Processing..." : uploading ? "Uploading Photo..." : (isMissingRequiredFields ? "✓ Complete Registration" : "✓ Register")}
                       </button>
+
+                      {isMissingRequiredFields && (
+                        <div className="alert alert-danger mt-3 mb-0 small">
+                          <strong>⚠️ FINAL NOTICE:</strong> After completing this form with all required fields, your registration will be <strong>permanently locked</strong> and no further edits will be allowed.
+                        </div>
+                      )}
+
+                      {!isMissingRequiredFields && !hasRegistered && (
+                        <div className="alert alert-warning mt-3 mb-0 small">
+                          <strong>⚠️ Final Registration Notice:</strong> By clicking "Register", you confirm that all information is accurate. <strong>No edits or changes will be allowed after submission.</strong>
+                        </div>
+                      )}
                     </form>
                   </div>
                 </div>
@@ -412,16 +669,19 @@ export default function SpecificClanRegistration() {
                                 <img
                                   src={player.player_avatar}
                                   alt={player.name}
-                                  style={{ width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover" }}
+                                  style={{ width: "50px", height: "60px", borderRadius: "4px", objectFit: "cover" }}
                                 />
                               ) : (
-                                <div className="bg-light rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px" }}>
+                                <div className="bg-light rounded d-flex align-items-center justify-content-center" style={{ width: "50px", height: "60px" }}>
                                   👤
                                 </div>
                               )}
                               <div>
-                                <strong>{player.name}</strong>
-                                <div className="small text-muted">Age: {player.age} | 📍 {player.place}</div>
+                                <strong>{player.name || "No name"}</strong>
+                                <div className="small text-muted">
+                                  Age: {player.age || "?"} | 📍 {player.place || "No location"}
+                                  {!player.player_avatar && <span className="badge bg-danger ms-2">Missing Avatar!</span>}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -432,7 +692,7 @@ export default function SpecificClanRegistration() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </main>
     </>

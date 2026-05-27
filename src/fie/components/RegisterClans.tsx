@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../../supabase";
 import Navbar from "../../components/Navbar";
 
@@ -14,8 +14,6 @@ interface Clan {
   created_at: string;
 }
 
-
-
 export default function ClanManager() {
   const [clans, setClans] = useState<Clan[]>([]);
   const [clanName, setClanName] = useState("");
@@ -25,28 +23,18 @@ export default function ClanManager() {
   const [uploading, setUploading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const isMounted = useRef(true);
 
-  useEffect(() => {
-    isMounted.current = true;
-    
-    fetchClans();
-    
-    return () => {
-      isMounted.current = false;
-      if (imagePreview && imagePreview.startsWith('blob:')) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, [imagePreview]);
-
-  const fetchClans = async () => {
+  // Define fetchClans with useCallback to prevent recreation
+  const fetchClans = useCallback(async (userId: string) => {
     try {
       setFetching(true);
       const { data, error } = await supabase
         .from('clans')
         .select('*')
+        .eq('created_by', userId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -57,7 +45,38 @@ export default function ClanManager() {
     } finally {
       if (isMounted.current) setFetching(false);
     }
-  };
+  }, []); // No dependencies needed for this function
+
+  // Define getCurrentUser with useCallback
+  const getCurrentUser = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        await fetchClans(user.id);
+      } else {
+        setFetching(false);
+        alert("You must be logged in to view your clans");
+      }
+    } catch (error) {
+      console.error('Error getting user:', error);
+      setFetching(false);
+    }
+  }, [fetchClans]); // fetchClans is a dependency
+
+  useEffect(() => {
+    isMounted.current = true;
+    
+    getCurrentUser();
+    
+    return () => {
+      isMounted.current = false;
+      // Cleanup image preview URL if it exists
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [getCurrentUser, imagePreview]); // Include dependencies
 
   const uploadImageToWorker = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -158,7 +177,7 @@ export default function ClanManager() {
       setImagePreview(null);
       
       // Refresh the list
-      await fetchClans();
+      await fetchClans(user.id);
       
       alert("Clan created successfully!");
     } catch (err) {
@@ -170,6 +189,12 @@ export default function ClanManager() {
   };
 
   const handleDeleteClan = async (clan: Clan) => {
+    // Check if user owns this clan
+    if (clan.created_by !== currentUserId) {
+      alert("You don't have permission to delete this clan");
+      return;
+    }
+
     // Check for players in clan
     const playerCount = await checkPlayersInClan(clan.id);
     
@@ -207,7 +232,9 @@ export default function ClanManager() {
       }
       
       // Refresh the list
-      await fetchClans();
+      if (currentUserId) {
+        await fetchClans(currentUserId);
+      }
       
       alert(`Clan "${clan.clan_name}" deleted successfully!${playerCount > 0 ? ` Removed ${playerCount} linked player${playerCount === 1 ? '' : 's'}.` : ''}`);
     } catch (error: any) {
@@ -221,6 +248,7 @@ export default function ClanManager() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Revoke old preview URL if it exists
       if (imagePreview && imagePreview.startsWith('blob:')) {
         URL.revokeObjectURL(imagePreview);
       }
@@ -353,7 +381,7 @@ export default function ClanManager() {
               </div>
             ) : clans.length === 0 ? (
               <div className="text-center py-5">
-                <p className="text-muted">No clans created yet. Create your first clan above!</p>
+                <p className="text-muted">You haven't created any clans yet. Create your first clan above!</p>
               </div>
             ) : (
               <div className="row g-4">
