@@ -61,7 +61,7 @@ const InstallBar = () => {
           Continue to Website
         </Link>
 
-        <Link to="/announcements" style={styles.webBtn}>
+        <Link to="/announcements" style={styles.blogBtn}>
           Blog
         </Link>
      <Link to="/fie" style={styles.fie}>
@@ -128,6 +128,23 @@ const styles = {
     fontWeight: "500",
     backdropFilter: "blur(8px)",
   },
+  blogBtn: {
+  padding: "10px 24px",
+  background: "linear-gradient(135deg, #fff0f5 0%, #ffe4ec 100%)",
+  color: "#db7093",
+  textDecoration: "none",
+  borderRadius: "40px",
+  border: "1px solid rgba(219, 112, 147, 0.25)",
+  fontWeight: "500",
+  fontSize: "0.85rem",
+  letterSpacing: "0.3px",
+  transition: "all 0.3s ease",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  boxShadow: "0 2px 8px rgba(219, 112, 147, 0.08)",
+},
 };
 
 export default InstallBar;

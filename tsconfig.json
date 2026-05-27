@@ -17,6 +17,6 @@
     "incremental": true,
         "types": ["node"]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/components/Advert.jsx", "src/index.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/components/Advert.jsx", "src/index.js", "src/pages/Announcement/Profiles.tsx"],
   "exclude": ["node_modules"]
 }
