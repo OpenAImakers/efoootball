@@ -24,6 +24,7 @@ interface ClanPlayer {
   clan_id: string;
   created_at: string;
   user_id?: string;
+  gender: string;
 }
 
 export default function SpecificClanRegistration() {
@@ -41,6 +42,7 @@ export default function SpecificClanRegistration() {
   const [playerName, setPlayerName] = useState("");
   const [playerAge, setPlayerAge] = useState("");
   const [playerPlace, setPlayerPlace] = useState("");
+  const [playerGender, setPlayerGender] = useState("Male");
   const [playerAvatar, setPlayerAvatar] = useState<File | null>(null);
   const [playerAvatarPreview, setPlayerAvatarPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -216,6 +218,7 @@ export default function SpecificClanRegistration() {
             place: playerPlace.trim(),
             clan_id: id,
             user_id: currentUser.id,
+            gender: playerGender,
           },
         ]);
       
@@ -224,6 +227,7 @@ export default function SpecificClanRegistration() {
       setPlayerName("");
       setPlayerAge("");
       setPlayerPlace("");
+      setPlayerGender("Male");
       if (playerAvatarPreview && playerAvatarPreview.startsWith('blob:')) {
         URL.revokeObjectURL(playerAvatarPreview);
       }
@@ -384,6 +388,35 @@ export default function SpecificClanRegistration() {
                         />
                       </div>
 
+                      {/* Gender Radio Group Selection */}
+                      <div className="mb-3">
+                        <label className="form-label d-block">Gender *</label>
+                        <div className="form-check form-check-inline">
+                          <input
+                            className="form-check-input"
+                            type="radio"
+                            name="playerGender"
+                            id="genderMale"
+                            value="Male"
+                            checked={playerGender === "Male"}
+                            onChange={(e) => setPlayerGender(e.target.value)}
+                          />
+                          <label className="form-check-label" htmlFor="genderMale">Male</label>
+                        </div>
+                        <div className="form-check form-check-inline">
+                          <input
+                            className="form-check-input"
+                            type="radio"
+                            name="playerGender"
+                            id="genderFemale"
+                            value="Female"
+                            checked={playerGender === "Female"}
+                            onChange={(e) => setPlayerGender(e.target.value)}
+                          />
+                          <label className="form-check-label" htmlFor="genderFemale">Female</label>
+                        </div>
+                      </div>
+
                       <button
                         type="submit"
                         className="btn btn-success w-100"
@@ -421,7 +454,10 @@ export default function SpecificClanRegistration() {
                               )}
                               <div>
                                 <strong>{player.name}</strong>
-                                <div className="small text-muted">Age: {player.age} | 📍 {player.place}</div>
+                                <div className="small text-muted">
+                                  Age: {player.age} | {player.gender || "Male"}
+                                </div>
+                                <div className="small text-muted">📍 {player.place}</div>
                               </div>
                             </div>
                           </div>

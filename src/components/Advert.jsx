@@ -5,7 +5,6 @@ import LivelyFeed from "./LivelyFeed";
 const InstallBar = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
     const standalone =
@@ -25,7 +24,6 @@ const InstallBar = () => {
     const installedHandler = () => {
       setIsStandalone(true);
       setDeferredPrompt(null);
-      setIsInstalling(false);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
@@ -39,87 +37,19 @@ const InstallBar = () => {
 
   const handleInstall = async () => {
     if (!deferredPrompt) {
-      alert("Install not available. Use browser menu → Add to Home Screen.");
+      alert("Already Installed. If not, use browser menu → Add to Home Screen.");
       return;
     }
 
-    setIsInstalling(true);
-
     deferredPrompt.prompt();
-
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome !== "accepted") {
-      setIsInstalling(false);
-    }
+    await deferredPrompt.userChoice;
   };
 
   if (isStandalone) return null;
 
   return (
     <>
-      {/* LOCAL CSS ONLY */}
-      <style>
-        {`
-          @keyframes dashMove {
-            0% {
-              transform: translateX(-20px);
-              opacity: 0.3;
-            }
-
-            50% {
-              transform: translateX(20px);
-              opacity: 1;
-            }
-
-            100% {
-              transform: translateX(-20px);
-              opacity: 0.3;
-            }
-          }
-
-          @keyframes floatGlow {
-            0% {
-              transform: translateY(0px);
-            }
-
-            50% {
-              transform: translateY(-4px);
-            }
-
-            100% {
-              transform: translateY(0px);
-            }
-          }
-        `}
-      </style>
-
       <div style={styles.container}>
-        {/* INSTALL SCREEN */}
-        {isInstalling && (
-          <div style={styles.installOverlay}>
-            <div style={styles.loaderCard}>
-              <div style={styles.loaderIcon}>
-                <i className="bi bi-cloud-arrow-down-fill"></i>
-              </div>
-
-              <div style={styles.loaderTitle}>
-                Installing Application
-              </div>
-
-              <div style={styles.dashLoader}>
-                <span>-</span>
-                <span>---</span>
-                <span>-----</span>
-              </div>
-
-              <div style={styles.loaderText}>
-                Preparing assets...
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* BUTTONS */}
         <div style={styles.buttonRow}>
           <button style={styles.downloadBtn} onClick={handleInstall}>
@@ -187,56 +117,6 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     flexWrap: "wrap",
-  },
-
-  installOverlay: {
-    position: "absolute",
-    inset: 0,
-    background: "rgba(2,6,18,0.97)",
-    backdropFilter: "blur(14px)",
-    zIndex: 100,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  loaderCard: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "16px",
-    padding: "30px",
-    borderRadius: "24px",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.4)",
-  },
-
-  loaderIcon: {
-    fontSize: "2.5rem",
-    color: "#f8c146",
-    animation: "floatGlow 1.8s infinite ease-in-out",
-  },
-
-  loaderTitle: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: "1.1rem",
-    letterSpacing: "0.5px",
-  },
-
-  dashLoader: {
-    display: "flex",
-    gap: "10px",
-    fontSize: "1.8rem",
-    color: "#f8c146",
-    fontWeight: "900",
-    animation: "dashMove 1.2s infinite ease-in-out",
-  },
-
-  loaderText: {
-    color: "rgba(255,255,255,0.65)",
-    fontSize: "0.9rem",
   },
 
   downloadBtn: {

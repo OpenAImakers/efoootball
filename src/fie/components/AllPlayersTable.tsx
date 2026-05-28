@@ -1,13 +1,68 @@
-import React from "react";
+import { supabase } from "../../supabase";
+import React, { useEffect, useState } from "react";
+
+// Global cache object to hold state outside of lifecycle mounts
+const leaderboardCache = {
+  data: null as any[] | null,
+  timestamp: 0,
+};
+const CACHE_EXPIRY = 1000 * 60 * 3; // 3 minutes cache lifespan
+
+const LOADING_PHRASES = [
+  "CONNECTING TO LEAGUE SERVERS...",
+  "SYNCING PLAYER STATS...",
+  "CALIBRATING MMR RANKINGS...",
+  "COMPILING TOURNAMENT LEADERBOARD...",
+];
 
 export default function AllPlayersTable() {
-  const players = [
-    { name: "Kevin", clan: "Alpha Warriors", points: 120 },
-    { name: "Brian", clan: "Alpha Warriors", points: 90 },
-    { name: "Alex", clan: "Goal Hunters", points: 110 },
-    { name: "Mike", clan: "Elite FC", points: 70 },
-    { name: "John", clan: "Elite FC", points: 80 },
-  ];
+  const [players, setPlayers] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [phraseIdx, setPhraseIdx] = useState<number>(0);
+
+  // Cycle through tactical loading status strings
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setPhraseIdx((prev) => (prev + 1) % LOADING_PHRASES.length);
+    }, 800);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      const now = Date.now();
+
+      // Serve directly from runtime memory cache if fresh
+      if (leaderboardCache.data && (now - leaderboardCache.timestamp < CACHE_EXPIRY)) {
+        setPlayers(leaderboardCache.data);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("all_players_leaderboard")
+          .select("*")
+          .order("rank", { ascending: true });
+
+        if (error) throw error;
+        if (data) {
+          // Save parameters to local runtime cache
+          leaderboardCache.data = data;
+          leaderboardCache.timestamp = now;
+          setPlayers(data);
+        }
+      } catch (error) {
+        console.error("Error fetching player leaderboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
+  }, []);
 
   const styles = {
     card: {
@@ -51,10 +106,55 @@ export default function AllPlayersTable() {
       fontWeight: 500,
       letterSpacing: "0.5px",
     },
+
+    // Progress Loader Container Setup
+    loaderWrapper: {
+      padding: "30px 10px",
+      textAlign: "center" as const,
+    },
+
+    loaderText: {
+      fontSize: "12px",
+      fontWeight: 700,
+      letterSpacing: "1.5px",
+      color: "#38b222",
+      marginBottom: "8px",
+    },
+
+    progressBarTrack: {
+      width: "100%",
+      maxWidth: "300px",
+      height: "6px",
+      background: "rgba(0,0,0,0.08)",
+      borderRadius: "10px",
+      margin: "0 auto",
+      overflow: "hidden",
+      position: "relative" as const,
+    },
+
+    progressBarFill: {
+      position: "absolute" as const,
+      top: 0,
+      left: 0,
+      height: "100%",
+      width: "40%",
+      background: "linear-gradient(90deg, #38b222, #ff9f1c)",
+      borderRadius: "10px",
+      animation: "matchmaking-slide 1.2s infinite ease-in-out",
+    },
   };
 
   return (
     <div style={styles.card}>
+      {/* Injected Keyframes for loading bar slide effect */}
+      <style>{`
+        @keyframes matchmaking-slide {
+          0% { left: -40%; width: 30%; }
+          50% { width: 40%; }
+          100% { left: 100%; width: 20%; }
+        }
+      `}</style>
+
       <h2 style={styles.title}>All Players</h2>
 
       <table style={styles.table}>
@@ -73,19 +173,40 @@ export default function AllPlayersTable() {
         </thead>
 
         <tbody>
-          {players.map((p: any, i: number) => (
-            <tr key={i}>
-              <td style={styles.td}>{i + 1}</td>
-              <td style={styles.td}>{p.name}</td>
-              <td style={styles.td}>Male</td>
-              <td style={styles.td}>{p.clan}</td>
-              <td style={styles.td}>10</td>
-              <td style={styles.td}>7</td>
-              <td style={styles.td}>2</td>
-              <td style={styles.td}>1</td>
-              <td style={styles.td}>{p.points}</td>
+          {loading ? (
+            <tr>
+              <td colSpan={9}>
+                <div style={styles.loaderWrapper}>
+                  <div style={styles.loaderText}>
+                    {LOADING_PHRASES[phraseIdx]}
+                  </div>
+                  <div style={styles.progressBarTrack}>
+                    <div style={styles.progressBarFill} />
+                  </div>
+                </div>
+              </td>
             </tr>
-          ))}
+          ) : players.length === 0 ? (
+            <tr>
+              <td colSpan={9} style={{ ...styles.td, textAlign: "center" }}>
+                No players registered yet.
+              </td>
+            </tr>
+          ) : (
+            players.map((p: any, i: number) => (
+              <tr key={p.id || i} style={{ borderBottom: "1px solid rgba(0,0,0,0.03)" }}>
+                <td style={styles.td}>#{p.rank}</td>
+                <td style={styles.td}>{p.name}</td>
+                <td style={styles.td}>{p.gender}</td>
+                <td style={styles.td}>{p.clan}</td>
+                <td style={styles.td}>{p.mp}</td>
+                <td style={styles.td}>{p.w}</td>
+                <td style={styles.td}>{p.l}</td>
+                <td style={styles.td}>{p.d}</td>
+                <td style={styles.td}>{p.points}</td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
