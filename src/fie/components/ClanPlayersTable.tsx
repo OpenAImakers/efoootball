@@ -244,7 +244,7 @@ export default function ClanPlayersProfile({
       {/* Empty State */}
       {!loading && selected && players.length === 0 && (
         <div style={styles.empty}>
-          No players found.
+          Select your clan to view Players
         </div>
       )}
 

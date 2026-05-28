@@ -5,7 +5,7 @@ export default function Header() {
 
   useEffect(() => {
     const onScroll = () => {
-      setScrolled(window.scrollY > 40);
+      setScrolled(window.scrollY > 20);
     };
 
     window.addEventListener("scroll", onScroll);
@@ -20,83 +20,114 @@ export default function Header() {
       zIndex: 1000,
       background: "linear-gradient(135deg, #38b222, #ff9f1c)",
       color: "#111",
-      transition: "all 0.3s ease",
-      boxShadow: scrolled
-        ? "0 4px 15px rgba(0,0,0,0.25)"
-        : "none",
-      padding: scrolled ? "8px 15px" : "18px 20px",
+      padding: "14px 20px", 
       textAlign: "center" as const,
       fontFamily: "'Rajdhani', 'Orbitron', 'Segoe UI', Arial, sans-serif",
       boxSizing: "border-box" as const,
+      overflow: "hidden",
+      boxShadow: scrolled 
+        ? "0 10px 30px rgba(0,0,0,0.15)" 
+        : "0 0 0 rgba(0,0,0,0)",
+      transition: "box-shadow 0.3s ease",
+    },
+
+    hudScanline: {
+      position: "absolute" as const,
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      background: "linear-gradient(rgba(255,255,255,0.07) 50%, rgba(0,0,0,0.05) 50%)",
+      backgroundSize: "100% 4px",
+      pointerEvents: "none" as const,
+      zIndex: 1,
     },
 
     title: {
-      fontSize: scrolled ? "14px" : "18px",
+      fontSize: "15px",
       fontWeight: 800,
-      letterSpacing: "2px",
-      transition: "all 0.3s ease",
+      letterSpacing: "3px",
       color: "#1a1a2e",
+      opacity: 0.85,
+      position: "relative" as const,
+      zIndex: 3,
     },
 
     sub: {
-      marginTop: scrolled ? "0px" : "6px",
-      fontSize: scrolled ? "13px" : "18px",
-      fontWeight: 800,
+      marginTop: "4px",
+      fontSize: "16px",
+      fontWeight: 900,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: scrolled ? "12px" : "20px",
-      opacity: scrolled ? 0.9 : 1,
-      transition: "all 0.3s ease",
+      gap: "12px",
       textTransform: "uppercase" as const,
-      letterSpacing: "1px",
+      letterSpacing: "1.5px",
+      position: "relative" as const,
+      zIndex: 3,
     },
 
+    /* The Secret Sauce: Hardware-accelerated CSS translation moves the brackets smoothly without disrupting text elements */
     iconLeft: {
-      fontSize: scrolled ? "14px" : "20px",
-      transition: "all 0.3s ease",
+      fontSize: "16px",
+      opacity: 0.75,
+      transform: scrolled ? "translateX(-25px)" : "translateX(0px)",
+      transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
     },
 
     iconRight: {
-      fontSize: scrolled ? "14px" : "20px",
-      transition: "all 0.3s ease",
+      fontSize: "16px",
+      opacity: 0.75,
+      transform: scrolled ? "translateX(25px)" : "translateX(0px)",
+      transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+    },
+
+    ballIcon: {
+      fontSize: "16px",
+      opacity: 0.8,
     },
 
     mainText: {
-      fontWeight: 800,
+      fontWeight: 900,
       color: "#1a1a2e",
     },
 
     bottomLeftText: {
       position: "absolute" as const,
-      bottom: scrolled ? "8px" : "12px",
-      left: scrolled ? "15px" : "20px",
-      fontSize: scrolled ? "11px" : "13px",
-      fontWeight: 800,
+      bottom: "14px",
+      left: "20px",
+      fontSize: "11px",
+      fontWeight: 700,
       textTransform: "uppercase" as const,
       color: "#1a1a2e",
       letterSpacing: "1px",
-      transition: "all 0.3s ease",
+      opacity: scrolled ? 0 : 0.6,
+      transition: "opacity 0.25s ease", 
       pointerEvents: "none" as const, 
+      zIndex: 3,
     },
   };
 
   return (
     <div style={styles.header}>
+      <div style={styles.hudScanline} />
+
       <div style={styles.title}>
         FEDERATION INTERNATIONALE
       </div>
 
       <div style={styles.sub}>
-        <i className="bi bi-arrow-left" style={styles.iconLeft}></i>
-        <i className="bi bi-soccer-ball" style={styles.iconLeft}></i>
+        {/* Left Chevron slides left */}
+        <i className="bi bi-chevron-left" style={styles.iconLeft}></i>
+        <i className="bi bi-soccer-ball" style={styles.ballIcon}></i>
         
         <span style={styles.mainText}>
           EFOOTBALL
         </span>
         
-        <i className="bi bi-soccer-ball" style={styles.iconRight}></i>
-        <i className="bi bi-arrow-right" style={styles.iconRight}></i>
+        <i className="bi bi-soccer-ball" style={styles.ballIcon}></i>
+        {/* Right Chevron slides right */}
+        <i className="bi bi-chevron-right" style={styles.iconRight}></i>
       </div>
 
       <div style={styles.bottomLeftText}>
