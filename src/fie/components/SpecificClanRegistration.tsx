@@ -317,7 +317,7 @@ export default function SpecificClanRegistration() {
                     
                     <form onSubmit={handleSubmit}>
                       <div className="mb-3">
-                        <label className="form-label">Avatar (Optional)</label>
+                        <label className="form-label">Avatar (Must Upload a passport sized Photo)</label>
                         <div className="border p-3 text-center">
                           {playerAvatarPreview ? (
                             <div className="position-relative d-inline-block">
