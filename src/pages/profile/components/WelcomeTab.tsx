@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import Posts from "./WelcomeTabViews/Posts";
+import AddPosts from "./WelcomeTabViews/AddPosts";
 
 interface WelcomeTabProps {
   profile: {
@@ -7,330 +9,61 @@ interface WelcomeTabProps {
     profile_pic: string | null;
   } | null;
 }
- const milestones = [
-    {
-      icon: "bi-person-check-fill",
-      title: "Account Registered",
-      completed: true,
-    },
-    {
-      icon: "bi-pencil-square",
-      title: "Complete Profile",
-      completed: false,
-    },
-    {
-      icon: "bi-controller",
-      title: "Update Rating",
-      completed: false,
-    },
-    {
-      icon: "bi-calendar-event",
-      title: "Join First Tournament",
-      completed: false,
-    },
-    {
-      icon: "bi-joystick",
-      title: "Play First Match",
-      completed: false,
-    },
-    {
-      icon: "bi-trophy",
-      title: "Win First Match",
-      completed: false,
-    },
-    {
-      icon: "bi-star",
-      title: "Earn First Ranking Point",
-      completed: false,
-    },
-    {
-      icon: "bi-bar-chart-line",
-      title: "Reach Top 100",
-      completed: false,
-    },
-    {
-      icon: "bi-lightning-charge",
-      title: "Reach Top 50",
-      completed: false,
-    },
-    {
-      icon: "bi-award",
-      title: "Reach Top 10",
-      completed: false,
-    },
-    {
-      icon: "bi-cup-hot",
-      title: "Win Your First Tournament",
-      completed: false,
-    },
-    {
-      icon: "bi-gem",
-      title: "Become a Seasonal Qualifier",
-      completed: false,
-    },
-    {
-      icon: "bi-crown-fill",
-      title: "Qualify for National Finals",
-      completed: false,
-    },
-    {
-  icon: "bi-megaphone-fill",
-  title: "Commentate a Match",
-  completed: false,
-},
-{
-  icon: "bi-person-plus-fill",
-  title: "Create a Tournament Registration",
-  completed: false,
-},
-{
-  icon: "bi-trophy-fill",
-  title: "Host Your First Tournament",
-  completed: false,
-},
-{
-  icon: "bi-cash-coin",
-  title: "Earn Over KSh 100",
-  completed: false,
-},
-{
-  icon: "bi-wallet2",
-  title: "Earn Over KSh 500",
-  completed: false,
-},
-{
-  icon: "bi-bank",
-  title: "Earn Over KSh 1,000",
-  completed: false,
-},
-{
-  icon: "bi-fire",
-  title: "Earn Over KSh 5,000",
-  completed: false,
-},
-{
-  icon: "bi-gem",
-  title: "Become a Community Contributor",
-  completed: false,
-},
-{
-  icon: "bi-people-fill",
-  title: "Recruit 5 New Players",
-  completed: false,
-},
-{
-  icon: "bi-award-fill",
-  title: "Become a Verified Tournament Organizer",
-  completed: false,
-},
-{
-  icon: "bi-star-fill",
-  title: "Earn 100 Ranking Points",
-  completed: false,
-},
-{
-  icon: "bi-stars",
-  title: "Earn 500 Ranking Points",
-  completed: false,
-},
-{
-  icon: "bi-lightning-charge-fill",
-  title: "Earn 1,000 Ranking Points",
-  completed: false,
-},
-{
-  icon: "bi-globe-africa",
-  title: "Represent Your County",
-  completed: false,
-},
-{
-  icon: "bi-shield-check",
-  title: "Complete All Beginner Milestones",
-  completed: false,
-}
-  ];
 
 export default function WelcomeTab({ profile }: WelcomeTabProps) {
-  const completedCount = milestones.filter((m) => m.completed).length;
+  const [activeTab, setActiveTab] = useState<"posts" | "add">("posts");
+  const [ ,setRefreshKey] = useState(0);
 
-  const progress =
-    milestones.length > 0
-      ? Math.round((completedCount / milestones.length) * 100)
-      : 0;
+  const handlePostAdded = () => {
+    // Switch to posts tab and refresh the list
+    setActiveTab("posts");
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
-    <div
-      className="d-flex flex-column"
-      style={{
-        height: "calc(100vh - 440px)", // adjust to fit your layout
-      }}
-    >
-      {/* Fixed Header */}
+    <div className="d-flex flex-grow-1 flex-column">
+      {/* Header */}
       <div>
         <h4 className="fw-bold text-primary mb-2">
-          Welcome, {profile?.display_name || profile?.username}!
+          Welcome, {profile?.display_name || profile?.username || "Player"}!
         </h4>
 
-        <p className="text-muted mb-4">
-          Complete milestones, climb the rankings, and earn your place among
-          Kenya&apos;s top eFootball competitors.
+        <p className="text-muted mb-3">
+          Share updates, connect with players, and stay active in the community.
         </p>
 
-        {/* Progress Card */}
-        <div className="card shadow-sm border-0 mb-4">
-          <div className="card-body">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <h5 className="fw-bold mb-0">
-                <i className="bi bi-map me-2"></i>
-                Player Journey
-              </h5>
+        {/* Tabs */}
+        <div className="card shadow-sm border-0 mb-3">
+          <div className="card-body p-2">
+            <div className="d-flex gap-2">
+              <button
+                className={`btn flex-fill ${
+                  activeTab === "posts" ? "btn-primary" : "btn-outline-primary"
+                }`}
+                onClick={() => setActiveTab("posts")}
+              >
+                <i className="bi bi-journal-text me-2"></i>
+                Posts
+              </button>
 
-              <span className="badge bg-primary fs-6">
-                {progress}% Complete
-              </span>
+              <button
+                className={`btn flex-fill ${
+                  activeTab === "add" ? "btn-primary" : "btn-outline-primary"
+                }`}
+                onClick={() => setActiveTab("add")}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Add Post
+              </button>
             </div>
-
-            <div className="progress mb-2" style={{ height: "10px" }}>
-              <div
-                className="progress-bar"
-                role="progressbar"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-
-            <small className="text-muted">
-              {completedCount} of {milestones.length} milestones completed
-            </small>
           </div>
         </div>
       </div>
 
-      {/* Scrollable Area */}
-      <div
-        className="flex-grow-1 overflow-auto"
-        style={{
-          minHeight: 0,
-          paddingRight: "4px",
-        }}
-      >
-        {/* Journey Timeline */}
-        <div className="card shadow-sm border-0 mb-4">
-          <div className="card-body">
-            <h5 className="fw-bold mb-4">
-              <i className="bi bi-signpost-split-fill me-2"></i>
-              Road to Champion
-            </h5>
-
-            <div className="d-flex flex-column gap-3">
-              {milestones.map((milestone, index) => (
-                <div
-                  key={index}
-                  className={`d-flex align-items-center p-3 rounded ${
-                    milestone.completed
-                      ? "bg-success bg-opacity-10"
-                      : "bg-light"
-                  }`}
-                >
-                  <div
-                    className={`rounded-circle d-flex align-items-center justify-content-center me-3 ${
-                      milestone.completed
-                        ? "bg-success text-white"
-                        : "bg-secondary text-white"
-                    }`}
-                    style={{
-                      width: "42px",
-                      height: "42px",
-                      minWidth: "42px",
-                    }}
-                  >
-                    <i className={`bi ${milestone.icon}`}></i>
-                  </div>
-
-                  <div className="flex-grow-1">
-                    <div className="fw-semibold">
-                      {milestone.title}
-                    </div>
-                  </div>
-
-                  {milestone.completed ? (
-                    <i className="bi bi-check-circle-fill text-success fs-4"></i>
-                  ) : (
-                    <i className="bi bi-circle text-secondary fs-5"></i>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Achievements */}
-        <div className="card shadow-sm border-0 mb-4">
-          <div className="card-body">
-            <h5 className="fw-bold mb-3">
-              <i className="bi bi-stars me-2"></i>
-              Unlockable Achievements
-            </h5>
-
-            <div className="row g-3">
-              <div className="col-md-4">
-                <div className="border rounded p-3 text-center h-100">
-                  <i className="bi bi-fire fs-2 text-warning"></i>
-                  <div className="fw-semibold mt-2">
-                    3 Match Win Streak
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-md-4">
-                <div className="border rounded p-3 text-center h-100">
-                  <i className="bi bi-trophy-fill fs-2 text-warning"></i>
-                  <div className="fw-semibold mt-2">
-                    Tournament Champion
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-md-4">
-                <div className="border rounded p-3 text-center h-100">
-                  <i className="bi bi-crown-fill fs-2 text-warning"></i>
-                  <div className="fw-semibold mt-2">
-                    Seasonal Top 10
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-md-4">
-                <div className="border rounded p-3 text-center h-100">
-                  <i className="bi bi-bank fs-2 text-success"></i>
-                  <div className="fw-semibold mt-2">
-                    Earn KSh 1,000+
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-md-4">
-                <div className="border rounded p-3 text-center h-100">
-                  <i className="bi bi-mic-fill fs-2 text-primary"></i>
-                  <div className="fw-semibold mt-2">
-                    Commentate a Match
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-md-4">
-                <div className="border rounded p-3 text-center h-100">
-                  <i className="bi bi-award-fill fs-2 text-info"></i>
-                  <div className="fw-semibold mt-2">
-                    Tournament Organizer
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom spacing */}
-        <div style={{ height: "20px" }} />
+      {/* Content Switch */}
+      <div className="flex-grow-1 overflow-auto">
+        {activeTab === "posts" && <Posts  />}
+        {activeTab === "add" && <AddPosts onPostAdded={handlePostAdded} />}
       </div>
     </div>
   );
