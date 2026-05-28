@@ -4,6 +4,7 @@ import AddPosts from "./WelcomeTabViews/AddPosts";
 
 interface WelcomeTabProps {
   profile: {
+    id?: string | null;
     username: string | null;
     display_name: string | null;
     profile_pic: string | null;
@@ -12,13 +13,7 @@ interface WelcomeTabProps {
 
 export default function WelcomeTab({ profile }: WelcomeTabProps) {
   const [activeTab, setActiveTab] = useState<"posts" | "add">("posts");
-  const [ ,setRefreshKey] = useState(0);
 
-  const handlePostAdded = () => {
-    // Switch to posts tab and refresh the list
-    setActiveTab("posts");
-    setRefreshKey(prev => prev + 1);
-  };
 
   return (
     <div className="d-flex flex-grow-1 flex-column">
@@ -38,7 +33,9 @@ export default function WelcomeTab({ profile }: WelcomeTabProps) {
             <div className="d-flex gap-2">
               <button
                 className={`btn flex-fill ${
-                  activeTab === "posts" ? "btn-primary" : "btn-outline-primary"
+                  activeTab === "posts"
+                    ? "btn-primary"
+                    : "btn-outline-primary"
                 }`}
                 onClick={() => setActiveTab("posts")}
               >
@@ -48,7 +45,9 @@ export default function WelcomeTab({ profile }: WelcomeTabProps) {
 
               <button
                 className={`btn flex-fill ${
-                  activeTab === "add" ? "btn-primary" : "btn-outline-primary"
+                  activeTab === "add"
+                    ? "btn-primary"
+                    : "btn-outline-primary"
                 }`}
                 onClick={() => setActiveTab("add")}
               >
@@ -60,10 +59,15 @@ export default function WelcomeTab({ profile }: WelcomeTabProps) {
         </div>
       </div>
 
-      {/* Content Switch */}
+      {/* Content */}
       <div className="flex-grow-1 overflow-auto">
-        {activeTab === "posts" && <Posts  />}
-        {activeTab === "add" && <AddPosts onPostAdded={handlePostAdded} />}
+        {activeTab === "posts" && (
+          <Posts />
+        )}
+
+        {activeTab === "add" && (
+          <AddPosts/>
+        )}
       </div>
     </div>
   );
