@@ -30,7 +30,6 @@ import Registrations from "./pages/CreateRegistrations.tsx";
 import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 import SendSms from "./pages/sms/Sendsms";
 import Announcements from "./pages/Announcement/Announcement";
-import Journalists from "./pages/Announcement/CreatePost";
 import Fie from "./fie/Fie.tsx";
 import RegisterClans from "./fie/components/RegisterClans";
 import SpecificClanRegistration from "./fie/components/SpecificClanRegistration";
@@ -91,24 +90,13 @@ useEffect(() => {
 />
 {/* announcement routes */}
 
-            <Route
-  path="/announcements"
-  element={
-   
-      <Announcements />
-  }
-/>
-
-               <Route
-  path="/announcements/journalists"
-  element={
-     <ProtectedRoute> 
-   
-      <Journalists />
-       </ProtectedRoute>
-  }
-/>
-
+                  <Route
+        path="/announcements"
+        element={
+        
+            <Announcements />
+        }
+      />
 
       {/* leagues routes */}
 
