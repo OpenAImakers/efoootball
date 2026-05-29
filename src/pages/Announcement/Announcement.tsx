@@ -256,6 +256,7 @@ useEffect(() => {
       }}
     >
       <NewspaperMasthead />
+       <FeaturedPlayers/>
 
       <div className="container py-5">
         <div className="d-flex flex-column" style={{  margin: "0 auto" }}>
@@ -270,7 +271,7 @@ useEffect(() => {
 
               return (
                 <Fragment key={story.id}>
-                  <FeaturedPlayers/>
+                 
                   {/* Post Content */}
                   <div 
                     className="d-flex flex-column flex-sm-row gap-4 py-4"
