@@ -3,6 +3,7 @@ import NewspaperMasthead from "./NewspaperMasthead";
 import NewsOverlay from "./NewsOverlay";
 import { supabase } from "../../supabase";
 import Profiles from "./Profiles";
+import FeaturedPlayers from "../../fie/components/FeaturedPlayers";
 
 interface NewsItem {
   id: number;
@@ -269,6 +270,7 @@ useEffect(() => {
 
               return (
                 <Fragment key={story.id}>
+                  <FeaturedPlayers/>
                   {/* Post Content */}
                   <div 
                     className="d-flex flex-column flex-sm-row gap-4 py-4"
