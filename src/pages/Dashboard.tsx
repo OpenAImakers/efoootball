@@ -21,8 +21,8 @@ function Home() {
 
   const tabs = [
     { id: 'tournaments', label: 'ONGOING' },
-    { id: 'matches', label: 'MATCHES' },
-    { id: 'discussion', label: 'COMMUNITY' },
+    { id: 'matches', label: 'MATCHES PREDICT' },
+    { id: 'discussion', label: 'CHAT ROOM' },
   ];
 
   return (

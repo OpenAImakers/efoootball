@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../supabase";
 
+import MatchPreviews from "../components/MatchPreviews";
+
 const CACHE_KEY = "tournament_list_cache";
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 Minutes
 
@@ -152,6 +154,7 @@ const TournamentList = () => {
     .filter((t) => t.status === statusFilter);
 
   return (
+    <>  
     <div
       className="min-vh-100 w-100"
       style={{ backgroundColor: "#020617", color: "#f8fafc" }}
@@ -400,6 +403,8 @@ const TournamentList = () => {
         )}
       </div>
     </div>
+    <MatchPreviews/>
+    </>
   );
 };
 
