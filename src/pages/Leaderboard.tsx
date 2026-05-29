@@ -224,7 +224,7 @@ const KenyaEfootballHub: React.FC = () => {
                 className="text-primary text-decoration-none d-flex align-items-center gap-2"
               >
                 <i className="bi bi-person-plus-fill"></i>
-                <span>Register</span>
+                <span>Register Clan</span>
               </Link>
 
               <Link
