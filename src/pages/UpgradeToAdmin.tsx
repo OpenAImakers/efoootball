@@ -70,6 +70,12 @@ const UpgradeToAdmin: React.FC<UpgradeToAdminProps> = ({ role }) => {
           >
             CREATE TOURNAMENT
           </button>
+          <button 
+            onClick={() => window.location.href = '/clans'} 
+            style={adminButtonStyle(false)}
+          >
+            MANAGE CLANS
+          </button>
           
           
           <button 

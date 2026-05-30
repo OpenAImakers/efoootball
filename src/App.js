@@ -33,6 +33,7 @@ import Announcements from "./pages/Announcement/Announcement";
 import Fie from "./fie/Fie.tsx";
 import RegisterClans from "./fie/components/RegisterClans";
 import SpecificClanRegistration from "./fie/components/SpecificClanRegistration";
+import Clans from "./fie/clans/Clans";
 
 function App() {
   // Detect PWA vs browser
@@ -53,6 +54,13 @@ useEffect(() => {
   return (
     <Routes>
       {/* fie routes */}
+        <Route
+        path="/clans"
+        element={
+            <Clans />
+        }
+      />
+
       <Route
         path="/fie"
         element={
