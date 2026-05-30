@@ -33,7 +33,7 @@ import Announcements from "./pages/Announcement/Announcement";
 import Fie from "./fie/Fie.tsx";
 import RegisterClans from "./fie/components/RegisterClans";
 import SpecificClanRegistration from "./fie/components/SpecificClanRegistration";
-import Clans from "./fie/clans/Clans";
+import Clans from "./fie/clans/ClanAdminForm";
 
 function App() {
   // Detect PWA vs browser
