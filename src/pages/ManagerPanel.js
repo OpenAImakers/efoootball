@@ -1,87 +1,70 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react"; // Added useCallback
 import { supabase } from "../supabase";
 import { getActiveTournament } from "../Utils/TournamentSession";
 
 function TeamsManager() {
+  const [tournaments, setTournaments] = useState([]);
+  const [selectedTournamentId, setSelectedTournamentId] = useState(null);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
-  
-  // States for importing registration records
-  const [myRegistrations, setMyRegistrations] = useState([]);
-  const [selectedRegId, setSelectedRegId] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [userId, setUserId] = useState(null);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamGroup, setNewTeamGroup] = useState("0");
+
+  const nameInputRef = useRef(null);
 
   const activeSession = getActiveTournament();
-  const activeTournamentId = activeSession?.id || null;
 
-  // Initialize Session User
   useEffect(() => {
-    async function getSession() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUserId(user.id);
+    async function fetchTournaments() {
+      setLoading(true);
+      let query = supabase
+        .from("tournaments")
+        .select("id, name")
+        .order("created_at", { ascending: false });
+
+      if (activeSession?.id) {
+        query = query.eq("id", activeSession.id);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error fetching tournaments:", error);
+        setLoading(false);
+        return;
+      }
+
+      setTournaments(data || []);
+      if (data?.length > 0) {
+        if (activeSession?.id && data.some((t) => t.id === activeSession.id)) {
+          setSelectedTournamentId(activeSession.id);
+        } else {
+          setSelectedTournamentId(data[0].id);
+        }
+      }
+      setLoading(false);
     }
-    getSession();
-  }, []);
+    fetchTournaments();
+    // Added activeSession?.id to dependencies to satisfy ESLint
+  }, [activeSession?.id]);
 
-  // Fetch parent configurations created by this admin context along with tournament_id
-  const fetchMyRegistrations = useCallback(async () => {
-    if (!userId) return;
-    const { data } = await supabase
-      .from("registrations")
-      .select("id, name, tournament_id")
-      .eq("created_by", userId);
-    if (data) setMyRegistrations(data);
-  }, [userId]);
-
-  useEffect(() => {
-    fetchMyRegistrations();
-  }, [userId, fetchMyRegistrations]);
-
-  // Fetch structural data of teams bound to active context
+  // Wrapped in useCallback so it can be safely used in useEffect dependencies
   const refreshTeams = useCallback(async () => {
-    if (!activeTournamentId) return;
+    if (!selectedTournamentId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("teams")
       .select("*")
-      .eq("tournament_id", activeTournamentId)
+      .eq("tournament_id", selectedTournamentId)
       .order("group_id", { ascending: true })
       .order("name", { ascending: true });
 
     if (!error) setTeams(data || []);
     setLoading(false);
-  }, [activeTournamentId]);
+  }, [selectedTournamentId]);
 
   useEffect(() => {
-    if (activeTournamentId) {
-      refreshTeams();
-    }
-  }, [activeTournamentId, refreshTeams]);
-
-  // Streamlined Pipeline Execution leveraging Database Triggers
-  const handleImportTeams = async () => {
-    if (!selectedRegId || !activeTournamentId) return;
-
-    setImporting(true);
-    
-    // Simply update the tournament_id on the chosen registration record.
-    // The Database Trigger takes care of conditions 1, 2, and 3 instantly.
-    const { error: updateError } = await supabase
-      .from("registrations")
-      .update({ tournament_id: activeTournamentId })
-      .eq("id", selectedRegId);
-
-    setImporting(false);
-
-    if (updateError) {
-      alert("Error linking registration: " + updateError.message);
-    } else {
-      alert("Successfully linked registration! Teams have been auto-populated via trigger.");
-      fetchMyRegistrations(); 
-      refreshTeams();
-    }
-  };
+    if (selectedTournamentId) refreshTeams();
+  }, [selectedTournamentId, refreshTeams]); // Added refreshTeams here
 
   const handleChange = (id, field, value) => {
     setTeams((prev) =>
@@ -106,6 +89,26 @@ function TeamsManager() {
     else refreshTeams();
   };
 
+  const handleAddTeam = async () => {
+    if (!newTeamName.trim() || !selectedTournamentId) return;
+    const { error } = await supabase.from("teams").insert({
+      name: newTeamName.trim(),
+      tournament_id: selectedTournamentId,
+      group_id: parseInt(newTeamGroup) || 0,
+      w: 0,
+      l: 0,
+      d: 0,
+    });
+
+    if (!error) {
+      setNewTeamName("");
+      refreshTeams();
+      nameInputRef.current?.focus();
+    } else {
+      alert(error.message);
+    }
+  };
+
   const handleDeleteTeam = async (id, name) => {
     if (!window.confirm(`Delete ${name}?`)) return;
     await supabase
@@ -123,169 +126,152 @@ function TeamsManager() {
     groups[gid].push(team);
   });
 
-  // Determine if a registration has already been linked to this active tournament context
-  const isAlreadyImported = myRegistrations.some(
-    (reg) => reg.tournament_id === activeTournamentId
-  );
+  const isLockedMode = !!activeSession?.id;
 
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <h2 className="mb-0">
-          {activeSession?.name ? `Managing: ${activeSession.name}` : "Teams Manager"}
+          {isLockedMode ? `Managing: ${activeSession?.name}` : "Tournaments"}
         </h2>
+        {!isLockedMode && (
+          <select
+            className="form-select w-auto"
+            value={selectedTournamentId ?? ""}
+            onChange={(e) =>
+              setSelectedTournamentId(
+                e.target.value ? Number(e.target.value) : null
+              )
+            }
+          >
+            <option value="">Select a Tournament</option>
+            {tournaments.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {loading && teams.length === 0 ? (
         <div className="text-center py-5">
           <div className="spinner-border text-primary" />
         </div>
-      ) : !activeTournamentId ? (
+      ) : !selectedTournamentId ? (
         <div className="text-center py-5 bg-light rounded">
-          <p className="text-muted">No active tournament session found.</p>
+          <p className="text-muted">Select a tournament to manage teams.</p>
         </div>
       ) : (
         <>
-          {/* IMPORT CONTROL BAR INTERFACE */}
-          {!isAlreadyImported && (
-            <div className="card mb-4 shadow-sm border-0 bg-dark text-white">
-              <div className="card-body">
-                <h6 className="mb-3 text-uppercase tracking-wider">
-                  <i className="bi bi-download me-2"></i>Import Approved Sign-ups
-                </h6>
-                <div className="row g-2">
-                  <div className="col-md-8">
-                    <select
-                      className="form-select bg-secondary text-white border-0"
-                      value={selectedRegId}
-                      onChange={(e) => setSelectedRegId(e.target.value)}
-                    >
-                      <option value="">Select Registration Form Source...</option>
-                      {myRegistrations.map((reg) => (
-                        <option key={reg.id} value={reg.id} className="text-dark">
-                          {reg.name} (Form ID: #{reg.id})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-md-4">
-                    <button
-                      className="btn btn-primary w-100 fw-bold text-uppercase"
-                      onClick={handleImportTeams}
-                      disabled={!selectedRegId || importing}
-                    >
-                      {importing ? "Importing Data..." : "Execute Import"}
-                    </button>
-                  </div>
+          <div className="card mb-4 shadow-sm border-0 bg-dark text-white">
+            <div className="card-body">
+              <h6 className="mb-3">Add Team</h6>
+              <div className="row g-2">
+                <div className="col-md-6">
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    className="form-control"
+                    placeholder="Team name"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddTeam()}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <select
+                    className="form-select"
+                    value={newTeamGroup}
+                    onChange={(e) => setNewTeamGroup(e.target.value)}
+                  >
+                    <option value="0">No Group </option>
+                    <option value="1">Group 1</option>
+                    <option value="2">Group 2</option>
+                    <option value="3">Group 3</option>
+                    <option value="4">Group 4</option>
+                  </select>
+                </div>
+                <div className="col-md-3">
+                  <button
+                    className="btn btn-primary w-100"
+                    onClick={handleAddTeam}
+                    disabled={!newTeamName.trim()}
+                  >
+                    Add
+                  </button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* GROUPS SCHEDULING MANAGEMENT BLOCK */}
           <div className="row">
             {Object.keys(groups)
               .sort((a, b) => (a === "0" ? 1 : b === "0" ? -1 : a - b))
               .map((groupId) => (
                 <div key={groupId} className="col-lg-4 col-md-6 mb-4">
                   <div className="card border-0 shadow-sm h-100">
-                    <div className="card-header bg-white fw-bold text-primary d-flex justify-content-between align-items-center">
-                      <span>{groupId === "0" ? "All Teams" : `Group ${groupId}`}</span>
-                      <span className="badge bg-light text-dark border">{groups[groupId].length} Teams</span>
+                    <div className="card-header bg-white fw-bold text-primary">
+                      {groupId === "0" ? "Teams" : `Group ${groupId}`}
                     </div>
                     <div className="table-responsive">
-  <table className="table align-middle mb-0">
-    <thead>
-      <tr className="small text-muted">
-        <th style={{ minWidth: "220px" }}>Team</th>
-        <th style={{ width: "90px" }}>Grp</th>
-        <th style={{ width: "55px" }}>W</th>
-        <th style={{ width: "55px" }}>L</th>
-        <th style={{ width: "55px" }}>D</th>
-        <th style={{ width: "90px" }} />
-      </tr>
-    </thead>
-
-    <tbody>
-      {groups[groupId].map((team) => (
-        <tr key={team.id}>
-          <td>
-<div
-  className="bg-light fw-semibold py-2 px-3"
-  style={{
-    minWidth: "220px",
-    borderRadius: "10px",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    fontSize: "0.95rem",
-  }}
->
-  {team.name}
-</div>
-          </td>
-
-          <td>
-            <select
-              className="form-select form-select-sm border-0 bg-light"
-              style={{
-                width: "85px",
-                borderRadius: "10px",
-              }}
-              value={team.group_id ?? 0}
-              onChange={(e) =>
-                handleChange(team.id, "group_id", e.target.value)
-              }
-            >
-              <option value="0">No Group</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-            </select>
-          </td>
-
-          {["w", "l", "d"].map((f) => (
-            <td key={f}>
-              <input
-                type="number"
-                className="form-control form-control-sm text-center border-0 bg-light"
-                style={{
-                  width: "48px",
-                  borderRadius: "10px",
-                }}
-                value={team[f] ?? 0}
-                onChange={(e) =>
-                  handleChange(team.id, f, e.target.value)
-                }
-              />
-            </td>
-          ))}
-
-          <td className="text-end">
-            <div className="d-flex gap-2 justify-content-end">
-              <button
-                className="btn btn-sm btn-success rounded-pill px-2 py-1 fw-semibold"
-                onClick={() => handleSave(team)}
-              >
-                Save
-              </button>
-
-              <button
-                className="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 fw-semibold"
-                onClick={() =>
-                  handleDeleteTeam(team.id, team.name)
-                }
-              >
-                Del
-              </button>
-            </div>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+                      <table className="table align-middle mb-0">
+                        <thead>
+                          <tr className="small text-muted">
+                            <th>Team</th>
+                            <th>W</th>
+                            <th>L</th>
+                            <th>D</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groups[groupId].map((team) => (
+                            <tr key={team.id}>
+                              <td>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm fw-bold"
+                                  value={team.name}
+                                  onChange={(e) =>
+                                    handleChange(team.id, "name", e.target.value)
+                                  }
+                                />
+                              </td>
+                              {["w", "l", "d"].map((f) => (
+                                <td key={f}>
+                                  <input
+                                    type="number"
+                                    className="form-control form-control-sm text-center"
+                                    style={{ width: "45px" }}
+                                    value={team[f] ?? 0}
+                                    onChange={(e) =>
+                                      handleChange(team.id, f, e.target.value)
+                                    }
+                                  />
+                                </td>
+                              ))}
+                              <td className="text-end">
+                                <button
+                                  className="btn btn-sm btn-link text-success p-0 me-2"
+                                  onClick={() => handleSave(team)}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-link text-danger p-0"
+                                  onClick={() =>
+                                    handleDeleteTeam(team.id, team.name)
+                                  }
+                                >
+                                  Del
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               ))}
