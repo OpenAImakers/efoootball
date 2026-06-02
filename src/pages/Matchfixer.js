@@ -268,10 +268,19 @@ function MatchScheduler() {
                   onChange={(e) => setStagegroup(e.target.value)}
                 >
                   <option value="">No Group</option>
+                  {/* up to group 12 */}
                   <option value="1">Group 1</option>
                   <option value="2">Group 2</option>
                   <option value="3">Group 3</option>
                   <option value="4">Group 4</option>
+                  <option value="5">Group 5</option>
+                  <option value="6">Group 6</option>
+                  <option value="7">Group 7</option>
+                  <option value="8">Group 8</option>
+                  <option value="9">Group 9</option>
+                  <option value="10">Group 10</option>
+                  <option value="11">Group 11</option>
+                  <option value="12">Group 12</option>
                 </select>
               </div>
 
