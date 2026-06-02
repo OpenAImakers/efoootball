@@ -21,6 +21,10 @@ function MatchManager() {
   const [addToGA, setAddToGA] = useState(0);
   const [showEndModal, setShowEndModal] = useState(false);
 
+  // New UI feature state additions
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const activeSession = getActiveTournament();
 
   // --- SESSION LOGOUT LOGIC ---
@@ -145,6 +149,11 @@ function MatchManager() {
 
   const currentTournament = tournaments.find((t) => t.id === selectedTournamentId);
 
+  // Inline filter for search utility functionality 
+  const filteredTeams = teams.filter((t) =>
+    t.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <>
       {/* SESSION HEADER */}
@@ -251,37 +260,87 @@ function MatchManager() {
               </div>
             </div>
 
-            <h3 className="mb-4">Live Goal Overview</h3>
-            <div className="table-responsive">
-              <table className="table table-striped table-hover align-middle">
-                <thead className="table-dark">
-                  <tr>
-                    <th>Team</th>
-                    <th className="text-center">GF</th>
-                    <th className="text-center">GA</th>
-                    <th className="text-center">GD</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teams.map((t) => (
-                    <tr key={t.id}>
-                      <td>{t.name}</td>
-                      <td className="text-center">{t.gf}</td>
-                      <td className="text-center">{t.ga}</td>
-                      <td className="text-center">{(t.gf || 0) - (t.ga || 0)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Live Goal Overview Toggler Header */}
+            <div 
+              className="d-flex align-items-center justify-content-between mb-4" 
+              onClick={() => setIsOverviewOpen(!isOverviewOpen)} 
+              style={{ cursor: "pointer", userSelect: "none" }}
+            >
+              <h3 className="mb-0 d-flex align-items-center gap-2">
+                <i className={`bi ${isOverviewOpen ? "bi-chevron-up" : "bi-chevron-down"}`}></i>
+                Live Goal Overview
+              </h3>
+              <span className="text-muted small">
+                {isOverviewOpen ? "Click to collapse" : "Click to expand"}
+              </span>
             </div>
+
+            {/* Conditionally Render Content Layout when Opened */}
+            {isOverviewOpen && (
+              <>
+                {/* Real-time Filter Search Input Panel */}
+                <div className="mb-3 max-width-xs" style={{ maxWidth: "350px" }}>
+                  <div className="input-group input-group-sm">
+                    <span className="input-group-text bg-light text-secondary border-end-0">
+                      <i className="bi bi-search"></i>
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control border-start-0 ps-1"
+                      placeholder="Search team profile..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && (
+                      <button 
+                        className="btn btn-outline-secondary border-start-0" 
+                        type="button" 
+                        onClick={() => setSearchTerm("")}
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="table-responsive">
+                  <table className="table table-striped table-hover align-middle">
+                    <thead className="table-dark">
+                      <tr>
+                        <th>Team</th>
+                        <th className="text-center">GF</th>
+                        <th className="text-center">GA</th>
+                        <th className="text-center">GD</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTeams.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="text-center text-muted py-3">No matching teams found.</td>
+                        </tr>
+                      ) : (
+                        filteredTeams.map((t) => (
+                          <tr key={t.id}>
+                            <td>{t.name}</td>
+                            <td className="text-center">{t.gf}</td>
+                            <td className="text-center">{t.ga}</td>
+                            <td className="text-center">{(t.gf || 0) - (t.ga || 0)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
 
       <TeamCodes
-      tournamentId={selectedTournamentId} 
-  tournamentName={currentTournament?.name}
-  />
+        tournamentId={selectedTournamentId} 
+        tournamentName={currentTournament?.name}
+      />
 
       {/* End Tournament Button - Bottom Right */}
       {currentTournament && selectedTournamentId && (
