@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { getActiveTournament } from "../Utils/TournamentSession";
-import UpdateMatchScore from "./UpdateMatch"; // Import the new component
+import UpdateMatchScore from "./UpdateMatch"; 
 
 function MatchScheduler() {
   const [tournaments, setTournaments] = useState([]);
@@ -21,7 +21,18 @@ function MatchScheduler() {
   // Delete Match State
   const [matchToDeleteId, setMatchToDeleteId] = useState("");
 
+  // --- Inline Confirmation & Alert States ---
+  const [pendingMatchData, setPendingMatchData] = useState(null);
+  const [pendingDeleteData, setPendingDeleteData] = useState(null);
+  const [customAlert, setCustomAlert] = useState({ show: false, message: "", type: "success" });
+
   const activeSession = getActiveTournament(); // null or { id, name }
+
+  // Helper to show custom notifications
+  const showAlert = (message, type = "success") => {
+    setCustomAlert({ show: true, message, type });
+    setTimeout(() => setCustomAlert({ show: false, message: "", type: "success" }), 4000);
+  };
 
   // Helper function to refresh matches used across operations
   const refreshMatches = async () => {
@@ -123,9 +134,10 @@ function MatchScheduler() {
     fetchData();
   }, [selectedTournamentId]);
 
-  const handleCreateMatch = async () => {
+  // Handle Init Create (shows card preview instead of window.confirm)
+  const handleCreateMatchInitiate = () => {
     if (!selectedTournamentId || !homeTeamId || !awayTeamId || homeTeamId === awayTeamId) {
-      alert("Please select a tournament and two different teams.");
+      showAlert("Please select a tournament and two different teams.", "danger");
       return;
     }
 
@@ -133,8 +145,11 @@ function MatchScheduler() {
     const awayName = teams.find(t => t.id === awayTeamId)?.name || "?";
     const stageText = stage === "GROUP" ? `Group ${stagegroup || "?"}` : stage;
 
-    if (!window.confirm(`Schedule:\n${homeName} vs ${awayName}\nStage: ${stageText}\nRound: ${round}`)) return;
+    setPendingMatchData({ homeName, awayName, stageText });
+  };
 
+  // Final confirmation to insert match details
+  const confirmCreateMatch = async () => {
     const { error } = await supabase.from("matches").insert({
       tournament_id: selectedTournamentId,
       home_team_id: homeTeamId,
@@ -146,36 +161,46 @@ function MatchScheduler() {
     });
 
     if (error) {
-      alert("Error: " + error.message);
+      showAlert("Error: " + error.message, "danger");
       return;
     }
 
-    alert("Match created!");
+    showAlert("Match created successfully!", "success");
     setHomeTeamId("");
     setAwayTeamId("");
     setStage("GROUP");
     setStagegroup("");
     setRound(1); // Reset round
+    setPendingMatchData(null); // Close confirmation card
 
     refreshMatches();
   };
 
-  const handleDeleteMatch = async () => {
-    if (!matchToDeleteId) return alert("Select a match to delete.");
-    if (!window.confirm("Delete this match permanently?")) return;
+  // Handle Init Delete
+  const handleDeleteMatchInitiate = () => {
+    if (!matchToDeleteId) return showAlert("Select a match to delete.", "danger");
+    
+    const selectedMatch = matches.find(m => m.id === matchToDeleteId);
+    setPendingDeleteData({
+      text: `${selectedMatch?.home_team?.name} vs ${selectedMatch?.away_team?.name}`
+    });
+  };
 
+  // Final execution of match deletion
+  const confirmDeleteMatch = async () => {
     const { error } = await supabase
       .from("matches")
       .delete()
       .eq("id", matchToDeleteId);
 
     if (error) {
-      alert("Error: " + error.message);
+      showAlert("Error: " + error.message, "danger");
       return;
     }
 
-    alert("Match deleted.");
+    showAlert("Match deleted successfully.", "warning");
     setMatchToDeleteId("");
+    setPendingDeleteData(null); // Close confirmation card
 
     refreshMatches();
   };
@@ -204,6 +229,13 @@ function MatchScheduler() {
       <h2 className="mb-4">
         {isLockedMode ? `Match Scheduler – ${currentName}` : "Match Scheduler"}
       </h2>
+
+      {/* Dynamic Inline Alert System */}
+      {customAlert.show && (
+        <div className={`alert alert-${customAlert.type} alert-dismissible fade show`} role="alert">
+          {customAlert.message}
+        </div>
+      )}
 
       {!isLockedMode && (
         <div className="mb-4">
@@ -268,7 +300,6 @@ function MatchScheduler() {
                   onChange={(e) => setStagegroup(e.target.value)}
                 >
                   <option value="">No Group</option>
-                  {/* up to group 12 */}
                   <option value="1">Group 1</option>
                   <option value="2">Group 2</option>
                   <option value="3">Group 3</option>
@@ -309,9 +340,31 @@ function MatchScheduler() {
               </div>
 
               <div className="col-12">
-                <button className="btn btn-success w-100" onClick={handleCreateMatch}>
-                  Create Match
-                </button>
+                {!pendingMatchData ? (
+                  <button className="btn btn-success w-100" onClick={handleCreateMatchInitiate}>
+                    Create Match
+                  </button>
+                ) : (
+                  /* Custom Match Confirmation Card UI replacement */
+                  <div className="card border-success mt-2">
+                    <div className="card-body bg-light">
+                      <h6 className="card-title text-success fw-bold">Confirm Match Details</h6>
+                                            <p className="card-text mb-2">
+                        <strong>Stage:</strong> {pendingMatchData.stageText} |{" "}
+                        <strong>Round:</strong>{" "}
+                        {round === 0 || round === null || round === undefined ? "No rounds" : round}
+                      </p>
+                      <div className="d-flex gap-2">
+                        <button className="btn btn-success btn-sm flex-grow-1" onClick={confirmCreateMatch}>
+                          Confirm & Schedule
+                        </button>
+                        <button className="btn btn-outline-secondary btn-sm" onClick={() => setPendingMatchData(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -324,12 +377,15 @@ function MatchScheduler() {
           />
 
           {/* DELETE MATCH */}
-          <div className="card p-4 shadow-sm">
+          <div className="card p-4 shadow-sm mt-4">
             <h5 className="mb-3 text-danger">Delete Match</h5>
             <select
               className="form-select mb-3"
               value={matchToDeleteId}
-              onChange={(e) => setMatchToDeleteId(e.target.value)}
+              onChange={(e) => {
+                setMatchToDeleteId(e.target.value);
+                setPendingDeleteData(null); // Clear pending delete if choice changes
+              }}
             >
               <option value="">Select unplayed match</option>
               {matches.filter((m) => !m.played).map((m) => (
@@ -338,13 +394,34 @@ function MatchScheduler() {
                 </option>
               ))}
             </select>
-            <button
-              className="btn btn-danger w-100"
-              onClick={handleDeleteMatch}
-              disabled={!matchToDeleteId}
-            >
-              Delete Selected Match
-            </button>
+
+            {!pendingDeleteData ? (
+              <button
+                className="btn btn-danger w-100"
+                onClick={handleDeleteMatchInitiate}
+                disabled={!matchToDeleteId}
+              >
+                Delete Selected Match
+              </button>
+            ) : (
+              /* Custom Delete Confirmation Card UI replacement */
+              <div className="card border-danger mt-2">
+                <div className="card-body bg-light">
+                  <h6 className="card-title text-danger fw-bold">Permanently delete this match?</h6>
+                  <p className="card-text small text-muted mb-3">
+                    Are you sure you want to remove <strong>{pendingDeleteData.text}</strong>? This action cannot be undone.
+                  </p>
+                  <div className="d-flex gap-2">
+                    <button className="btn btn-danger btn-sm flex-grow-1" onClick={confirmDeleteMatch}>
+                      Yes, Delete Permanently
+                    </button>
+                    <button className="btn btn-outline-secondary btn-sm" onClick={() => setPendingDeleteData(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </>
       ) : (
