@@ -406,7 +406,7 @@ export default function ProfilePage() {
                   <div className="fade-in">
                     {activeTab === "welcome" && <WelcomeTab profile={profile} />}
                     {activeTab === "account" && <AccountTab />}
-                    {activeTab === "myteam" && <MyTeamTab teams={teams} />}
+                    {activeTab === "myteam" && <MyTeamTab/>}
                     {activeTab === "tournaments" && <TournamentsTab />}
                     {activeTab === "predictions" && <PredictionsTab />}
                   </div>
