@@ -5,6 +5,7 @@ import Match from "./Matchfixer";
 import ManagerPanel from "./ManagerPanel";
 import { getActiveTournament } from "../Utils/TournamentSession";
 import EndTournament from "./EndTournament";
+import TeamCodes from "./TournamentCodesList";    
 
 function MatchManager() {
   const [tournaments, setTournaments] = useState([]);
@@ -276,6 +277,11 @@ function MatchManager() {
           </>
         )}
       </div>
+
+      <TeamCodes
+      tournamentId={selectedTournamentId} 
+  tournamentName={currentTournament?.name}
+  />
 
       {/* End Tournament Button - Bottom Right */}
       {currentTournament && selectedTournamentId && (

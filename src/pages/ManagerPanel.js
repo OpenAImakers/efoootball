@@ -27,7 +27,7 @@ function TeamsManager() {
       }
 
       const { data, error } = await query;
-      if (error) {
+      if (error) { 
         console.error("Error fetching tournaments:", error);
         setLoading(false);
         return;
