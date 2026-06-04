@@ -170,7 +170,7 @@ function MatchScheduler() {
     setAwayTeamId("");
     setStage("GROUP");
     setStagegroup("");
-    setRound(1); // Reset round
+    setRound(0); // Reset round
     setPendingMatchData(null); // Close confirmation card
 
     refreshMatches();
@@ -286,9 +286,13 @@ function MatchScheduler() {
                   value={round}
                   onChange={(e) => setRound(Number(e.target.value))}
                 >
-                  {Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
-                    <option key={num} value={num}>Round {num}</option>
-                  ))}
+                  <option value={0}>No Round</option>
+
+{Array.from({ length: 30 }, (_, i) => i + 1).map((num) => (
+  <option key={num} value={num}>
+    Round {num}
+  </option>
+))}
                 </select>
               </div>
 
