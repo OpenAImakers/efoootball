@@ -6,6 +6,7 @@ import TournamentAdmin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard.tsx";
 import Teams from "./pages/Team.tsx";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedAdmin from "./components/ProtectedAdmin";
 import Account from "./pages/profile/Account";  
 import ProfileView from "./pages/ProfileView.tsx";
 import MatchVote from "./pages/MatchVote.tsx";   
@@ -13,19 +14,13 @@ import UpdatePassword from "./pages/UpdatePassword.js";
 import Leaderboard from "./pages/Leaderboard.tsx";  
 import LeaderboardForm from "./pages/Leaderboardadmin.tsx";
 import Navbar from "./components/Navbar.jsx";
-import Winner from "./pages/Winner.tsx";  
 import UpgradeToAdmin from "./pages/UpgradeToAdmin.tsx";
 import TournamentCreation from "./pages/TournamentCreation.tsx";
 import TournamentList from "./pages/TournamentList.tsx";
 import LeaderboardCreation from "./pages/LeaderboardCreation.tsx";
 import Register from "./pages/Register.tsx";
-import Leagues from "./pages/leagues/AllLeagues.tsx";
 import TeamMatches  from "./pages/TeamMatches.tsx";
-import SpecificLeague from "./pages/leagues/SpecificLeague.tsx";
-import LandingPage  from "./pages/leagues/LandingLeaguePage.tsx";
 import RegistrationsAdmin from "./pages/RegistrationsAdmin.tsx";
-import LeagueManagement from "./pages/leagues/Manageleague.tsx";
-import AddLeague from "./pages/leagues/Addleague.tsx";
 import Registrations from "./pages/CreateRegistrations.tsx";
 import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 import SendSms from "./pages/sms/Sendsms";
@@ -57,7 +52,9 @@ useEffect(() => {
         <Route
         path="/clans"
         element={
+          <ProtectedAdmin>
             <Clans />
+            </ProtectedAdmin>
         }
       />
 
@@ -105,35 +102,6 @@ useEffect(() => {
             <Announcements />
         }
       />
-
-      {/* leagues routes */}
-
-   <Route
-        path="/leaguelandingpage"
-        element={
-          <ProtectedRoute>
-            <LandingPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-  path="/manage-league"
-  element={
-    <ProtectedRoute>
-      <LeagueManagement />
-    </ProtectedRoute>
-  }
-/>
-   <Route
-  path="/add-league"
-  element={
-    <ProtectedRoute>
-      <AddLeague />
-    </ProtectedRoute>
-  }
-/>
-
-      {/* leagues routes end */}
 
 
 
@@ -196,14 +164,7 @@ useEffect(() => {
 
 
       {/* Other existing routes unchanged */}
-         <Route
-  path="/league/:id"
-  element={
-
-      <SpecificLeague />
-
-  }
-/>
+     
       <Route 
   path="/team/:username/matches" 
   element={
@@ -230,22 +191,8 @@ useEffect(() => {
           </ProtectedRoute>
         }
       />
-            <Route
-        path="/leagues"
-        element={
-        
-            <Leagues />
-        
-        }
-      />
-            <Route
-        path="/sports"
-        element={
-          <ProtectedRoute>
-            <Winner />
-          </ProtectedRoute>
-        }
-      />
+          
+          
       <Route
         path="/tournament-list"
         element={

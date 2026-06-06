@@ -10,7 +10,7 @@ export default function Navbar() {
   const LANG_CACHE_KEY = "efootball_lang_fr";
 
   // Initialize from cache if available
-  const [isAdmin, setIsAdmin] = useState(() => {
+  const [, setIsAdmin] = useState(() => {
     return sessionStorage.getItem(ROLE_CACHE_KEY) === "admin";
   });
   
@@ -83,9 +83,9 @@ export default function Navbar() {
       <nav className="navbar fixed-top bg-black border-bottom border-primary shadow-lg" style={{ borderBottomWidth: '2px' }}>
         <div className="container-fluid px-3 px-md-4 px-lg-5">
           <div className="d-flex align-items-center w-100" style={{ height: '60px', overflow: 'hidden' }}>
-            <Link
+            <div
               className="navbar-brand fw-black text-decoration-none me-4 me-lg-5 flex-shrink-0"
-              to="/leagues"
+        
               style={{
                 fontSize: '1.9rem',
                 letterSpacing: '-1px',
@@ -98,7 +98,7 @@ export default function Navbar() {
               }}
             >
               efootball
-            </Link>
+            </div>
 
             <div className="flex-grow-1 position-relative d-flex align-items-center h-100">
               <img 
@@ -141,9 +141,9 @@ export default function Navbar() {
       <div className="container-fluid px-3 px-md-4 px-lg-5">
         <div className="d-flex align-items-center w-100">
           
-          <Link
+          <div
             className="navbar-brand fw-black text-decoration-none me-3 me-lg-4 flex-shrink-0 brand-logo"
-            to="/leagues"
+           
             style={{
               fontSize: '1.9rem',
               letterSpacing: '-1px',
@@ -156,7 +156,7 @@ export default function Navbar() {
             }}
           >
             efootball
-          </Link>
+          </div>
 
           <div
             className="d-flex align-items-center flex-nowrap overflow-auto flex-grow-1"
@@ -216,7 +216,7 @@ export default function Navbar() {
 
             <NavLink to="/dashboard" label={isFrench ? "Accueil" : "Home"} currentPath={location.pathname} />
             <NavLink to="/teams" label={isFrench ? "Calendrier" : "FIXTURES"} currentPath={location.pathname} />
-            {isAdmin && <NavLink to="/admin" label="Admin" currentPath={location.pathname} />}
+            <NavLink to="/admin" label="Admin" currentPath={location.pathname} />
             <NavLink to="/register" label={isFrench ? "S'inscrire" : "Register"} currentPath={location.pathname} />
             <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>
