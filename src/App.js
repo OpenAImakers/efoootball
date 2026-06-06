@@ -52,7 +52,7 @@ useEffect(() => {
         <Route
         path="/clans"
         element={
-          <ProtectedAdmin>
+          <ProtectedAdmin requiredRole="admin">
             <Clans />
             </ProtectedAdmin>
         }
