@@ -138,15 +138,7 @@ if (!hasAccess()) {
     <>
       <Navbar />
       <div style={{ padding: "40px", textAlign: "center", marginTop: "40px" }}>
-        <h2>Access Denied</h2>
-        <p>This area requires the <strong>admin</strong> role.</p>
-        <p>Your current role: <strong>{role || "None"}</strong></p>
         
-        <div style={{ marginTop: "30px" }}>
-          <p style={{ marginBottom: "20px", fontSize: "18px" }}>
-            Here are some places you can go instead:
-          </p>
-          
           <div style={{ padding: "40px", textAlign: "center", marginTop: "40px" }}>
   <h2>Access Denied</h2>
   <p>This area requires the <strong>FEI Clan Admin</strong> role.</p>
@@ -202,7 +194,6 @@ if (!hasAccess()) {
   </div>
 </div>
         </div>
-      </div>
     </>
   );
 }
