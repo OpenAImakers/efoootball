@@ -67,33 +67,78 @@ if (loading) {
         alignItems: "center",
         height: "100vh",
         backgroundColor: "#1a1a1a",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Animated Verifying Text */}
-      <p
+  
+
+      {/* Circular Orbit Container */}
+      <div
         style={{
-          fontSize: "24px",
-          fontWeight: "bold",
-          color: "#ff9900",
-          marginBottom: "40px",
-          animation: "bounce 1.5s infinite",
+          position: "relative",
+          width: "420px",
+          height: "420px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        Verifying access...
-      </p>
+        {/* Central Logo */}
+        <img
+          src="/konaminewlogo.png"
+          alt="Stadium"
+          style={{
+            width: "120px",
+            height: "120px",
+            borderRadius: "50%",
+            boxShadow: "0 0 40px rgba(255, 204, 51, 0.9)",
+            zIndex: 5,
+            animation: "pulseCenter 2s ease-in-out infinite",
+          }}
+        />
 
-      {/* Stadium Image */}
-      <img
-        src="/stadium.png"
-        alt="Stadium"
-        style={{
-          width: "60%",
-          maxWidth: "700px",
-          borderRadius: "15px",
-          boxShadow: "0 0 40px rgba(255, 204, 51, 0.8)",
-          animation: "riseGlow 3s ease-in-out infinite alternate",
-        }}
-      />
+        {/* Orbiting Logos */}
+        {Array.from({ length: 8 }).map((_, i) => (
+          <img
+            key={i}
+            src="/konaminewlogo.png"
+            alt={`Orbit ${i}`}
+            style={{
+              position: "absolute",
+              width: "65px",
+              height: "65px",
+              borderRadius: "50%",
+              boxShadow: "0 0 25px rgba(255, 204, 51, 0.6)",
+              animation: `orbitRotate 12s linear infinite`,
+              animationDelay: `-${i * 1.5}s`,
+              transformOrigin: "210px 210px", // half of container size
+            }}
+          />
+        ))}
+
+        {/* Decorative Circular Lines */}
+        <div
+          style={{
+            position: "absolute",
+            width: "380px",
+            height: "380px",
+            border: "2px solid rgba(255, 204, 51, 0.15)",
+            borderRadius: "50%",
+            animation: "spinSlow 25s linear infinite",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            width: "320px",
+            height: "320px",
+            border: "1.5px solid rgba(255, 204, 51, 0.12)",
+            borderRadius: "50%",
+            animation: "spinSlow 18s linear infinite reverse",
+          }}
+        />
+      </div>
 
       {/* Animations */}
       <style>{`
@@ -102,19 +147,25 @@ if (loading) {
           50% { transform: translateY(-10px); }
         }
 
-        @keyframes riseGlow {
-          0% {
-            transform: translateY(0) scale(1);
-            box-shadow: 0 0 20px rgba(255, 204, 51, 0.5);
+        @keyframes pulseCenter {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 40px rgba(255, 204, 51, 0.9);
           }
           50% {
-            transform: translateY(-30px) scale(1.05);
-            box-shadow: 0 0 60px rgba(255, 204, 51, 1);
+            transform: scale(1.08);
+            box-shadow: 0 0 70px rgba(255, 204, 51, 1);
           }
-          100% {
-            transform: translateY(0) scale(1);
-            box-shadow: 0 0 20px rgba(255, 204, 51, 0.5);
-          }
+        }
+
+        @keyframes orbitRotate {
+          from { transform: rotate(0deg) translateX(170px) rotate(0deg); }
+          to { transform: rotate(360deg) translateX(170px) rotate(-360deg); }
+        }
+
+        @keyframes spinSlow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
