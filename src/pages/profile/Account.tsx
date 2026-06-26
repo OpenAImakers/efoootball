@@ -9,6 +9,7 @@ import MyTeamTab from "./components/MyTeamTab";
 import TournamentsTab from "./components/TournamentsTab";
 import PredictionsTab from "./components/PredictionsTab";
 import ProfileEditForm from "./components/ProfileEditForm";
+import Challenges from "./components/Challenges";
 
 // Skeleton Loader Component
 function ProfileSkeleton() {
@@ -366,7 +367,13 @@ export default function ProfilePage() {
                   onClick={() => { setActiveTab("predictions"); setIsEditing(false); }}
                   className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'predictions' ? 'active' : ''}`}
                 >
-                  <i className="bi bi-chat-dots me-2"></i> Predictions
+                  <i className="bi bi-graph-up-arrow me-2"></i> Predictions
+                </button>
+                                <button
+                  onClick={() => { setActiveTab("challenges"); setIsEditing(false); }}
+                  className={`list-group-item list-group-item-action border-0 py-3 tab-btn ${activeTab === 'challenges' ? 'active' : ''}`}
+                >
+                  <i className="bi bi-award me-2"></i> Challenges
                 </button>
               </div>
 
@@ -409,6 +416,7 @@ export default function ProfilePage() {
                     {activeTab === "myteam" && <MyTeamTab/>}
                     {activeTab === "tournaments" && <TournamentsTab />}
                     {activeTab === "predictions" && <PredictionsTab />}
+                    {activeTab === "challenges" && <Challenges />}
                   </div>
                 )}
               </div>
