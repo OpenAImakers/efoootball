@@ -9,7 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ProtectedAdmin from "./components/ProtectedAdmin";
 import Account from "./pages/profile/Account";  
 import ProfileView from "./pages/ProfileView.tsx";
-import MatchVote from "./pages/MatchVote.tsx";   
+import MatchVote from "./pages/Matchvote/MatchVote";   
 import UpdatePassword from "./pages/UpdatePassword.js";
 import Leaderboard from "./pages/Leaderboard.tsx";  
 import LeaderboardForm from "./pages/Leaderboardadmin.tsx";

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "../supabase";
-import Navbar from "../components/Navbar";
+import { supabase } from "../../supabase";
+import Navbar from "../../components/Navbar";
+import Challenge from "./Challenge";
 
 interface Match {
   id: number;
@@ -180,6 +181,7 @@ export default function MatchVotePage() {
           )}
         </div>
       </div>
+      <Challenge match={match} />
     </div>
     </>
   );
