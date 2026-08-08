@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../../supabase";
 import { useParams, useNavigate } from "react-router-dom";
-import Navbar from "../../components/Navbar";
+import Navbar from "../../components/ExternalHeader";
 
 const WORKER_URL = 'https://posts-api.unscriptedusa.workers.dev';
 

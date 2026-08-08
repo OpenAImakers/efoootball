@@ -24,6 +24,7 @@ import RegistrationsAdmin from "./pages/RegistrationsAdmin.tsx";
 import Registrations from "./pages/CreateRegistrations.tsx";
 import SpecificRegistration from "./pages/SpecificRegistration.tsx";
 import SendSms from "./pages/sms/Sendsms";
+
 import Announcements from "./pages/Announcement/Announcement";
 import Fie from "./fie/Fie.tsx";
 import RegisterClans from "./fie/components/RegisterClans";
@@ -67,18 +68,15 @@ useEffect(() => {
       <Route
       path="/registerclans"
       element={
-    <ProtectedRoute>
         <RegisterClans />
-        </ProtectedRoute>
+      
       }
       />
       
       <Route
         path="/registerclans/:id"
         element={
-          <ProtectedRoute>
             <SpecificClanRegistration />
-          </ProtectedRoute>
         }
       />
 
@@ -120,9 +118,7 @@ useEffect(() => {
       <Route
         path="/registration/:id"
         element={
-          <ProtectedRoute>
             <SpecificRegistration />
-          </ProtectedRoute>
         }
       />
 
@@ -138,9 +134,7 @@ useEffect(() => {
                   <Route
         path="/register"
         element={
-          <ProtectedRoute>
             <Register/>
-          </ProtectedRoute>
         }
       />
 
@@ -179,6 +173,14 @@ useEffect(() => {
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
+        }
+      />
+
+       <Route
+        path="/activetournaments"
+        element={
+            <Dashboard />
+        
         }
       />
       

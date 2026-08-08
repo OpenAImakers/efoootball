@@ -43,19 +43,6 @@ export default function TournamentsTab({
             />
           </div>
         </div>
-
-        <button
-          onClick={() => navigate("/registrations")}
-          className="btn btn-primary btn-lg shadow-sm px-4 py-2"
-          style={{
-            background: "linear-gradient(135deg, #35962e 0%, #863131 100%)",
-            border: "none",
-            fontWeight: "600",
-            borderRadius: "8px",
-          }}
-        >
-          <i className="bi bi-plus-lg me-2"></i>Have a squad? Create a registration here
-        </button>
       </div>
 
       {/* Main Grid Row Layout */}

@@ -214,10 +214,8 @@ export default function Navbar() {
               }
             `}</style>
 
-            <NavLink to="/dashboard" label={isFrench ? "Accueil" : "Home"} currentPath={location.pathname} />
             <NavLink to="/teams" label={isFrench ? "Calendrier" : "FIXTURES"} currentPath={location.pathname} />
             <NavLink to="/admin" label="Admin" currentPath={location.pathname} />
-            <NavLink to="/register" label={isFrench ? "S'inscrire" : "Register"} currentPath={location.pathname} />
             <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>
 

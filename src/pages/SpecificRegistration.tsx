@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
-import Navbar from "../components/Navbar";
+import Navbar from "../components/ExternalHeader";
 
 export default function SpecificRegistration() {
   const { id } = useParams();

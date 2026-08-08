@@ -13,7 +13,7 @@ interface SEOProps {
 }
 
 const SEOHead: React.FC<SEOProps> = ({
-  title = "Kenya eFootball Rankings | Premier eFootball Tournament Platform in Kenya",
+  title = "Kenya eFootball Tournaments | efkl | efootball Kenya",
   description = "Join the largest eFootball tournament community in Kenya. Track rankings, participate in leagues, compete with top players, and win prizes. Official eFootball rankings and leaderboards.",
   keywords = "eFootball, Kenya eFootball, eFootball tournaments, PES, eFootball Kenya, football gaming, esports Kenya, eFootball rankings, gaming tournaments Nairobi",
   image = "https://computerscience.website/assets/efkl.png",

@@ -133,18 +133,14 @@ export default function MatchPreviews() {
 
   return (
     <div
-      className="d-flex flex-column text-white position-relative overflow-hidden shadow-lg"
+      className="d-flex flex-column bg-white border rounded-3 shadow-sm p-4 overflow-hidden position-relative my-3"
       style={{
-        background: "#0b0014",
-        borderRadius: "18px",
-        padding: "30px 24px 40px 24px",
-        minHeight: "330px",
-        border: "1px solid #1f0833"
+        minHeight: "320px",
       }}
     >
-      {/* Dynamic Keyframes for Shimmer & Live Pulse Effects */}
+      {/* Light-theme Keyframe Animations */}
       <style>{`
-        @keyframes shimmer {
+        @keyframes shimmer-light {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }
         }
@@ -153,53 +149,50 @@ export default function MatchPreviews() {
           50% { transform: scale(1.2); opacity: 1; }
           100% { transform: scale(0.9); opacity: 0.6; }
         }
-        .skeleton-pulse {
-          background: linear-gradient(90deg, #160a22 25%, #251438 50%, #160a22 75%);
+        .skeleton-pulse-light {
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
           background-size: 200% 100%;
-          animation: shimmer 1.6s infinite linear;
+          animation: shimmer-light 1.6s infinite linear;
         }
         .live-dot {
           width: 8px;
           height: 8px;
-          background-color: #00ff87;
+          background-color: #10b981;
           border-radius: 50%;
           display: inline-block;
           animation: pulse-dot 2s infinite ease-in-out;
-          box-shadow: 0 0 8px #00ff87;
-        }
-        .premium-title {
-          font-family: 'Montserrat', sans-serif;
-          font-size: 12px;
-          letter-spacing: 2px;
-          color: #aaa;
-          font-weight: 700;
+          box-shadow: 0 0 6px #10b981;
         }
       `}</style>
 
-      {/* PREMIUM HEADER SUB-COMPONENT */}
-      <div className="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4" style={{ borderColor: "#1f0833" }}>
+      {/* HEADER BAR */}
+      <div className="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4">
         <div className="d-flex align-items-center gap-2">
           <span className="live-dot"></span>
-          <span className="premium-title text-uppercase">Featured Matches</span>
+          <span
+            className="fw-bold text-uppercase text-muted"
+            style={{ fontSize: "0.75rem", letterSpacing: "1px" }}
+          >
+            Featured Matches
+          </span>
         </div>
-       
       </div>
 
-      {/* CORE RENDER CONTROLLER */}
+      {/* RENDER BODY */}
       {loading || !matches.length || currentIndex === null ? (
         /* SKELETON STATE */
         <div className="d-flex align-items-center justify-content-center gap-4 w-100 my-auto">
           <div className="text-center d-flex flex-column align-items-center" style={{ width: "35%" }}>
-            <div className="skeleton-pulse rounded-circle" style={{ width: "90px", height: "90px" }}></div>
-            <div className="skeleton-pulse rounded mt-3" style={{ width: "70%", height: "18px" }}></div>
+            <div className="skeleton-pulse-light rounded-circle" style={{ width: "80px", height: "80px" }}></div>
+            <div className="skeleton-pulse-light rounded mt-3" style={{ width: "70%", height: "16px" }}></div>
           </div>
           <div className="text-center d-flex flex-column align-items-center">
-            <div className="skeleton-pulse rounded" style={{ width: "110px", height: "52px" }}></div>
-            <div className="skeleton-pulse rounded mt-3" style={{ width: "60px", height: "14px" }}></div>
+            <div className="skeleton-pulse-light rounded" style={{ width: "100px", height: "48px" }}></div>
+            <div className="skeleton-pulse-light rounded mt-3" style={{ width: "50px", height: "12px" }}></div>
           </div>
           <div className="text-center d-flex flex-column align-items-center" style={{ width: "35%" }}>
-            <div className="skeleton-pulse rounded-circle" style={{ width: "90px", height: "90px" }}></div>
-            <div className="skeleton-pulse rounded mt-3" style={{ width: "70%", height: "18px" }}></div>
+            <div className="skeleton-pulse-light rounded-circle" style={{ width: "80px", height: "80px" }}></div>
+            <div className="skeleton-pulse-light rounded mt-3" style={{ width: "70%", height: "16px" }}></div>
           </div>
         </div>
       ) : (
@@ -211,41 +204,42 @@ export default function MatchPreviews() {
 
           return (
             <div className="d-flex align-items-center justify-content-center gap-4 w-100 my-auto">
-              {/* HOME */}
+              {/* HOME TEAM */}
               <div className="text-center" style={{ width: "35%" }}>
                 <img
                   src={home.logo}
                   alt={home.name}
                   style={{
-                    width: "90px",
-                    height: "90px",
+                    width: "80px",
+                    height: "80px",
                     objectFit: "contain",
-                    filter: "drop-shadow(0px 4px 10px rgba(0,0,0,0.3))"
+                    filter: "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))"
                   }}
                 />
-                <div className="fw-bold mt-2" style={{ fontSize: "17px", letterSpacing: "-0.3px" }}>
+                <div
+                  className="fw-bold text-dark mt-2"
+                  style={{ fontSize: "1rem", letterSpacing: "-0.2px" }}
+                >
                   {home.name}
                 </div>
               </div>
 
-              {/* SCORE */}
+              {/* SCORE DISPLAY */}
               <div className="text-center">
                 <div
-                  className="fw-bold tracking-tight"
+                  className="fw-bold text-primary"
                   style={{
-                    fontSize: "52px",
-                    lineHeight: "52px",
-                    color: "#00ff87",
+                    fontSize: "3rem",
+                    lineHeight: "1",
                     letterSpacing: "-1px"
                   }}
                 >
                   {match.home_goals}:{match.away_goals}
                 </div>
                 <div
-                  className="mt-2 text-uppercase fw-semibold"
+                  className="mt-2 text-uppercase fw-semibold text-muted"
                   style={{
-                    fontSize: "11px",
-                    color: "#888",
+                    fontSize: "0.7rem",
                     letterSpacing: "1px"
                   }}
                 >
@@ -253,19 +247,22 @@ export default function MatchPreviews() {
                 </div>
               </div>
 
-              {/* AWAY */}
+              {/* AWAY TEAM */}
               <div className="text-center" style={{ width: "35%" }}>
                 <img
                   src={away.logo}
                   alt={away.name}
                   style={{
-                    width: "90px",
-                    height: "90px",
+                    width: "80px",
+                    height: "80px",
                     objectFit: "contain",
-                    filter: "drop-shadow(0px 4px 10px rgba(0,0,0,0.3))"
+                    filter: "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))"
                   }}
                 />
-                <div className="fw-bold mt-2" style={{ fontSize: "17px", letterSpacing: "-0.3px" }}>
+                <div
+                  className="fw-bold text-dark mt-2"
+                  style={{ fontSize: "1rem", letterSpacing: "-0.2px" }}
+                >
                   {away.name}
                 </div>
               </div>

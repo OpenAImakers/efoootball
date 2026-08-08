@@ -68,20 +68,6 @@ export default function ClansTab({
             />
           </div>
         </div>
-
-        <button
-          onClick={() => navigate("/registerclans")}
-          className="btn btn-primary btn-lg shadow-sm px-4 py-2"
-          style={{
-            background: "linear-gradient(135deg, #fdf91b 0%, #13ff0f 100%)",
-            border: "none",
-            fontWeight: "600",
-            borderRadius: "8px",
-            color: "#000",
-          }}
-        >
-          <i className="bi bi-shield-plus me-2"></i>Create New Clan
-        </button>
       </div>
 
       {/* Grid Content Cards */}

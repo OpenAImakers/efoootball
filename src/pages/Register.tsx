@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabase";
-import Navbar from "../components/Navbar";
+import Navbar from "../components/ExternalHeader";
 import TournamentsTab from "./Registerfiles/TournamentsTab";
 import ClansTab from "./Registerfiles/ClansTab";
 

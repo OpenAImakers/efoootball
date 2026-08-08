@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Header from "./Header";
+import Header from "../components/ExternalHeader";
 import ClanRankingsTable from "./components/ClanRankingsTable";
 import ClanPlayersTable from "./components/ClanPlayersTable";
 import AllPlayersTable from "./components/AllPlayersTable";
