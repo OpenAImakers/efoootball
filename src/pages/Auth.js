@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
 
@@ -11,11 +11,35 @@ export default function Auth() {
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSignedUp, setIsSignedUp] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   
   // 🌍 Language State: 'en' or 'fr'
   const [lang, setLang] = useState("en");
 
   const [showIntro, setShowIntro] = useState(true);
+
+  // ✅ Auto-redirect if already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        navigate("/teams", { replace: true });
+      } else {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        navigate("/teams", { replace: true });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   // Dictionary for clean text management
   const t = {
@@ -101,6 +125,22 @@ export default function Auth() {
         setMessage(t[lang].resetSent);
       }
     }
+  }
+
+  // Show nothing (or spinner) while checking session
+  if (checkingAuth) {
+    return (
+      <div style={{ 
+        height: "100vh", 
+        width: "100vw", 
+        display: "flex", 
+        justifyContent: "center", 
+        alignItems: "center",
+        backgroundColor: "#0a1a44"
+      }}>
+        <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
+      </div>
+    );
   }
 
   return (
