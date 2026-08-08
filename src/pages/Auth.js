@@ -78,7 +78,7 @@ export default function Auth() {
         setError(error.message);
         setLoading(false);
       } else {
-        navigate("/dashboard");
+        navigate("/teams");
       }
     } else if (authMode === "signup") {
       const { error, data } = await supabase.auth.signUp({ email, password });
@@ -88,7 +88,7 @@ export default function Auth() {
       } else if (data.user && data.session === null) {
         setIsSignedUp(true);
       } else {
-        navigate("/dashboard");
+        navigate("/teams");
       }
     } else if (authMode === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
