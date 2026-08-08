@@ -358,32 +358,39 @@ const KenyaEfootballHub: React.FC = () => {
         <th className="text-center pe-4">Points</th>
        </tr>
     </thead>
-    <tbody>
-      {rows.map((row) => (
-        <tr 
-          key={row.username} 
-          onClick={() => navigate(`/team/${row.username}/matches`)} 
-          style={{ cursor: "pointer" }}
-          aria-label={`View ${row.display_name}'s matches`}
-        >
-          <td className="ps-4 fw-bold">{row.rank}</td>
-          <td className="fw-bold text-info">
-            <div className="d-flex align-items-center gap-2">
-              <i className="bi bi-arrow-right-circle-fill text-primary" style={{ fontSize: "1.1rem" }}></i>
-              {row.display_name}
-            </div>
-          </td>
-          <td className="text-center opacity-50">{row.tournaments_played}</td>
-          <td className="text-center opacity-50">{row.mp}</td>
-          <td className="text-center text-success opacity-75">{row.w}</td>
-          <td className="text-center text-danger opacity-75">{row.l}</td>
-          <td className="text-center opacity-75">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
-          <td className="text-center pe-4 fw-black text-warning">
-            {row.points}
-          </td>
-        </tr>
-      ))}
-    </tbody>
+   <tbody>
+  {rows.map((row) => (
+    <tr 
+      key={row.username} 
+      onClick={() => navigate(`/team/${row.username}/matches`)} 
+      style={{ cursor: "pointer" }}
+      aria-label={`View ${row.display_name}'s matches`}
+    >
+      <td className="ps-4 fw-bold">{row.rank}</td>
+      <td className="fw-bold text-info py-2">
+        <div className="d-flex flex-column">
+          <div className="d-flex align-items-center gap-2">
+            <i className="bi bi-arrow-right-circle-fill text-primary" style={{ fontSize: "1.1rem" }}></i>
+            <span>{row.display_name}</span>
+          </div>
+          {/* Visual affordance hint */}
+          <div className="d-flex align-items-center gap-1 mt-1 opacity-75 text-white-50" style={{ fontSize: "0.7rem", fontWeight: "normal" }}>
+            <i className="bi bi-arrow-return-right text-info ms-4" style={{ fontSize: "0.75rem" }}></i>
+            <span className="fst-italic">view matches</span>
+          </div>
+        </div>
+      </td>
+      <td className="text-center opacity-50">{row.tournaments_played}</td>
+      <td className="text-center opacity-50">{row.mp}</td>
+      <td className="text-center text-success opacity-75">{row.w}</td>
+      <td className="text-center text-danger opacity-75">{row.l}</td>
+      <td className="text-center opacity-75">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
+      <td className="text-center pe-4 fw-black text-warning">
+        {row.points}
+      </td>
+    </tr>
+  ))}
+</tbody>
   </table>
 </div>
               </div>
