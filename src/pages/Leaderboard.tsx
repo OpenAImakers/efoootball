@@ -248,7 +248,7 @@ const KenyaEfootballHub: React.FC = () => {
         to="/activetournaments"
         className="btn btn-lg fw-bold text-decoration-none d-flex align-items-center gap-2 px-4 py-2"
         style={{
-          background: "linear-gradient(90deg, #0dcaf0, #0d6efd)",
+          background: "linear-gradient(90deg, #f4fbfc, #287bf8)",
           color: "#000",
           borderRadius: "50px",
           border: "none",
@@ -266,7 +266,6 @@ const KenyaEfootballHub: React.FC = () => {
           e.currentTarget.style.boxShadow = "0 0 25px rgba(13, 202, 240, 0.55)";
         }}
       >
-        <i className="bi bi-lightning-charge-fill"></i>
         VIEW & REGISTER FOR TOURNAMENTS
         <i className="bi bi-arrow-right"></i>
       </Link>
