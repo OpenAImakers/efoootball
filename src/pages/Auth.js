@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
+  
   // 🔗 Get redirect_to parameter passed by the Expo Mobile App
   const redirectTo = searchParams.get("redirect_to");
 
@@ -18,48 +18,25 @@ export default function Auth() {
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Instead of auto-redirecting (which raced the Custom Tab's redirect
-  // interceptor and was inconsistent), we show a "Continue to App" button.
-  // A user tap is a guaranteed-ready signal — no timing to get wrong.
-  const [readyToRedirect, setReadyToRedirect] = useState(false);
-  const pendingUrlRef = useRef(null);
-
   // 🌍 Language State: 'en' or 'fr'
   const [lang, setLang] = useState("en");
 
   const [showIntro, setShowIntro] = useState(true);
 
-  // Prevents handleAuthSuccess from re-arming more than once
-  // (e.g. if checkSession() and onAuthStateChange both fire)
-  const redirectedRef = useRef(false);
-
   // Helper function to handle redirection back to Mobile App or Website Navigation
   const handleAuthSuccess = (session) => {
-    if (redirectedRef.current) return;
-
     if (redirectTo && session) {
-      redirectedRef.current = true;
-
       // Send access_token and refresh_token back to Expo App
       // (URL-encoded — refresh_token can contain characters that break an
       // unescaped query string, which was truncating it on the mobile side)
       const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
-
-      pendingUrlRef.current = appRedirectUrl;
-      setCheckingAuth(false);
-      setReadyToRedirect(true);
+      window.location.href = appRedirectUrl;
     } else {
       navigate("/teams", { replace: true });
     }
   };
 
-  const handleContinueTap = () => {
-    if (pendingUrlRef.current) {
-      window.location.href = pendingUrlRef.current;
-    }
-  };
-
-  // ✅ Auto-check for an existing session on mount
+  // ✅ Auto-redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -102,9 +79,7 @@ export default function Auth() {
       sentLink: "We sent a verification link to",
       back: "Back to Login",
       alreadyReg: "Account already exists. Try logging in!",
-      resetSent: "Password reset link sent to your email!",
-      signedIn: "You're signed in",
-      continueBtn: "Continue to App"
+      resetSent: "Password reset link sent to your email!"
     },
     fr: {
       slogan: "Tout ce dont vous avez besoin pour gérer vos tournois en un seul endroit",
@@ -124,9 +99,7 @@ export default function Auth() {
       sentLink: "Lien de vérification envoyé à",
       back: "Retour",
       alreadyReg: "Compte déjà existant. Connectez-vous !",
-      resetSent: "Lien de réinitialisation envoyé par e-mail !",
-      signedIn: "Vous êtes connecté",
-      continueBtn: "Continuer vers l'app"
+      resetSent: "Lien de réinitialisation envoyé par e-mail !"
     }
   };
 
@@ -172,50 +145,18 @@ export default function Auth() {
     }
   }
 
-  // Show spinner while checking session
+  // Show nothing (or spinner) while checking session
   if (checkingAuth) {
     return (
-      <div style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        justifyContent: "center",
+      <div style={{ 
+        height: "100vh", 
+        width: "100vw", 
+        display: "flex", 
+        justifyContent: "center", 
         alignItems: "center",
         backgroundColor: "#0a1a44"
       }}>
         <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
-      </div>
-    );
-  }
-
-  // Show "Continue to App" gate once we have a session + redirect target.
-  // This replaces the old automatic window.location.href redirect, which
-  // raced the Custom Tab / ASWebAuthenticationSession's redirect interceptor
-  // and intermittently got dismissed before the interceptor was armed. A
-  // deliberate tap here is a guaranteed-ready signal, so no race is possible.
-  if (readyToRedirect) {
-    return (
-      <div style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#0a1a44"
-      }}>
-        <div style={{ fontSize: "3rem" }}>✅</div>
-        <div style={{ color: "white", fontSize: "1.1rem", opacity: 0.9 }}>
-          {t[lang].signedIn}
-        </div>
-        <button
-          onClick={handleContinueTap}
-          className="btn btn-lg fw-bold text-white border-0 shadow-sm"
-          style={{ backgroundColor: "#00b5ad", padding: "14px 32px", borderRadius: "12px" }}
-        >
-          {t[lang].continueBtn}
-        </button>
       </div>
     );
   }
@@ -236,16 +177,16 @@ export default function Auth() {
 
           <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
             <div className="card shadow-lg border-0 text-white" style={styles.authCard}>
-
+              
               {/* 🌐 Language Switcher Tab */}
               <div style={styles.langTabContainer}>
-                <button
-                  onClick={() => setLang("en")}
+                <button 
+                  onClick={() => setLang("en")} 
                   style={{...styles.langBtn, color: lang === 'en' ? '#00b5ad' : '#fff'}}
                 >EN</button>
                 <span style={{opacity: 0.3}}>|</span>
-                <button
-                  onClick={() => setLang("fr")}
+                <button 
+                  onClick={() => setLang("fr")} 
                   style={{...styles.langBtn, color: lang === 'fr' ? '#00b5ad' : '#fff'}}
                 >FR</button>
               </div>
@@ -304,7 +245,7 @@ export default function Auth() {
 
                     <div className="d-grid gap-3">
                       <button type="submit" className="btn btn-lg fw-bold text-white border-0 shadow-sm" style={{ backgroundColor: "#00b5ad", padding: "14px" }} disabled={loading}>
-                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> :
+                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : 
                          authMode === "login" ? t[lang].loginBtn : authMode === "signup" ? t[lang].signupBtn : t[lang].sendReset}
                       </button>
 
@@ -332,109 +273,109 @@ export default function Auth() {
 }
 
 const styles = {
-  viewport: {
-    backgroundColor: "#eef2f3",
-    height: "100vh",
-    width: "100vw",
-    overflow: "hidden",
-    position: "relative"
+  viewport: { 
+    backgroundColor: "#eef2f3", 
+    height: "100vh", 
+    width: "100vw", 
+    overflow: "hidden", 
+    position: "relative" 
   },
-  introVideo: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    objectFit: "cover",
-    zIndex: 9999
+  introVideo: { 
+    position: "fixed", 
+    top: 0, 
+    left: 0, 
+    width: "100vw", 
+    height: "100vh", 
+    objectFit: "cover", 
+    zIndex: 9999 
   },
-  bgOrange: {
-    position: "absolute",
-    width: "80%",
-    height: "80%",
-    top: "-10%",
-    left: "-10%",
-    backgroundColor: "#f7931e",
-    clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)",
-    opacity: 0.6,
-    zIndex: 1
+  bgOrange: { 
+    position: "absolute", 
+    width: "80%", 
+    height: "80%", 
+    top: "-10%", 
+    left: "-10%", 
+    backgroundColor: "#f7931e", 
+    clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)", 
+    opacity: 0.6, 
+    zIndex: 1 
   },
-  bgTeal: {
-    position: "absolute",
-    width: "70%",
-    height: "90%",
-    bottom: "-10%",
-    right: "-10%",
-    backgroundColor: "#00b5ad",
-    clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)",
-    mixBlendMode: "multiply",
-    opacity: 0.7,
-    zIndex: 2
+  bgTeal: { 
+    position: "absolute", 
+    width: "70%", 
+    height: "90%", 
+    bottom: "-10%", 
+    right: "-10%", 
+    backgroundColor: "#00b5ad", 
+    clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)", 
+    mixBlendMode: "multiply", 
+    opacity: 0.7, 
+    zIndex: 2 
   },
-  bgNavy: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(10, 26, 68, 0.2)",
-    zIndex: 3
+  bgNavy: { 
+    position: "absolute", 
+    width: "100%", 
+    height: "100%", 
+    backgroundColor: "rgba(10, 26, 68, 0.2)", 
+    zIndex: 3 
   },
-  authCard: {
-    position: "relative",
-    zIndex: 10,
-    width: "75%",
-    maxWidth: "900px",
-    minWidth: "320px",
-    backgroundColor: "#0a1a44",
-    borderRadius: "20px",
-    overflow: "hidden",
-    boxShadow: "0 30px 60px rgba(0,0,0,0.5)"
+  authCard: { 
+    position: "relative", 
+    zIndex: 10, 
+    width: "75%", 
+    maxWidth: "900px", 
+    minWidth: "320px", 
+    backgroundColor: "#0a1a44", 
+    borderRadius: "20px", 
+    overflow: "hidden", 
+    boxShadow: "0 30px 60px rgba(0,0,0,0.5)" 
   },
-  langTabContainer: {
-    position: "absolute",
-    top: "20px",
-    right: "25px",
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    zIndex: 11
+  langTabContainer: { 
+    position: "absolute", 
+    top: "20px", 
+    right: "25px", 
+    display: "flex", 
+    gap: "12px", 
+    alignItems: "center", 
+    zIndex: 11 
   },
-  langBtn: {
-    background: "none",
-    border: "none",
-    fontSize: "0.85rem",
-    fontWeight: "bold",
-    cursor: "pointer",
-    transition: "0.3s"
+  langBtn: { 
+    background: "none", 
+    border: "none", 
+    fontSize: "0.85rem", 
+    fontWeight: "bold", 
+    cursor: "pointer", 
+    transition: "0.3s" 
   },
-  divider: {
-    width: "2px",
-    height: "20px",
-    background: "white",
-    opacity: 0.5
+  divider: { 
+    width: "2px", 
+    height: "20px", 
+    background: "white", 
+    opacity: 0.5 
   },
-  inputField: {
-    border: "1px solid rgba(255,255,255,0.2)",
-    borderRadius: "12px",
-    fontSize: "1rem",
+  inputField: { 
+    border: "1px solid rgba(255,255,255,0.2)", 
+    borderRadius: "12px", 
+    fontSize: "1rem", 
     color: "white",
     padding: "12px 16px",
     transition: "all 0.3s"
   },
-  linkBtn: {
-    background: "none",
-    border: "none",
-    color: "white",
-    fontSize: "0.9rem",
-    opacity: 0.75,
-    cursor: "pointer",
+  linkBtn: { 
+    background: "none", 
+    border: "none", 
+    color: "white", 
+    fontSize: "0.9rem", 
+    opacity: 0.75, 
+    cursor: "pointer", 
     textDecoration: "none",
     transition: "all 0.3s",
     padding: "8px"
   },
-  bottomBorder: {
-    height: "6px",
-    width: "100%",
-    background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)"
+  bottomBorder: { 
+    height: "6px", 
+    width: "100%", 
+    background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)" 
   },
   logoTitle: {
     fontSize: "4rem",
