@@ -24,17 +24,20 @@ export default function Auth() {
   const [showIntro, setShowIntro] = useState(true);
 
   // Helper function to handle redirection back to Mobile App or Website Navigation
-  const handleAuthSuccess = (session) => {
-    if (redirectTo && session) {
-      // Send access_token and refresh_token back to Expo App
-      // (URL-encoded — refresh_token can contain characters that break an
-      // unescaped query string, which was truncating it on the mobile side)
-      const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
+const redirectedRef = useRef(false);
+
+const handleAuthSuccess = (session) => {
+  if (redirectedRef.current) return;
+  if (redirectTo && session) {
+    redirectedRef.current = true;
+    const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
+    setTimeout(() => {
       window.location.href = appRedirectUrl;
-    } else {
-      navigate("/teams", { replace: true });
-    }
-  };
+    }, 600);
+  } else {
+    navigate("/teams", { replace: true });
+  }
+};
 
   // ✅ Auto-redirect if already logged in
   useEffect(() => {
