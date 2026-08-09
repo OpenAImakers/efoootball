@@ -27,7 +27,9 @@ export default function Auth() {
   const handleAuthSuccess = (session) => {
     if (redirectTo && session) {
       // Send access_token and refresh_token back to Expo App
-      const appRedirectUrl = `${redirectTo}?access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+      // (URL-encoded — refresh_token can contain characters that break an
+      // unescaped query string, which was truncating it on the mobile side)
+      const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
       window.location.href = appRedirectUrl;
     } else {
       navigate("/teams", { replace: true });
