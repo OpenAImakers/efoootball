@@ -17,15 +17,20 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [redirecting, setRedirecting] = useState(false);
+
+  // Instead of auto-redirecting (which raced the Custom Tab's redirect
+  // interceptor and was inconsistent), we show a "Continue to App" button.
+  // A user tap is a guaranteed-ready signal — no timing to get wrong.
+  const [readyToRedirect, setReadyToRedirect] = useState(false);
+  const pendingUrlRef = useRef(null);
 
   // 🌍 Language State: 'en' or 'fr'
   const [lang, setLang] = useState("en");
 
   const [showIntro, setShowIntro] = useState(true);
 
-  // Prevents handleAuthSuccess from scheduling more than one redirect
-  // (e.g. if checkSession() and onAuthStateChange both fire during the delay window)
+  // Prevents handleAuthSuccess from re-arming more than once
+  // (e.g. if checkSession() and onAuthStateChange both fire)
   const redirectedRef = useRef(false);
 
   // Helper function to handle redirection back to Mobile App or Website Navigation
@@ -34,29 +39,27 @@ export default function Auth() {
 
     if (redirectTo && session) {
       redirectedRef.current = true;
-      setRedirecting(true);
 
       // Send access_token and refresh_token back to Expo App
       // (URL-encoded — refresh_token can contain characters that break an
       // unescaped query string, which was truncating it on the mobile side)
       const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
 
-      // IMPORTANT: When a session already exists (returning user), this fires
-      // almost instantly on mount. WebBrowser.openAuthSessionAsync's Custom Tab
-      // / ASWebAuthenticationSession needs a moment to finish arming its redirect
-      // interceptor — redirecting before that's ready causes the tab to just
-      // dismiss/cancel with no URL ever delivered to the app. This delay avoids
-      // that race. If it's still flaky on low-end Android devices, bump this up
-      // or switch to a manual "Continue to app" button instead.
-      setTimeout(() => {
-        window.location.href = appRedirectUrl;
-      }, 600);
+      pendingUrlRef.current = appRedirectUrl;
+      setCheckingAuth(false);
+      setReadyToRedirect(true);
     } else {
       navigate("/teams", { replace: true });
     }
   };
 
-  // ✅ Auto-redirect if already logged in
+  const handleContinueTap = () => {
+    if (pendingUrlRef.current) {
+      window.location.href = pendingUrlRef.current;
+    }
+  };
+
+  // ✅ Auto-check for an existing session on mount
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -100,7 +103,8 @@ export default function Auth() {
       back: "Back to Login",
       alreadyReg: "Account already exists. Try logging in!",
       resetSent: "Password reset link sent to your email!",
-      signingIn: "Signing you in..."
+      signedIn: "You're signed in",
+      continueBtn: "Continue to App"
     },
     fr: {
       slogan: "Tout ce dont vous avez besoin pour gérer vos tournois en un seul endroit",
@@ -121,7 +125,8 @@ export default function Auth() {
       back: "Retour",
       alreadyReg: "Compte déjà existant. Connectez-vous !",
       resetSent: "Lien de réinitialisation envoyé par e-mail !",
-      signingIn: "Connexion en cours..."
+      signedIn: "Vous êtes connecté",
+      continueBtn: "Continuer vers l'app"
     }
   };
 
@@ -167,25 +172,50 @@ export default function Auth() {
     }
   }
 
-  // Show nothing (or spinner) while checking session
-  if (checkingAuth || redirecting) {
+  // Show spinner while checking session
+  if (checkingAuth) {
+    return (
+      <div style={{
+        height: "100vh",
+        width: "100vw",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#0a1a44"
+      }}>
+        <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
+      </div>
+    );
+  }
+
+  // Show "Continue to App" gate once we have a session + redirect target.
+  // This replaces the old automatic window.location.href redirect, which
+  // raced the Custom Tab / ASWebAuthenticationSession's redirect interceptor
+  // and intermittently got dismissed before the interceptor was armed. A
+  // deliberate tap here is a guaranteed-ready signal, so no race is possible.
+  if (readyToRedirect) {
     return (
       <div style={{
         height: "100vh",
         width: "100vw",
         display: "flex",
         flexDirection: "column",
-        gap: "16px",
+        gap: "20px",
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#0a1a44"
       }}>
-        <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
-        {redirecting && (
-          <div style={{ color: "white", opacity: 0.8, fontSize: "0.9rem" }}>
-            {t[lang].signingIn}
-          </div>
-        )}
+        <div style={{ fontSize: "3rem" }}>✅</div>
+        <div style={{ color: "white", fontSize: "1.1rem", opacity: 0.9 }}>
+          {t[lang].signedIn}
+        </div>
+        <button
+          onClick={handleContinueTap}
+          className="btn btn-lg fw-bold text-white border-0 shadow-sm"
+          style={{ backgroundColor: "#00b5ad", padding: "14px 32px", borderRadius: "12px" }}
+        >
+          {t[lang].continueBtn}
+        </button>
       </div>
     );
   }
