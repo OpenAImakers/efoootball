@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../supabase";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   // 🔗 Get redirect_to parameter passed by the Expo Mobile App
   const redirectTo = searchParams.get("redirect_to");
 
@@ -23,26 +23,35 @@ export default function Auth() {
 
   const [showIntro, setShowIntro] = useState(true);
 
-  // Helper function to handle redirection back to Mobile App or Website Navigation
-const redirectedRef = useRef(false);
+  // Prevent multiple redirects
+  const redirectedRef = useRef(false);
 
-const handleAuthSuccess = (session) => {
-  if (redirectedRef.current) return;
-  if (redirectTo && session) {
-    redirectedRef.current = true;
-    const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
-    setTimeout(() => {
-      window.location.href = appRedirectUrl;
-    }, 600);
-  } else {
-    navigate("/teams", { replace: true });
-  }
-};
+  const handleAuthSuccess = useCallback(
+    (session) => {
+      if (redirectedRef.current || !session) return;
+
+      if (redirectTo) {
+        redirectedRef.current = true;
+        const appRedirectUrl = `\( {redirectTo}?access_token= \){encodeURIComponent(
+          session.access_token
+        )}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
+
+        setTimeout(() => {
+          window.location.href = appRedirectUrl;
+        }, 600);
+      } else {
+        navigate("/teams", { replace: true });
+      }
+    },
+    [redirectTo, navigate]
+  );
 
   // ✅ Auto-redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (session) {
         handleAuthSuccess(session);
@@ -53,14 +62,16 @@ const handleAuthSuccess = (session) => {
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         handleAuthSuccess(session);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, redirectTo]);
+  }, [handleAuthSuccess]);
 
   // Dictionary for clean text management
   const t = {
@@ -82,7 +93,7 @@ const handleAuthSuccess = (session) => {
       sentLink: "We sent a verification link to",
       back: "Back to Login",
       alreadyReg: "Account already exists. Try logging in!",
-      resetSent: "Password reset link sent to your email!"
+      resetSent: "Password reset link sent to your email!",
     },
     fr: {
       slogan: "Tout ce dont vous avez besoin pour gérer vos tournois en un seul endroit",
@@ -102,8 +113,8 @@ const handleAuthSuccess = (session) => {
       sentLink: "Lien de vérification envoyé à",
       back: "Retour",
       alreadyReg: "Compte déjà existant. Connectez-vous !",
-      resetSent: "Lien de réinitialisation envoyé par e-mail !"
-    }
+      resetSent: "Lien de réinitialisation envoyé par e-mail !",
+    },
   };
 
   const switchMode = (mode) => {
@@ -118,7 +129,10 @@ const handleAuthSuccess = (session) => {
     setError(null);
 
     if (authMode === "login") {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) {
         setError(error.message);
         setLoading(false);
@@ -129,7 +143,11 @@ const handleAuthSuccess = (session) => {
       const { error, data } = await supabase.auth.signUp({ email, password });
       setLoading(false);
       if (error) {
-        setError(error.message.includes("User already registered") ? t[lang].alreadyReg : error.message);
+        setError(
+          error.message.includes("User already registered")
+            ? t[lang].alreadyReg
+            : error.message
+        );
       } else if (data.user && data.session === null) {
         setIsSignedUp(true);
       } else if (data?.session) {
@@ -151,15 +169,21 @@ const handleAuthSuccess = (session) => {
   // Show nothing (or spinner) while checking session
   if (checkingAuth) {
     return (
-      <div style={{ 
-        height: "100vh", 
-        width: "100vw", 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center",
-        backgroundColor: "#0a1a44"
-      }}>
-        <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
+      <div
+        style={{
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#0a1a44",
+        }}
+      >
+        <div
+          className="spinner-border text-info"
+          role="status"
+          style={{ width: "3rem", height: "3rem" }}
+        ></div>
       </div>
     );
   }
@@ -167,7 +191,13 @@ const handleAuthSuccess = (session) => {
   return (
     <>
       {showIntro && (
-        <video autoPlay muted playsInline onEnded={() => setShowIntro(false)} style={styles.introVideo}>
+        <video
+          autoPlay
+          muted
+          playsInline
+          onEnded={() => setShowIntro(false)}
+          style={styles.introVideo}
+        >
           <source src="/intro.mp4" type="video/mp4" />
         </video>
       )}
@@ -178,43 +208,72 @@ const handleAuthSuccess = (session) => {
           <div style={styles.bgTeal}></div>
           <div style={styles.bgNavy}></div>
 
-          <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-            <div className="card shadow-lg border-0 text-white" style={styles.authCard}>
-              
+          <div
+            className="container d-flex justify-content-center align-items-center"
+            style={{ minHeight: "100vh" }}
+          >
+            <div
+              className="card shadow-lg border-0 text-white"
+              style={styles.authCard}
+            >
               {/* 🌐 Language Switcher Tab */}
               <div style={styles.langTabContainer}>
-                <button 
-                  onClick={() => setLang("en")} 
-                  style={{...styles.langBtn, color: lang === 'en' ? '#00b5ad' : '#fff'}}
-                >EN</button>
-                <span style={{opacity: 0.3}}>|</span>
-                <button 
-                  onClick={() => setLang("fr")} 
-                  style={{...styles.langBtn, color: lang === 'fr' ? '#00b5ad' : '#fff'}}
-                >FR</button>
+                <button
+                  onClick={() => setLang("en")}
+                  style={{
+                    ...styles.langBtn,
+                    color: lang === "en" ? "#00b5ad" : "#fff",
+                  }}
+                >
+                  EN
+                </button>
+                <span style={{ opacity: 0.3 }}>|</span>
+                <button
+                  onClick={() => setLang("fr")}
+                  style={{
+                    ...styles.langBtn,
+                    color: lang === "fr" ? "#00b5ad" : "#fff",
+                  }}
+                >
+                  FR
+                </button>
               </div>
 
               <div className="card-body p-5 text-center">
                 <div className="mb-5">
                   <h1 style={styles.logoTitle}>efootball</h1>
-                  <div className="d-flex align-items-center justify-content-center mt-2" style={{ fontSize: "1rem", opacity: 0.9 }}>
-                     {t[lang].slogan}
+                  <div
+                    className="d-flex align-items-center justify-content-center mt-2"
+                    style={{ fontSize: "1rem", opacity: 0.9 }}
+                  >
+                    {t[lang].slogan}
                   </div>
                 </div>
 
                 {isSignedUp ? (
                   <div>
-                    <div className="mb-4" style={{ fontSize: "3rem" }}>✉️</div>
+                    <div className="mb-4" style={{ fontSize: "3rem" }}>
+                      ✉️
+                    </div>
                     <h4>{t[lang].checkInbox}</h4>
-                    <p className="small opacity-75">{t[lang].sentLink} {email}</p>
-                    <button className="btn btn-sm btn-outline-light mt-3" onClick={() => setIsSignedUp(false)}>
+                    <p className="small opacity-75">
+                      {t[lang].sentLink} {email}
+                    </p>
+                    <button
+                      className="btn btn-sm btn-outline-light mt-3"
+                      onClick={() => setIsSignedUp(false)}
+                    >
                       {t[lang].back}
                     </button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit}>
                     <h3 className="h4 mb-4 opacity-75">
-                      {authMode === "login" ? t[lang].welcome : authMode === "signup" ? t[lang].create : t[lang].reset}
+                      {authMode === "login"
+                        ? t[lang].welcome
+                        : authMode === "signup"
+                        ? t[lang].create
+                        : t[lang].reset}
                     </h3>
 
                     <div className="mb-4">
@@ -243,23 +302,60 @@ const handleAuthSuccess = (session) => {
                       </div>
                     )}
 
-                    {error && <div className="alert alert-danger py-2 small bg-danger bg-opacity-25 border-0 text-white mb-4">{error}</div>}
-                    {message && <div className="alert alert-success py-2 small bg-success bg-opacity-25 border-0 text-white mb-4">{message}</div>}
+                    {error && (
+                      <div className="alert alert-danger py-2 small bg-danger bg-opacity-25 border-0 text-white mb-4">
+                        {error}
+                      </div>
+                    )}
+                    {message && (
+                      <div className="alert alert-success py-2 small bg-success bg-opacity-25 border-0 text-white mb-4">
+                        {message}
+                      </div>
+                    )}
 
                     <div className="d-grid gap-3">
-                      <button type="submit" className="btn btn-lg fw-bold text-white border-0 shadow-sm" style={{ backgroundColor: "#00b5ad", padding: "14px" }} disabled={loading}>
-                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : 
-                         authMode === "login" ? t[lang].loginBtn : authMode === "signup" ? t[lang].signupBtn : t[lang].sendReset}
+                      <button
+                        type="submit"
+                        className="btn btn-lg fw-bold text-white border-0 shadow-sm"
+                        style={{
+                          backgroundColor: "#00b5ad",
+                          padding: "14px",
+                        }}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                        ) : authMode === "login" ? (
+                          t[lang].loginBtn
+                        ) : authMode === "signup" ? (
+                          t[lang].signupBtn
+                        ) : (
+                          t[lang].sendReset
+                        )}
                       </button>
 
                       <div className="d-flex flex-column gap-2 mt-3">
                         {authMode === "login" && (
-                          <button type="button" style={styles.linkBtn} onClick={() => switchMode("reset")}>
+                          <button
+                            type="button"
+                            style={styles.linkBtn}
+                            onClick={() => switchMode("reset")}
+                          >
                             {t[lang].forgot}
                           </button>
                         )}
-                        <button type="button" style={styles.linkBtn} onClick={() => switchMode(authMode === "login" ? "signup" : "login")}>
-                          {authMode === "login" ? t[lang].newHere : t[lang].haveAcc}
+                        <button
+                          type="button"
+                          style={styles.linkBtn}
+                          onClick={() =>
+                            switchMode(
+                              authMode === "login" ? "signup" : "login"
+                            )
+                          }
+                        >
+                          {authMode === "login"
+                            ? t[lang].newHere
+                            : t[lang].haveAcc}
                         </button>
                       </div>
                     </div>
@@ -276,109 +372,109 @@ const handleAuthSuccess = (session) => {
 }
 
 const styles = {
-  viewport: { 
-    backgroundColor: "#eef2f3", 
-    height: "100vh", 
-    width: "100vw", 
-    overflow: "hidden", 
-    position: "relative" 
+  viewport: {
+    backgroundColor: "#eef2f3",
+    height: "100vh",
+    width: "100vw",
+    overflow: "hidden",
+    position: "relative",
   },
-  introVideo: { 
-    position: "fixed", 
-    top: 0, 
-    left: 0, 
-    width: "100vw", 
-    height: "100vh", 
-    objectFit: "cover", 
-    zIndex: 9999 
+  introVideo: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    objectFit: "cover",
+    zIndex: 9999,
   },
-  bgOrange: { 
-    position: "absolute", 
-    width: "80%", 
-    height: "80%", 
-    top: "-10%", 
-    left: "-10%", 
-    backgroundColor: "#f7931e", 
-    clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)", 
-    opacity: 0.6, 
-    zIndex: 1 
+  bgOrange: {
+    position: "absolute",
+    width: "80%",
+    height: "80%",
+    top: "-10%",
+    left: "-10%",
+    backgroundColor: "#f7931e",
+    clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)",
+    opacity: 0.6,
+    zIndex: 1,
   },
-  bgTeal: { 
-    position: "absolute", 
-    width: "70%", 
-    height: "90%", 
-    bottom: "-10%", 
-    right: "-10%", 
-    backgroundColor: "#00b5ad", 
-    clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)", 
-    mixBlendMode: "multiply", 
-    opacity: 0.7, 
-    zIndex: 2 
+  bgTeal: {
+    position: "absolute",
+    width: "70%",
+    height: "90%",
+    bottom: "-10%",
+    right: "-10%",
+    backgroundColor: "#00b5ad",
+    clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)",
+    mixBlendMode: "multiply",
+    opacity: 0.7,
+    zIndex: 2,
   },
-  bgNavy: { 
-    position: "absolute", 
-    width: "100%", 
-    height: "100%", 
-    backgroundColor: "rgba(10, 26, 68, 0.2)", 
-    zIndex: 3 
+  bgNavy: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(10, 26, 68, 0.2)",
+    zIndex: 3,
   },
-  authCard: { 
-    position: "relative", 
-    zIndex: 10, 
-    width: "75%", 
-    maxWidth: "900px", 
-    minWidth: "320px", 
-    backgroundColor: "#0a1a44", 
-    borderRadius: "20px", 
-    overflow: "hidden", 
-    boxShadow: "0 30px 60px rgba(0,0,0,0.5)" 
+  authCard: {
+    position: "relative",
+    zIndex: 10,
+    width: "75%",
+    maxWidth: "900px",
+    minWidth: "320px",
+    backgroundColor: "#0a1a44",
+    borderRadius: "20px",
+    overflow: "hidden",
+    boxShadow: "0 30px 60px rgba(0,0,0,0.5)",
   },
-  langTabContainer: { 
-    position: "absolute", 
-    top: "20px", 
-    right: "25px", 
-    display: "flex", 
-    gap: "12px", 
-    alignItems: "center", 
-    zIndex: 11 
+  langTabContainer: {
+    position: "absolute",
+    top: "20px",
+    right: "25px",
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+    zIndex: 11,
   },
-  langBtn: { 
-    background: "none", 
-    border: "none", 
-    fontSize: "0.85rem", 
-    fontWeight: "bold", 
-    cursor: "pointer", 
-    transition: "0.3s" 
+  langBtn: {
+    background: "none",
+    border: "none",
+    fontSize: "0.85rem",
+    fontWeight: "bold",
+    cursor: "pointer",
+    transition: "0.3s",
   },
-  divider: { 
-    width: "2px", 
-    height: "20px", 
-    background: "white", 
-    opacity: 0.5 
+  divider: {
+    width: "2px",
+    height: "20px",
+    background: "white",
+    opacity: 0.5,
   },
-  inputField: { 
-    border: "1px solid rgba(255,255,255,0.2)", 
-    borderRadius: "12px", 
-    fontSize: "1rem", 
+  inputField: {
+    border: "1px solid rgba(255,255,255,0.2)",
+    borderRadius: "12px",
+    fontSize: "1rem",
     color: "white",
     padding: "12px 16px",
-    transition: "all 0.3s"
+    transition: "all 0.3s",
   },
-  linkBtn: { 
-    background: "none", 
-    border: "none", 
-    color: "white", 
-    fontSize: "0.9rem", 
-    opacity: 0.75, 
-    cursor: "pointer", 
+  linkBtn: {
+    background: "none",
+    border: "none",
+    color: "white",
+    fontSize: "0.9rem",
+    opacity: 0.75,
+    cursor: "pointer",
     textDecoration: "none",
     transition: "all 0.3s",
-    padding: "8px"
+    padding: "8px",
   },
-  bottomBorder: { 
-    height: "6px", 
-    width: "100%", 
-    background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)" 
+  bottomBorder: {
+    height: "6px",
+    width: "100%",
+    background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)",
   },
   logoTitle: {
     fontSize: "4rem",
@@ -388,6 +484,6 @@ const styles = {
     background: "linear-gradient(135deg, #f7931e 0%, #00b5ad 100%)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
-    backgroundClip: "text"
-  }
+    backgroundClip: "text",
+  },
 };
