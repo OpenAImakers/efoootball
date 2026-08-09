@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // 🔗 Get redirect_to parameter passed by the Expo Mobile App
+  const redirectTo = searchParams.get("redirect_to");
+
   const [authMode, setAuthMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,11 +17,22 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  
+
   // 🌍 Language State: 'en' or 'fr'
   const [lang, setLang] = useState("en");
 
   const [showIntro, setShowIntro] = useState(true);
+
+  // Helper function to handle redirection back to Mobile App or Website Navigation
+  const handleAuthSuccess = (session) => {
+    if (redirectTo && session) {
+      // Send access_token and refresh_token back to Expo App
+      const appRedirectUrl = `${redirectTo}?access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+      window.location.href = appRedirectUrl;
+    } else {
+      navigate("/teams", { replace: true });
+    }
+  };
 
   // ✅ Auto-redirect if already logged in
   useEffect(() => {
@@ -24,7 +40,7 @@ export default function Auth() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
-        navigate("/teams", { replace: true });
+        handleAuthSuccess(session);
       } else {
         setCheckingAuth(false);
       }
@@ -34,12 +50,12 @@ export default function Auth() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        navigate("/teams", { replace: true });
+        handleAuthSuccess(session);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, redirectTo]);
 
   // Dictionary for clean text management
   const t = {
@@ -97,12 +113,12 @@ export default function Auth() {
     setError(null);
 
     if (authMode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
         setLoading(false);
-      } else {
-        navigate("/teams");
+      } else if (data?.session) {
+        handleAuthSuccess(data.session);
       }
     } else if (authMode === "signup") {
       const { error, data } = await supabase.auth.signUp({ email, password });
@@ -111,8 +127,8 @@ export default function Auth() {
         setError(error.message.includes("User already registered") ? t[lang].alreadyReg : error.message);
       } else if (data.user && data.session === null) {
         setIsSignedUp(true);
-      } else {
-        navigate("/teams");
+      } else if (data?.session) {
+        handleAuthSuccess(data.session);
       }
     } else if (authMode === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -158,7 +174,6 @@ export default function Auth() {
           <div style={styles.bgNavy}></div>
 
           <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-            {/* Updated card to be larger - occupies 3/4 of screen */}
             <div className="card shadow-lg border-0 text-white" style={styles.authCard}>
               
               {/* 🌐 Language Switcher Tab */}
@@ -305,11 +320,11 @@ const styles = {
   authCard: { 
     position: "relative", 
     zIndex: 10, 
-    width: "75%", // 3/4 of the screen width
-    maxWidth: "900px", // Maximum width for large screens
-    minWidth: "320px", // Minimum width for mobile
+    width: "75%", 
+    maxWidth: "900px", 
+    minWidth: "320px", 
     backgroundColor: "#0a1a44", 
-    borderRadius: "20px", // Rounded corners for modern look
+    borderRadius: "20px", 
     overflow: "hidden", 
     boxShadow: "0 30px 60px rgba(0,0,0,0.5)" 
   },
