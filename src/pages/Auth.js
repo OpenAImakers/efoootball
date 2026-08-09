@@ -18,32 +18,40 @@ export default function Auth() {
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Instead of auto-redirecting (which raced the Custom Tab's redirect
-  // interceptor and was inconsistent), we show a "Continue to App" button.
-  // A user tap is a guaranteed-ready signal — no timing to get wrong.
+  // Deep Link Gate
   const [readyToRedirect, setReadyToRedirect] = useState(false);
   const pendingUrlRef = useRef(null);
 
   // 🌍 Language State: 'en' or 'fr'
   const [lang, setLang] = useState("en");
 
-  const [showIntro, setShowIntro] = useState(true);
-
   // Prevents handleAuthSuccess from re-arming more than once
-  // (e.g. if checkSession() and onAuthStateChange both fire)
   const redirectedRef = useRef(false);
 
   // Helper function to handle redirection back to Mobile App or Website Navigation
-  const handleAuthSuccess = (session) => {
+  const handleAuthSuccess = async (session) => {
     if (redirectedRef.current) return;
 
     if (redirectTo && session) {
       redirectedRef.current = true;
 
+      let activeSession = session;
+
+      // Force refresh session to guarantee non-expired tokens for mobile app
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      const isExpired = Date.now() >= expiresAt - 60000; // 1 min buffer
+
+      if (isExpired) {
+        const { data, error: refreshErr } = await supabase.auth.refreshSession();
+        if (!refreshErr && data.session) {
+          activeSession = data.session;
+        }
+      }
+
       // Send access_token and refresh_token back to Expo App
-      // (URL-encoded — refresh_token can contain characters that break an
-      // unescaped query string, which was truncating it on the mobile side)
-      const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
+      const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(
+        activeSession.access_token
+      )}&refresh_token=${encodeURIComponent(activeSession.refresh_token)}`;
 
       pendingUrlRef.current = appRedirectUrl;
       setCheckingAuth(false);
@@ -59,34 +67,31 @@ export default function Auth() {
     }
   };
 
-  // ✅ Auto-check for an existing session on mount
+  // ✅ Force sign out if coming from app link, or check existing session for standard web
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session) {
-        handleAuthSuccess(session);
-      } else {
+    const initAuth = async () => {
+      if (redirectTo) {
+        // FORCE RE-AUTHENTICATION: Sign out existing web session
+        await supabase.auth.signOut();
         setCheckingAuth(false);
+      } else {
+        // Standard Web Flow
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          handleAuthSuccess(session);
+        } else {
+          setCheckingAuth(false);
+        }
       }
     };
 
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        handleAuthSuccess(session);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate, redirectTo]);
+    initAuth();
+  }, [redirectTo]);
 
   // Dictionary for clean text management
   const t = {
     en: {
       slogan: "Everything you need to run tournaments in one place",
-      ecosystem: "smart ecosystem",
       welcome: "Welcome Back",
       create: "Create Account",
       reset: "Reset Password",
@@ -108,7 +113,6 @@ export default function Auth() {
     },
     fr: {
       slogan: "Tout ce dont vous avez besoin pour gérer vos tournois en un seul endroit",
-      ecosystem: "écosystème intelligent",
       welcome: "Bon retour",
       create: "Créer un compte",
       reset: "Réinitialiser",
@@ -175,44 +179,21 @@ export default function Auth() {
   // Show spinner while checking session
   if (checkingAuth) {
     return (
-      <div style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#0a1a44"
-      }}>
-        <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
+      <div style={styles.centerContainer}>
+        <div className="spinner-border text-primary" role="status"></div>
       </div>
     );
   }
 
-  // Show "Continue to App" gate once we have a session + redirect target.
-  // This replaces the old automatic window.location.href redirect, which
-  // raced the Custom Tab / ASWebAuthenticationSession's redirect interceptor
-  // and intermittently got dismissed before the interceptor was armed. A
-  // deliberate tap here is a guaranteed-ready signal, so no race is possible.
+  // Deep Link Return Screen
   if (readyToRedirect) {
     return (
-      <div style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#0a1a44"
-      }}>
+      <div style={styles.centerContainer}>
         <div style={{ fontSize: "3rem" }}>✅</div>
-        <div style={{ color: "white", fontSize: "1.1rem", opacity: 0.9 }}>
-          {t[lang].signedIn}
-        </div>
+        <h4>{t[lang].signedIn}</h4>
         <button
           onClick={handleContinueTap}
-          className="btn btn-lg fw-bold text-white border-0 shadow-sm"
-          style={{ backgroundColor: "#00b5ad", padding: "14px 32px", borderRadius: "12px" }}
+          className="btn btn-success btn-lg mt-3"
         >
           {t[lang].continueBtn}
         </button>
@@ -221,229 +202,117 @@ export default function Auth() {
   }
 
   return (
-    <>
-      {showIntro && (
-        <video autoPlay muted playsInline onEnded={() => setShowIntro(false)} style={styles.introVideo}>
-          <source src="/intro.mp4" type="video/mp4" />
-        </video>
-      )}
-
-      {!showIntro && (
-        <div style={styles.viewport}>
-          <div style={styles.bgOrange}></div>
-          <div style={styles.bgTeal}></div>
-          <div style={styles.bgNavy}></div>
-
-          <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-            <div className="card shadow-lg border-0 text-white" style={styles.authCard}>
-
-              {/* 🌐 Language Switcher Tab */}
-              <div style={styles.langTabContainer}>
-                <button
-                  onClick={() => setLang("en")}
-                  style={{...styles.langBtn, color: lang === 'en' ? '#00b5ad' : '#fff'}}
-                >EN</button>
-                <span style={{opacity: 0.3}}>|</span>
-                <button
-                  onClick={() => setLang("fr")}
-                  style={{...styles.langBtn, color: lang === 'fr' ? '#00b5ad' : '#fff'}}
-                >FR</button>
-              </div>
-
-              <div className="card-body p-5 text-center">
-                <div className="mb-5">
-                  <h1 style={styles.logoTitle}>efootball</h1>
-                  <div className="d-flex align-items-center justify-content-center mt-2" style={{ fontSize: "1rem", opacity: 0.9 }}>
-                     {t[lang].slogan}
-                  </div>
-                </div>
-
-                {isSignedUp ? (
-                  <div>
-                    <div className="mb-4" style={{ fontSize: "3rem" }}>✉️</div>
-                    <h4>{t[lang].checkInbox}</h4>
-                    <p className="small opacity-75">{t[lang].sentLink} {email}</p>
-                    <button className="btn btn-sm btn-outline-light mt-3" onClick={() => setIsSignedUp(false)}>
-                      {t[lang].back}
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit}>
-                    <h3 className="h4 mb-4 opacity-75">
-                      {authMode === "login" ? t[lang].welcome : authMode === "signup" ? t[lang].create : t[lang].reset}
-                    </h3>
-
-                    <div className="mb-4">
-                      <input
-                        type="email"
-                        required
-                        className="form-control form-control-lg bg-white bg-opacity-10 text-white border-secondary shadow-none"
-                        placeholder={t[lang].email}
-                        style={styles.inputField}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-
-                    {authMode !== "reset" && (
-                      <div className="mb-4">
-                        <input
-                          type="password"
-                          required
-                          className="form-control form-control-lg bg-white bg-opacity-10 text-white border-secondary shadow-none"
-                          placeholder={t[lang].pass}
-                          style={styles.inputField}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {error && <div className="alert alert-danger py-2 small bg-danger bg-opacity-25 border-0 text-white mb-4">{error}</div>}
-                    {message && <div className="alert alert-success py-2 small bg-success bg-opacity-25 border-0 text-white mb-4">{message}</div>}
-
-                    <div className="d-grid gap-3">
-                      <button type="submit" className="btn btn-lg fw-bold text-white border-0 shadow-sm" style={{ backgroundColor: "#00b5ad", padding: "14px" }} disabled={loading}>
-                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> :
-                         authMode === "login" ? t[lang].loginBtn : authMode === "signup" ? t[lang].signupBtn : t[lang].sendReset}
-                      </button>
-
-                      <div className="d-flex flex-column gap-2 mt-3">
-                        {authMode === "login" && (
-                          <button type="button" style={styles.linkBtn} onClick={() => switchMode("reset")}>
-                            {t[lang].forgot}
-                          </button>
-                        )}
-                        <button type="button" style={styles.linkBtn} onClick={() => switchMode(authMode === "login" ? "signup" : "login")}>
-                          {authMode === "login" ? t[lang].newHere : t[lang].haveAcc}
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                )}
-              </div>
-              <div style={styles.bottomBorder}></div>
-            </div>
-          </div>
+    <div style={styles.pageContainer}>
+      <div className="card shadow-sm p-4" style={{ maxWidth: "420px", width: "100%" }}>
+        {/* Language Switcher */}
+        <div className="d-flex justify-content-end gap-2 mb-3">
+          <button
+            onClick={() => setLang("en")}
+            className={`btn btn-sm ${lang === "en" ? "btn-primary" : "btn-outline-secondary"}`}
+          >
+            EN
+          </button>
+          <button
+            onClick={() => setLang("fr")}
+            className={`btn btn-sm ${lang === "fr" ? "btn-primary" : "btn-outline-secondary"}`}
+          >
+            FR
+          </button>
         </div>
-      )}
-    </>
+
+        <div className="text-center mb-4">
+          <h2 className="fw-bold">efootball</h2>
+          <p className="text-muted small">{t[lang].slogan}</p>
+        </div>
+
+        {isSignedUp ? (
+          <div className="text-center">
+            <div style={{ fontSize: "2.5rem" }}>✉️</div>
+            <h4>{t[lang].checkInbox}</h4>
+            <p className="text-muted small">{t[lang].sentLink} {email}</p>
+            <button className="btn btn-sm btn-outline-secondary mt-3" onClick={() => setIsSignedUp(false)}>
+              {t[lang].back}
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <h5 className="mb-3 text-center">
+              {authMode === "login" ? t[lang].welcome : authMode === "signup" ? t[lang].create : t[lang].reset}
+            </h5>
+
+            <div className="mb-3">
+              <input
+                type="email"
+                required
+                className="form-control"
+                placeholder={t[lang].email}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            {authMode !== "reset" && (
+              <div className="mb-3">
+                <input
+                  type="password"
+                  required
+                  className="form-control"
+                  placeholder={t[lang].pass}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            )}
+
+            {error && <div className="alert alert-danger py-2 small">{error}</div>}
+            {message && <div className="alert alert-success py-2 small">{message}</div>}
+
+            <button type="submit" className="btn btn-primary w-100 fw-bold" disabled={loading}>
+              {loading ? (
+                <span className="spinner-border spinner-border-sm"></span>
+              ) : authMode === "login" ? (
+                t[lang].loginBtn
+              ) : authMode === "signup" ? (
+                t[lang].signupBtn
+              ) : (
+                t[lang].sendReset
+              )}
+            </button>
+
+            <div className="text-center mt-3 d-flex flex-column gap-1">
+              {authMode === "login" && (
+                <button type="button" className="btn btn-link btn-sm text-decoration-none" onClick={() => switchMode("reset")}>
+                  {t[lang].forgot}
+                </button>
+              )}
+              <button type="button" className="btn btn-link btn-sm text-decoration-none" onClick={() => switchMode(authMode === "login" ? "signup" : "login")}>
+                {authMode === "login" ? t[lang].newHere : t[lang].haveAcc}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 
 const styles = {
-  viewport: {
-    backgroundColor: "#eef2f3",
-    height: "100vh",
-    width: "100vw",
-    overflow: "hidden",
-    position: "relative"
-  },
-  introVideo: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    objectFit: "cover",
-    zIndex: 9999
-  },
-  bgOrange: {
-    position: "absolute",
-    width: "80%",
-    height: "80%",
-    top: "-10%",
-    left: "-10%",
-    backgroundColor: "#f7931e",
-    clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)",
-    opacity: 0.6,
-    zIndex: 1
-  },
-  bgTeal: {
-    position: "absolute",
-    width: "70%",
-    height: "90%",
-    bottom: "-10%",
-    right: "-10%",
-    backgroundColor: "#00b5ad",
-    clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)",
-    mixBlendMode: "multiply",
-    opacity: 0.7,
-    zIndex: 2
-  },
-  bgNavy: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(10, 26, 68, 0.2)",
-    zIndex: 3
-  },
-  authCard: {
-    position: "relative",
-    zIndex: 10,
-    width: "75%",
-    maxWidth: "900px",
-    minWidth: "320px",
-    backgroundColor: "#0a1a44",
-    borderRadius: "20px",
-    overflow: "hidden",
-    boxShadow: "0 30px 60px rgba(0,0,0,0.5)"
-  },
-  langTabContainer: {
-    position: "absolute",
-    top: "20px",
-    right: "25px",
+  pageContainer: {
+    minHeight: "100vh",
     display: "flex",
-    gap: "12px",
+    justifyContent: "center",
     alignItems: "center",
-    zIndex: 11
+    backgroundColor: "#f8f9fa",
+    padding: "1rem"
   },
-  langBtn: {
-    background: "none",
-    border: "none",
-    fontSize: "0.85rem",
-    fontWeight: "bold",
-    cursor: "pointer",
-    transition: "0.3s"
-  },
-  divider: {
-    width: "2px",
-    height: "20px",
-    background: "white",
-    opacity: 0.5
-  },
-  inputField: {
-    border: "1px solid rgba(255,255,255,0.2)",
-    borderRadius: "12px",
-    fontSize: "1rem",
-    color: "white",
-    padding: "12px 16px",
-    transition: "all 0.3s"
-  },
-  linkBtn: {
-    background: "none",
-    border: "none",
-    color: "white",
-    fontSize: "0.9rem",
-    opacity: 0.75,
-    cursor: "pointer",
-    textDecoration: "none",
-    transition: "all 0.3s",
-    padding: "8px"
-  },
-  bottomBorder: {
-    height: "6px",
-    width: "100%",
-    background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)"
-  },
-  logoTitle: {
-    fontSize: "4rem",
-    fontWeight: "bold",
-    marginBottom: "0",
-    letterSpacing: "2px",
-    background: "linear-gradient(135deg, #f7931e 0%, #00b5ad 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    backgroundClip: "text"
+  centerContainer: {
+    height: "100vh",
+    width: "100vw",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    gap: "10px"
   }
 };
