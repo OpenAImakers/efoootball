@@ -82,6 +82,9 @@ export default function Navbar() {
               <NavLink to="/activetournaments" label="Tournaments" currentPath={location.pathname} />
               <NavLink to="/fie" label="FIE" currentPath={location.pathname} />
               <NavLink to="/register" label="Register" currentPath={location.pathname} />
+              {/* to fixtures
+               */}
+              <NavLink to="/about" label="Fixtures" currentPath={location.pathname} />
             </div>
 
             {/* Manage Tournament / PWA Action CTA */}
