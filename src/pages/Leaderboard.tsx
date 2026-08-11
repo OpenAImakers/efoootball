@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import Advert from "../components/Advert";
+import Advert from "../components/ExternalHeader";
 import { supabase } from "../supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -195,100 +195,10 @@ const KenyaEfootballHub: React.FC = () => {
       <SEOHead />
       <StructuredData rows={rows} leagues={leagues} />
       {/* <div className="container-fluid px-4 pt-5 mt-4"> */}
-      <div className="min-vh-100 container-fluid bg-konami-dark text-white font-konami pb-5"  >
+      <div className="min-vh-100 container-fluid bg-konami-dark text-white font-konami pb-5"  style={{ paddingTop: "105px" }}>
         <Advert />
         
         <div className="px-4 pt-5 mt-4" >
-          {/* Breadcrumb for SEO - STICKY NAV */}
-       <nav
-  aria-label="Tournament registration"
-  className="sticky-top"
-  style={{
-    top: 0,
-    zIndex: 1020,
-    background: "linear-gradient(90deg, #030a1a 0%, #0a1628 50%, #030a1a 100%)",
-    borderBottom: "1px solid rgba(13, 202, 240, 0.25)",
-    boxShadow: "0 4px 30px rgba(0, 0, 0, 0.6)",
-  }}
->
-  <div className="container-fluid px-3 px-md-4 py-3">
-    <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
-      
-      {/* Left – Strong message */}
-      <div className="d-flex align-items-center gap-3">
-        <div
-          className="d-flex align-items-center justify-content-center rounded-circle"
-          style={{
-            width: 42,
-            height: 42,
-            background: "linear-gradient(135deg, #0dcaf0, #6610f2)",
-            boxShadow: "0 0 18px rgba(13, 202, 240, 0.5)",
-          }}
-        >
-          <i className="bi bi-trophy-fill text-white fs-5"></i>
-        </div>
-        <div>
-          <div
-            className="fw-bold text-white lh-1"
-            style={{ fontSize: "0.95rem", letterSpacing: "0.5px" }}
-          >
-            READY TO COMPETE?
-          </div>
-          <div
-            className="text-info"
-            style={{ fontSize: "0.78rem", opacity: 0.9 }}
-          >
-            Register for tournaments 
-          </div>
-        </div>
-      </div>
-
-      {/* Center – Pulsing CTA */}
-      <Link
-        to="/activetournaments"
-        className="btn btn-lg fw-bold text-decoration-none d-flex align-items-center gap-2 px-4 py-2"
-        style={{
-          background: "linear-gradient(90deg, #f4fbfc, #287bf8)",
-          color: "#000",
-          borderRadius: "50px",
-          border: "none",
-          boxShadow: "0 0 25px rgba(13, 202, 240, 0.55)",
-          transition: "all 0.25s ease",
-          fontSize: "0.95rem",
-          letterSpacing: "0.8px",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.05)";
-          e.currentTarget.style.boxShadow = "0 0 35px rgba(13, 202, 240, 0.8)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = "0 0 25px rgba(13, 202, 240, 0.55)";
-        }}
-      >
-        VIEW & REGISTER FOR TOURNAMENTS
-        <i className="bi bi-arrow-right"></i>
-      </Link>
-
-      {/* Right – Quick info badges */}
-      <div className="d-none d-lg-flex align-items-center gap-3">
-        <div
-          className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill"
-          style={{
-            background: "rgba(13, 202, 240, 0.1)",
-            border: "1px solid rgba(13, 202, 240, 0.3)",
-          }}
-        >
-          <span className="text-white" style={{ fontSize: "0.8rem" }}>
-            efkl
-          </span>
-        </div>
-     
-      </div>
-    </div>
-  </div>
-</nav>
-
           {/* ACTION BUTTONS AT THE TOP */}
           <div className="d-flex justify-content-end gap-2 my-4">
             <button 

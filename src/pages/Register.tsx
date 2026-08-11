@@ -168,13 +168,12 @@ export default function RegisterPage() {
   );
 
   return (
-    <main className="min-vh-100" style={{ backgroundColor: "#f0f2f5", marginTop: "68px" }}>
+    <main className="min-vh-100" style={{ backgroundColor: "#f0f2f5", marginTop: "105px" }}>
       <Navbar />
 
       <div 
         className="container-fluid px-4 py-3 shadow-sm"
         style={{
-          position: "sticky",
           top: "68px",
           zIndex: 1020,
           backgroundColor: "#f0f2f5",

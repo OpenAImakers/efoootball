@@ -1,298 +1,277 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import LivelyFeed from "./LivelyFeed";
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Scroll position state
   const [scrolled, setScrolled] = useState(false);
 
-  const isFei = location.pathname === "/fie" || location.pathname.startsWith("/fie/");
+  // PWA / Standalone Installation Logic
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    if (!isFei) return;
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 30);
+    };
 
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [isFei]);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-  // ────────────────────────────────────────────────
-  // FEI MODE – matches the provided Header UI/UX
-  // ────────────────────────────────────────────────
-  if (isFei) {
-    return (
-      <nav
-        style={{
-          width: "100%",
-          position: "sticky",
-          top: 0,
-          zIndex: 1000,
-          background: "linear-gradient(135deg, #38b222, #ff9f1c)",
-          color: "#111",
-          padding: "14px 20px",
-          textAlign: "center",
-          fontFamily: "'Rajdhani', 'Orbitron', 'Segoe UI', Arial, sans-serif",
-          boxSizing: "border-box",
-          overflow: "hidden",
-          boxShadow: scrolled
-            ? "0 10px 30px rgba(0,0,0,0.15)"
-            : "0 0 0 rgba(0,0,0,0)",
-          transition: "box-shadow 0.3s ease",
-        }}
-      >
-        {/* HUD scanline */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background:
-              "linear-gradient(rgba(255,255,255,0.07) 50%, rgba(0,0,0,0.05) 50%)",
-            backgroundSize: "100% 4px",
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-        />
+  useEffect(() => {
+    // Safely cast navigator for non-standard iOS Safari property to satisfy TypeScript
+    const nav = window.navigator as Navigator & { standalone?: boolean };
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      nav.standalone === true;
 
-        {/* Top title */}
-        <div
-          style={{
-            fontSize: "15px",
-            fontWeight: 800,
-            letterSpacing: "3px",
-            color: "#1a1a2e",
-            opacity: 0.85,
-            position: "relative",
-            zIndex: 3,
-          }}
-        >
-          FEDERATION INTERNATIONALE
-        </div>
+    if (standalone) {
+      setIsStandalone(true);
+      return;
+    }
 
-        {/* Main line with animated chevrons */}
-        <div
-          style={{
-            marginTop: "4px",
-            fontSize: "16px",
-            fontWeight: 900,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "12px",
-            textTransform: "uppercase",
-            letterSpacing: "1.5px",
-            position: "relative",
-            zIndex: 3,
-          }}
-        >
-          <i
-            className="bi bi-chevron-left"
-            style={{
-              fontSize: "16px",
-              opacity: 0.75,
-              transform: scrolled ? "translateX(-25px)" : "translateX(0px)",
-              transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
-          />
-          <i className="bi bi-soccer-ball" style={{ fontSize: "16px", opacity: 0.8 }} />
-          <span style={{ fontWeight: 900, color: "#1a1a2e" }}>EFOOTBALL</span>
-          <i className="bi bi-soccer-ball" style={{ fontSize: "16px", opacity: 0.8 }} />
-          <i
-            className="bi bi-chevron-right"
-            style={{
-              fontSize: "16px",
-              opacity: 0.75,
-              transform: scrolled ? "translateX(25px)" : "translateX(0px)",
-              transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
-          />
-        </div>
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
 
-        {/* Bottom left text – fades on scroll */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "14px",
-            left: "20px",
-            fontSize: "11px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            color: "#1a1a2e",
-            letterSpacing: "1px",
-            opacity: scrolled ? 0 : 0.6,
-            transition: "opacity 0.25s ease",
-            pointerEvents: "none",
-            zIndex: 3,
-          }}
-        >
-          Results & Competitions
-        </div>
+    const installedHandler = () => {
+      setIsStandalone(true);
+      setDeferredPrompt(null);
+    };
 
-        {/* Navigation links (kept functional, styled to fit FEI) */}
-        <div
-          className="d-flex justify-content-center flex-wrap gap-2 mt-3"
-          style={{ position: "relative", zIndex: 3 }}
-        >
-          <FeiNavLink to="/" label="Home" currentPath={location.pathname} />
-          <FeiNavLink
-            to="/activetournaments"
-            label="Active Tournaments"
-            currentPath={location.pathname}
-          />
-          <FeiNavLink to="/fie" label="FEI" currentPath={location.pathname} />
-          <FeiNavLink
-            to="/register"
-            label="Register for Tournaments"
-            currentPath={location.pathname}
-          />
-        </div>
-      </nav>
-    );
-  }
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
 
-  // ────────────────────────────────────────────────
-  // DEFAULT MODE – original white navbar
-  // ────────────────────────────────────────────────
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
+  }, []);
+
+  const handleManageTournament = async (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+    }
+
+    navigate("/auth");
+  };
+
   return (
-    <nav
-      className="navbar fixed-top bg-white border-bottom shadow-sm"
-      style={{ borderColor: "#e0eafc" }}
-    >
-      <div className="container-fluid px-3 px-md-4 px-lg-5">
-        <div className="d-flex align-items-center w-100">
-          {/* Brand / Logo */}
-          <Link
-            to="/"
-            className="navbar-brand fw-bold text-decoration-none me-3 me-lg-4 flex-shrink-0 brand-logo"
-            style={{
-              fontSize: "1.75rem",
-              letterSpacing: "-0.5px",
-              background: "linear-gradient(90deg, #0072ff, #00c6ff)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              textTransform: "lowercase",
-            }}
-          >
-            efootball
-          </Link>
+    <header className={`fixed-top header-wrapper ${scrolled ? "header-scrolled" : ""}`}>
+      {/* Top Glassmorphic Navigation Bar */}
+      <nav className="navbar-container">
+        <div className="container-fluid px-3 px-md-4 px-lg-5">
+          <div className="d-flex align-items-center justify-content-between w-100 py-2 navbar-inner">
+            
+            {/* Brand / Logo (Takes to Home) */}
+            <Link to="/" className="navbar-brand-premium flex-shrink-0">
+              <span className="brand-glow"></span>
+              <span className="brand-text">efootball</span>
+            </Link>
 
-          {/* Navigation Links */}
-          <div
-            className="d-flex align-items-center flex-nowrap overflow-auto flex-grow-1"
-            style={{
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
-            <style>{`
-              .overflow-auto::-webkit-scrollbar { display: none; }
-              .brand-logo:hover { opacity: 0.85; }
-              .custom-nav-link {
-                font-size: 0.9rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                padding: 0.45rem 1rem;
-                margin: 0 0.2rem;
-                transition: all 0.2s ease-in-out;
-                border-radius: 6px;
-                color: #556987;
-                text-decoration: none;
-                border: 1px solid transparent;
-              }
-              .custom-nav-link:hover:not(.active) {
-                color: #0072ff !important;
-                background-color: #f0f7ff;
-              }
-              .custom-nav-link.active {
-                background-color: #e6f0ff !important;
-                color: #0072ff !important;
-                border-color: #b3d4ff !important;
-                font-weight: 700;
-              }
-              @media (max-width: 576px) {
-                .navbar-brand { font-size: 1.5rem !important; }
-                .custom-nav-link { font-size: 0.8rem; padding: 0.35rem 0.75rem; }
-              }
-            `}</style>
+            {/* Navigation Links */}
+            <div className="nav-scroll-container mx-3">
+              <NavLink to="/activetournaments" label="Tournaments" currentPath={location.pathname} />
+              <NavLink to="/fie" label="FIE" currentPath={location.pathname} />
+              <NavLink to="/register" label="Register" currentPath={location.pathname} />
+            </div>
 
-            <NavLink to="/" label="Home" currentPath={location.pathname} />
-            <NavLink
-              to="/activetournaments"
-              label="Active Tournaments"
-              currentPath={location.pathname}
-            />
-            <NavLink to="/fie" label="FEI" currentPath={location.pathname} />
-            <NavLink
-              to="/register"
-              label="Register for Tournaments"
-              currentPath={location.pathname}
-            />
+            {/* Manage Tournament / PWA Action CTA */}
+            {!isStandalone && (
+              <button className="cta-btn-glass text-nowrap" onClick={handleManageTournament}>
+                <i className="bi bi-trophy-fill me-2"></i>
+                <span>Manage Tournament</span>
+              </button>
+            )}
+
           </div>
         </div>
+      </nav>
+
+      {/* Lively Feed Section - Smoothly hides on scroll */}
+      <div className="lively-feed-wrapper">
+        <LivelyFeed />
       </div>
-    </nav>
+
+      {/* High-End Styling */}
+      <style>{`
+        .header-wrapper {
+          z-index: 1030;
+          background: rgba(3, 10, 26, 0.85);
+          backdrop-filter: blur(16px) saturate(180%);
+          -webkit-backdrop-filter: blur(16px) saturate(180%);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .header-scrolled {
+          background: rgba(2, 6, 18, 0.95);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .navbar-container {
+          position: relative;
+          background: radial-gradient(circle at 20% 0%, rgba(13, 110, 253, 0.15) 0%, transparent 50%);
+        }
+
+        .navbar-inner {
+          transition: padding 0.3s ease;
+        }
+
+        .header-scrolled .navbar-inner {
+          padding-top: 0.25rem !important;
+          padding-bottom: 0.25rem !important;
+        }
+
+        .navbar-brand-premium {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          text-decoration: none;
+          padding: 0.2rem 0;
+        }
+
+        .brand-text {
+          font-size: 1.8rem;
+          font-weight: 900;
+          letter-spacing: -0.8px;
+          text-transform: lowercase;
+          background: linear-gradient(135deg, #ffffff 30%, #60a5fa 70%, #fd7e14 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          transition: all 0.3s ease;
+        }
+
+        .header-scrolled .brand-text {
+          font-size: 1.4rem;
+        }
+
+        .navbar-brand-premium:hover .brand-text {
+          opacity: 0.9;
+          transform: translateY(-1px);
+        }
+
+        .nav-scroll-container {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          overflow-x: auto;
+          white-space: nowrap;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .nav-scroll-container::-webkit-scrollbar {
+          display: none;
+        }
+
+        .nav-link-premium {
+          position: relative;
+          font-size: 0.825rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1.2px;
+          padding: 0.55rem 1.1rem;
+          color: rgba(255, 255, 255, 0.65);
+          text-decoration: none;
+          border-radius: 12px;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          border: 1px solid transparent;
+        }
+
+        .header-scrolled .nav-link-premium {
+          padding: 0.35rem 0.85rem;
+          font-size: 0.775rem;
+        }
+
+        .nav-link-premium:hover:not(.active) {
+          color: #ffffff;
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-link-premium.active {
+          color: #38bdf8;
+          background: rgba(56, 189, 248, 0.1);
+          border-color: rgba(56, 189, 248, 0.3);
+          box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15);
+        }
+
+        .cta-btn-glass {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.55rem 1.2rem;
+          font-size: 0.825rem;
+          font-weight: 700;
+          color: #ffffff;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 12px;
+          cursor: pointer;
+          backdrop-filter: blur(10px);
+          transition: all 0.25s ease;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-scrolled .cta-btn-glass {
+          padding: 0.35rem 0.9rem;
+          font-size: 0.75rem;
+        }
+
+        .cta-btn-glass:hover {
+          background: linear-gradient(135deg, rgba(13, 110, 253, 0.3), rgba(255, 255, 255, 0.1));
+          border-color: rgba(56, 189, 248, 0.5);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(13, 110, 253, 0.25);
+        }
+
+        /* Lively Feed Smooth Collapse Animation */
+        .lively-feed-wrapper {
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          background: rgba(0, 0, 0, 0.2);
+          max-height: 50px;
+          opacity: 1;
+          overflow: hidden;
+          transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.25s ease,
+                      padding 0.35s ease;
+          padding: 6px 0;
+        }
+
+        .header-scrolled .lively-feed-wrapper {
+          max-height: 0;
+          opacity: 0;
+          padding: 0;
+          border-top-color: transparent;
+        }
+
+        @media (max-width: 576px) {
+          .brand-text { font-size: 1.5rem; }
+          .header-scrolled .brand-text { font-size: 1.2rem; }
+          .nav-link-premium { font-size: 0.75rem; padding: 0.45rem 0.8rem; }
+          .cta-btn-glass { font-size: 0.75rem; padding: 0.45rem 0.85rem; }
+        }
+      `}</style>
+    </header>
   );
 }
 
-/* ─── Helpers ─────────────────────────────────────── */
-
-function NavLink({
-  to,
-  label,
-  currentPath,
-}: {
-  to: string;
-  label: string;
-  currentPath: string;
-}) {
-  const isActive =
-    currentPath === to || (to !== "/" && currentPath.startsWith(to + "/"));
+function NavLink({ to, label, currentPath }: { to: string; label: string; currentPath: string }) {
+  const isActive = currentPath === to || (to !== "/" && currentPath.startsWith(to + "/"));
   return (
     <Link
       to={to}
-      className={`custom-nav-link text-nowrap ${isActive ? "active" : ""}`}
-      style={{ minWidth: "fit-content" }}
-    >
-      {label}
-    </Link>
-  );
-}
-
-function FeiNavLink({
-  to,
-  label,
-  currentPath,
-}: {
-  to: string;
-  label: string;
-  currentPath: string;
-}) {
-  const isActive =
-    currentPath === to || (to !== "/" && currentPath.startsWith(to + "/"));
-
-  return (
-    <Link
-      to={to}
-      className="text-nowrap"
-      style={{
-        fontSize: "0.75rem",
-        fontWeight: isActive ? 800 : 700,
-        letterSpacing: "1px",
-        textTransform: "uppercase",
-        padding: "0.3rem 0.85rem",
-        borderRadius: "4px",
-        textDecoration: "none",
-        color: "#1a1a2e",
-        background: isActive ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
-        border: isActive
-          ? "1px solid rgba(0,0,0,0.15)"
-          : "1px solid transparent",
-        transition: "all 0.2s ease",
-      }}
+      className={`nav-link-premium text-nowrap ${isActive ? "active" : ""}`}
     >
       {label}
     </Link>

@@ -10,6 +10,7 @@ export default function HelloWorld() {
   const pageStyle = {
     minHeight: "100vh",
     padding: "20px",
+    paddingTop: "105px",
     background: "linear-gradient(135deg, #38b222, #ff9f1c)",
     fontFamily: "Arial",
     color: "#111",

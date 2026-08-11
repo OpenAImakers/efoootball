@@ -13,7 +13,7 @@ function Home() {
   return (
     <div
       className="w-100 m-0 p-0 overflow-x-hidden"
-      style={{ minHeight: "100vh"}}
+      style={{ minHeight: "100vh" }}
     >
       <Navbar />
 
