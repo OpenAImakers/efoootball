@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // 🔗 Get redirect_to parameter passed by the Expo Mobile App
+  const redirectTo = searchParams.get("redirect_to");
+
   const [authMode, setAuthMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,34 +17,79 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  
+
+  // Intro Video State
+  const [showIntro, setShowIntro] = useState(true);
+
+  // Deep Link Gate
+  const [readyToRedirect, setReadyToRedirect] = useState(false);
+  const pendingUrlRef = useRef(null);
+
   // 🌍 Language State: 'en' or 'fr'
   const [lang, setLang] = useState("en");
 
-  const [showIntro, setShowIntro] = useState(true);
+  // Prevents handleAuthSuccess from re-arming more than once
+  const redirectedRef = useRef(false);
 
-  // ✅ Auto-redirect if already logged in
+  // Helper function to handle redirection back to Mobile App or Website Navigation
+  const handleAuthSuccess = async (session) => {
+    if (redirectedRef.current) return;
+
+    if (redirectTo && session) {
+      redirectedRef.current = true;
+
+      let activeSession = session;
+
+      // Force refresh session to guarantee non-expired tokens for mobile app
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      const isExpired = Date.now() >= expiresAt - 60000; // 1 min buffer
+
+      if (isExpired) {
+        const { data, error: refreshErr } = await supabase.auth.refreshSession();
+        if (!refreshErr && data.session) {
+          activeSession = data.session;
+        }
+      }
+
+      // Send access_token and refresh_token back to Expo App
+      const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(
+        activeSession.access_token
+      )}&refresh_token=${encodeURIComponent(activeSession.refresh_token)}`;
+
+      pendingUrlRef.current = appRedirectUrl;
+      setCheckingAuth(false);
+      setReadyToRedirect(true);
+    } else {
+      navigate("/teams", { replace: true });
+    }
+  };
+
+  const handleContinueTap = () => {
+    if (pendingUrlRef.current) {
+      window.location.href = pendingUrlRef.current;
+    }
+  };
+
+  // ✅ Force sign out if coming from app link, or check existing session for standard web
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session) {
-        navigate("/teams", { replace: true });
-      } else {
+    const initAuth = async () => {
+      if (redirectTo) {
+        // FORCE RE-AUTHENTICATION: Sign out existing web session
+        await supabase.auth.signOut();
         setCheckingAuth(false);
+      } else {
+        // Standard Web Flow
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          handleAuthSuccess(session);
+        } else {
+          setCheckingAuth(false);
+        }
       }
     };
 
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        navigate("/teams", { replace: true });
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    initAuth();
+  }, [redirectTo]);
 
   // Dictionary for clean text management
   const t = {
@@ -61,7 +111,9 @@ export default function Auth() {
       sentLink: "We sent a verification link to",
       back: "Back to Login",
       alreadyReg: "Account already exists. Try logging in!",
-      resetSent: "Password reset link sent to your email!"
+      resetSent: "Password reset link sent to your email!",
+      signedIn: "You're signed in",
+      continueBtn: "Continue to App"
     },
     fr: {
       slogan: "Tout ce dont vous avez besoin pour gérer vos tournois en un seul endroit",
@@ -81,7 +133,9 @@ export default function Auth() {
       sentLink: "Lien de vérification envoyé à",
       back: "Retour",
       alreadyReg: "Compte déjà existant. Connectez-vous !",
-      resetSent: "Lien de réinitialisation envoyé par e-mail !"
+      resetSent: "Lien de réinitialisation envoyé par e-mail !",
+      signedIn: "Vous êtes connecté",
+      continueBtn: "Continuer vers l'app"
     }
   };
 
@@ -97,12 +151,12 @@ export default function Auth() {
     setError(null);
 
     if (authMode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
         setLoading(false);
-      } else {
-        navigate("/teams");
+      } else if (data?.session) {
+        handleAuthSuccess(data.session);
       }
     } else if (authMode === "signup") {
       const { error, data } = await supabase.auth.signUp({ email, password });
@@ -111,8 +165,8 @@ export default function Auth() {
         setError(error.message.includes("User already registered") ? t[lang].alreadyReg : error.message);
       } else if (data.user && data.session === null) {
         setIsSignedUp(true);
-      } else {
-        navigate("/teams");
+      } else if (data?.session) {
+        handleAuthSuccess(data.session);
       }
     } else if (authMode === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -127,18 +181,28 @@ export default function Auth() {
     }
   }
 
-  // Show nothing (or spinner) while checking session
+  // Show spinner while checking session
   if (checkingAuth) {
     return (
-      <div style={{ 
-        height: "100vh", 
-        width: "100vw", 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center",
-        backgroundColor: "#0a1a44"
-      }}>
+      <div style={styles.spinnerContainer}>
         <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
+      </div>
+    );
+  }
+
+  // Deep Link Return Screen (styled to match dark theme)
+  if (readyToRedirect) {
+    return (
+      <div style={styles.centerContainer}>
+        <div style={{ fontSize: "3rem" }}>✅</div>
+        <h4 className="text-white mt-3">{t[lang].signedIn}</h4>
+        <button
+          onClick={handleContinueTap}
+          className="btn btn-lg fw-bold text-white border-0 shadow-sm mt-3"
+          style={{ backgroundColor: "#00b5ad", padding: "14px 28px" }}
+        >
+          {t[lang].continueBtn}
+        </button>
       </div>
     );
   }
@@ -158,7 +222,6 @@ export default function Auth() {
           <div style={styles.bgNavy}></div>
 
           <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-            {/* Updated card to be larger - occupies 3/4 of screen */}
             <div className="card shadow-lg border-0 text-white" style={styles.authCard}>
               
               {/* 🌐 Language Switcher Tab */}
@@ -178,7 +241,7 @@ export default function Auth() {
                 <div className="mb-5">
                   <h1 style={styles.logoTitle}>efootball</h1>
                   <div className="d-flex align-items-center justify-content-center mt-2" style={{ fontSize: "1rem", opacity: 0.9 }}>
-                     {t[lang].slogan}
+                    {t[lang].slogan}
                   </div>
                 </div>
 
@@ -305,11 +368,11 @@ const styles = {
   authCard: { 
     position: "relative", 
     zIndex: 10, 
-    width: "75%", // 3/4 of the screen width
-    maxWidth: "900px", // Maximum width for large screens
-    minWidth: "320px", // Minimum width for mobile
+    width: "75%", 
+    maxWidth: "900px", 
+    minWidth: "320px", 
     backgroundColor: "#0a1a44", 
-    borderRadius: "20px", // Rounded corners for modern look
+    borderRadius: "20px", 
     overflow: "hidden", 
     boxShadow: "0 30px 60px rgba(0,0,0,0.5)" 
   },
@@ -369,5 +432,23 @@ const styles = {
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
     backgroundClip: "text"
+  },
+  spinnerContainer: {
+    height: "100vh", 
+    width: "100vw", 
+    display: "flex", 
+    justifyContent: "center", 
+    alignItems: "center",
+    backgroundColor: "#0a1a44"
+  },
+  centerContainer: {
+    height: "100vh",
+    width: "100vw",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0a1a44",
+    gap: "10px"
   }
 };
