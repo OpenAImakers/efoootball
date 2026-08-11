@@ -60,7 +60,7 @@ export default function Auth() {
       setCheckingAuth(false);
       setReadyToRedirect(true);
     } else {
-      navigate("/teams", { replace: true });
+      navigate("/admin", { replace: true });
     }
   };
 

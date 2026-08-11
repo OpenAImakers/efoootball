@@ -51,7 +51,7 @@ useEffect(() => {
   return (
     <Routes>
       <Route
-        path="/about"
+        path="/fixtures-and-results"
         element={
             <About />
         }
