@@ -213,8 +213,6 @@ export default function Navbar() {
                 .nav-link { font-size: 0.85rem; padding: 0.4rem 0.9rem; }
               }
             `}</style>
-
-            <NavLink to="/teams" label={isFrench ? "Calendrier" : "FIXTURES"} currentPath={location.pathname} />
             <NavLink to="/admin" label="Admin" currentPath={location.pathname} />
             <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>
