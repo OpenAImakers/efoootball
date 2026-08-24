@@ -31,6 +31,7 @@ import RegisterClans from "./fie/components/RegisterClans";
 import SpecificClanRegistration from "./fie/components/SpecificClanRegistration";
 import Clans from "./fie/clans/ClanAdminForm";
 import About from "./pages/About.tsx";
+import JackpotAdmin from "./pages/JackpotAdmin"
 
 function App() {
   // Detect PWA vs browser
@@ -50,6 +51,13 @@ useEffect(() => {
 }, []);
   return (
     <Routes>
+     <Route
+        path="/jackpotadmin"
+        element={
+            <JackpotAdmin />
+        }
+      />
+
       <Route
         path="/fixtures-and-results"
         element={
