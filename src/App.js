@@ -32,6 +32,7 @@ import SpecificClanRegistration from "./fie/components/SpecificClanRegistration"
 import Clans from "./fie/clans/ClanAdminForm";
 import About from "./pages/About.tsx";
 import JackpotAdmin from "./pages/JackpotAdmin"
+import Jackpot from "./pages/Jackpot/Jackpot"
 
 function App() {
   // Detect PWA vs browser
@@ -162,8 +163,12 @@ useEffect(() => {
       {/* PWA starts at /auth, browser starts at / (Advert) */}
       <Route
         path="/"
-        element={isStandalone ? <Navigate to="/auth" /> : <Leaderboard/>}
+        element={isStandalone ? <Navigate to="/auth" /> : <Jackpot/>}
       />
+        <Route
+            path="/efootball"
+            element={<Leaderboard/>}
+            />
 
       <Route path="/auth" element={<Auth />} />
 
