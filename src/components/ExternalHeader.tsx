@@ -74,14 +74,16 @@ export default function Navbar() {
             {/* Brand / Logo (Takes to Home) */}
             <Link to="/" className="navbar-brand-premium flex-shrink-0">
               <span className="brand-glow"></span>
-              <span className="brand-text">efootball</span>
+              <span className="brand-text">Rankings</span>
             </Link>
 
             {/* Navigation Links */}
             <div className="nav-scroll-container mx-3">
+                <NavLink to="/efootball" label="Leaderboard" currentPath={location.pathname} />
               <NavLink to="/activetournaments" label="Tournaments" currentPath={location.pathname} />
               <NavLink to="/fie" label="FIE" currentPath={location.pathname} />
               <NavLink to="/register" label="Register" currentPath={location.pathname} />
+
               {/* to fixtures
                */}
               <NavLink to="/fixtures-and-results" label="Fixtures" currentPath={location.pathname} />
