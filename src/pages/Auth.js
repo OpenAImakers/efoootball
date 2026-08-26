@@ -3,452 +3,409 @@ import { supabase } from "../supabase";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Auth() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
-  // 🔗 Get redirect_to parameter passed by the Expo Mobile App
-  const redirectTo = searchParams.get("redirect_to");
+    const redirectTo = searchParams.get("redirect_to");
 
-  const [authMode, setAuthMode] = useState("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
-  const [message, setMessage] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [isSignedUp, setIsSignedUp] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+    const [authMode, setAuthMode] = useState("login");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [agreed, setAgreed] = useState(false);
+    const [error, setError] = useState(null);
+    const [message, setMessage] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [isSignedUp, setIsSignedUp] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Intro Video State
-  const [showIntro, setShowIntro] = useState(true);
+    const [readyToRedirect, setReadyToRedirect] = useState(false);
+    const pendingUrlRef = useRef(null);
+    const redirectedRef = useRef(false);
 
-  // Deep Link Gate
-  const [readyToRedirect, setReadyToRedirect] = useState(false);
-  const pendingUrlRef = useRef(null);
+    const handleAuthSuccess = async (session) => {
+        if (redirectedRef.current) return;
 
-  // 🌍 Language State: 'en' or 'fr'
-  const [lang, setLang] = useState("en");
+        if (redirectTo && session) {
+            redirectedRef.current = true;
 
-  // Prevents handleAuthSuccess from re-arming more than once
-  const redirectedRef = useRef(false);
+            let activeSession = session;
+            const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+            const isExpired = Date.now() >= expiresAt - 60000;
 
-  // Helper function to handle redirection back to Mobile App or Website Navigation
-  const handleAuthSuccess = async (session) => {
-    if (redirectedRef.current) return;
+            if (isExpired) {
+                const { data, error: refreshErr } = await supabase.auth.refreshSession();
+                if (!refreshErr && data.session) {
+                    activeSession = data.session;
+                }
+            }
 
-    if (redirectTo && session) {
-      redirectedRef.current = true;
+            const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(
+                activeSession.access_token
+            )}&refresh_token=${encodeURIComponent(activeSession.refresh_token)}`;
 
-      let activeSession = session;
-
-      // Force refresh session to guarantee non-expired tokens for mobile app
-      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-      const isExpired = Date.now() >= expiresAt - 60000; // 1 min buffer
-
-      if (isExpired) {
-        const { data, error: refreshErr } = await supabase.auth.refreshSession();
-        if (!refreshErr && data.session) {
-          activeSession = data.session;
-        }
-      }
-
-      // Send access_token and refresh_token back to Expo App
-      const appRedirectUrl = `${redirectTo}?access_token=${encodeURIComponent(
-        activeSession.access_token
-      )}&refresh_token=${encodeURIComponent(activeSession.refresh_token)}`;
-
-      pendingUrlRef.current = appRedirectUrl;
-      setCheckingAuth(false);
-      setReadyToRedirect(true);
-    } else {
-      navigate("/admin", { replace: true });
-    }
-  };
-
-  const handleContinueTap = () => {
-    if (pendingUrlRef.current) {
-      window.location.href = pendingUrlRef.current;
-    }
-  };
-
-  // ✅ Force sign out if coming from app link, or check existing session for standard web
-  useEffect(() => {
-    const initAuth = async () => {
-      if (redirectTo) {
-        // FORCE RE-AUTHENTICATION: Sign out existing web session
-        await supabase.auth.signOut();
-        setCheckingAuth(false);
-      } else {
-        // Standard Web Flow
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          handleAuthSuccess(session);
+            pendingUrlRef.current = appRedirectUrl;
+            setCheckingAuth(false);
+            setReadyToRedirect(true);
         } else {
-          setCheckingAuth(false);
+            navigate("/admin", { replace: true });
         }
-      }
     };
 
-    initAuth();
-  }, [redirectTo]);
+    // Auto-redirect to the mobile app when ready
+    useEffect(() => {
+        if (readyToRedirect && pendingUrlRef.current) {
+            window.location.href = pendingUrlRef.current;
+        }
+    }, [readyToRedirect]);
 
-  // Dictionary for clean text management
-  const t = {
-    en: {
-      slogan: "Everything you need to run tournaments in one place",
-      ecosystem: "smart ecosystem",
-      welcome: "Welcome Back",
-      create: "Create Account",
-      reset: "Reset Password",
-      email: "Email Address",
-      pass: "Password",
-      loginBtn: "LOG IN",
-      signupBtn: "SIGN UP",
-      sendReset: "SEND RESET LINK",
-      forgot: "Forgot Password?",
-      newHere: "New here? Create account",
-      haveAcc: "Already have an account? Log in",
-      checkInbox: "Check your inbox",
-      sentLink: "We sent a verification link to",
-      back: "Back to Login",
-      alreadyReg: "Account already exists. Try logging in!",
-      resetSent: "Password reset link sent to your email!",
-      signedIn: "You're signed in",
-      continueBtn: "Continue to App"
-    },
-    fr: {
-      slogan: "Tout ce dont vous avez besoin pour gérer vos tournois en un seul endroit",
-      ecosystem: "écosystème intelligent",
-      welcome: "Bon retour",
-      create: "Créer un compte",
-      reset: "Réinitialiser",
-      email: "Adresse e-mail",
-      pass: "Mot de passe",
-      loginBtn: "CONNEXION",
-      signupBtn: "S'INSCRIRE",
-      sendReset: "ENVOYER LE LIEN",
-      forgot: "Mot de passe oublié ?",
-      newHere: "Nouveau ? Créer un compte",
-      haveAcc: "Déjà inscrit ? Connexion",
-      checkInbox: "Vérifiez vos e-mails",
-      sentLink: "Lien de vérification envoyé à",
-      back: "Retour",
-      alreadyReg: "Compte déjà existant. Connectez-vous !",
-      resetSent: "Lien de réinitialisation envoyé par e-mail !",
-      signedIn: "Vous êtes connecté",
-      continueBtn: "Continuer vers l'app"
+    useEffect(() => {
+        const initAuth = async () => {
+            if (redirectTo) {
+                await supabase.auth.signOut();
+                setCheckingAuth(false);
+            } else {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    handleAuthSuccess(session);
+                } else {
+                    setCheckingAuth(false);
+                }
+            }
+        };
+        initAuth();
+    }, [redirectTo]);
+
+    const switchMode = (mode) => {
+        setAuthMode(mode);
+        setError(null);
+        setMessage(null);
+        setAgreed(false);
+    };
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        if (authMode === "signup" && !agreed) {
+            setError("Please accept the Terms and Conditions");
+            setLoading(false);
+            return;
+        }
+
+        if (authMode === "login") {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                setError(error.message);
+                setLoading(false);
+            } else if (data?.session) {
+                handleAuthSuccess(data.session);
+            }
+        } else if (authMode === "signup") {
+            const { error, data } = await supabase.auth.signUp({ email, password });
+            setLoading(false);
+            if (error) {
+                setError(
+                    error.message.includes("User already registered")
+                        ? "Account already exists. Try logging in!"
+                        : error.message
+                );
+            } else if (data.user && data.session === null) {
+                setIsSignedUp(true);
+            } else if (data?.session) {
+                handleAuthSuccess(data.session);
+            }
+        } else if (authMode === "reset") {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/update-password`,
+            });
+            setLoading(false);
+            if (error) {
+                setError(error.message);
+            } else {
+                setMessage("Password reset link sent to your email!");
+            }
+        }
     }
-  };
 
-  const switchMode = (mode) => {
-    setAuthMode(mode);
-    setError(null);
-    setMessage(null);
-  };
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    if (authMode === "login") {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-      } else if (data?.session) {
-        handleAuthSuccess(data.session);
-      }
-    } else if (authMode === "signup") {
-      const { error, data } = await supabase.auth.signUp({ email, password });
-      setLoading(false);
-      if (error) {
-        setError(error.message.includes("User already registered") ? t[lang].alreadyReg : error.message);
-      } else if (data.user && data.session === null) {
-        setIsSignedUp(true);
-      } else if (data?.session) {
-        handleAuthSuccess(data.session);
-      }
-    } else if (authMode === "reset") {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
-      });
-      setLoading(false);
-      if (error) {
-        setError(error.message);
-      } else {
-        setMessage(t[lang].resetSent);
-      }
+    if (checkingAuth) {
+        return (
+            <div style={styles.viewport}>
+                <div className="spinner-border text-light" role="status" style={{ width: "2.5rem", height: "2.5rem" }} />
+            </div>
+        );
     }
-  }
 
-  // Show spinner while checking session
-  if (checkingAuth) {
+    // Brief signed-in state while auto-redirect fires
+    if (readyToRedirect) {
+        return (
+            <div style={styles.viewport}>
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "2.5rem" }}>✅</div>
+                    <h4 style={{ color: "#fff", marginTop: 12 }}>You're signed in</h4>
+                    <p style={{ color: "#888", fontSize: "0.9rem", marginTop: 8 }}>Redirecting…</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-      <div style={styles.spinnerContainer}>
-        <div className="spinner-border text-info" role="status" style={{ width: "3rem", height: "3rem" }}></div>
-      </div>
-    );
-  }
-
-  // Deep Link Return Screen (styled to match dark theme)
-  if (readyToRedirect) {
-    return (
-      <div style={styles.centerContainer}>
-        <div style={{ fontSize: "3rem" }}>✅</div>
-        <h4 className="text-white mt-3">{t[lang].signedIn}</h4>
-        <button
-          onClick={handleContinueTap}
-          className="btn btn-lg fw-bold text-white border-0 shadow-sm mt-3"
-          style={{ backgroundColor: "#00b5ad", padding: "14px 28px" }}
-        >
-          {t[lang].continueBtn}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      {showIntro && (
-        <video autoPlay muted playsInline onEnded={() => setShowIntro(false)} style={styles.introVideo}>
-          <source src="/intro.mp4" type="video/mp4" />
-        </video>
-      )}
-
-      {!showIntro && (
         <div style={styles.viewport}>
-          <div style={styles.bgOrange}></div>
-          <div style={styles.bgTeal}></div>
-          <div style={styles.bgNavy}></div>
+            <div style={styles.container}>
+                {/* Top bar */}
+                <div style={styles.topBar}>
+          <span style={styles.topTitle}>
+            {authMode === "login" ? "Login" : authMode === "signup" ? "Register" : "Reset Password"}
+          </span>
+                </div>
 
-          <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-            <div className="card shadow-lg border-0 text-white" style={styles.authCard}>
-              
-              {/* 🌐 Language Switcher Tab */}
-              <div style={styles.langTabContainer}>
-                <button 
-                  onClick={() => setLang("en")} 
-                  style={{...styles.langBtn, color: lang === 'en' ? '#00b5ad' : '#fff'}}
-                >EN</button>
-                <span style={{opacity: 0.3}}>|</span>
-                <button 
-                  onClick={() => setLang("fr")} 
-                  style={{...styles.langBtn, color: lang === 'fr' ? '#00b5ad' : '#fff'}}
-                >FR</button>
-              </div>
-
-              <div className="card-body p-5 text-center">
-                <div className="mb-5">
-                  <h1 style={styles.logoTitle}>efootball</h1>
-                  <div className="d-flex align-items-center justify-content-center mt-2" style={{ fontSize: "1rem", opacity: 0.9 }}>
-                    {t[lang].slogan}
-                  </div>
+                {/* Logo */}
+                <div style={styles.logoWrap}>
+                    <span style={styles.logo}>rankings</span>
                 </div>
 
                 {isSignedUp ? (
-                  <div>
-                    <div className="mb-4" style={{ fontSize: "3rem" }}>✉️</div>
-                    <h4>{t[lang].checkInbox}</h4>
-                    <p className="small opacity-75">{t[lang].sentLink} {email}</p>
-                    <button className="btn btn-sm btn-outline-light mt-3" onClick={() => setIsSignedUp(false)}>
-                      {t[lang].back}
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit}>
-                    <h3 className="h4 mb-4 opacity-75">
-                      {authMode === "login" ? t[lang].welcome : authMode === "signup" ? t[lang].create : t[lang].reset}
-                    </h3>
-
-                    <div className="mb-4">
-                      <input
-                        type="email"
-                        required
-                        className="form-control form-control-lg bg-white bg-opacity-10 text-white border-secondary shadow-none"
-                        placeholder={t[lang].email}
-                        style={styles.inputField}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-
-                    {authMode !== "reset" && (
-                      <div className="mb-4">
-                        <input
-                          type="password"
-                          required
-                          className="form-control form-control-lg bg-white bg-opacity-10 text-white border-secondary shadow-none"
-                          placeholder={t[lang].pass}
-                          style={styles.inputField}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {error && <div className="alert alert-danger py-2 small bg-danger bg-opacity-25 border-0 text-white mb-4">{error}</div>}
-                    {message && <div className="alert alert-success py-2 small bg-success bg-opacity-25 border-0 text-white mb-4">{message}</div>}
-
-                    <div className="d-grid gap-3">
-                      <button type="submit" className="btn btn-lg fw-bold text-white border-0 shadow-sm" style={{ backgroundColor: "#00b5ad", padding: "14px" }} disabled={loading}>
-                        {loading ? <span className="spinner-border spinner-border-sm me-2"></span> : 
-                         authMode === "login" ? t[lang].loginBtn : authMode === "signup" ? t[lang].signupBtn : t[lang].sendReset}
-                      </button>
-
-                      <div className="d-flex flex-column gap-2 mt-3">
-                        {authMode === "login" && (
-                          <button type="button" style={styles.linkBtn} onClick={() => switchMode("reset")}>
-                            {t[lang].forgot}
-                          </button>
-                        )}
-                        <button type="button" style={styles.linkBtn} onClick={() => switchMode(authMode === "login" ? "signup" : "login")}>
-                          {authMode === "login" ? t[lang].newHere : t[lang].haveAcc}
+                    <div style={{ textAlign: "center", marginTop: 40 }}>
+                        <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>✉️</div>
+                        <h3 style={{ color: "#fff", margin: "0 0 8px", fontSize: "1.2rem" }}>Check your inbox</h3>
+                        <p style={{ color: "#888", fontSize: "0.9rem", marginBottom: 24 }}>
+                            We sent a verification link to {email}
+                        </p>
+                        <button type="button" style={styles.linkBtn} onClick={() => setIsSignedUp(false)}>
+                            Back to Login
                         </button>
-                      </div>
                     </div>
-                  </form>
+                ) : (
+                    <>
+                        <p style={styles.instruction}>
+                            {authMode === "login"
+                                ? "Enter your email and password below to log in to your existing account. Otherwise click on Register to create a new account."
+                                : authMode === "signup"
+                                    ? "Enter your email and password below to create a new account. Otherwise click on Login if you already have one."
+                                    : "Enter your email address and we'll send you a link to reset your password."}
+                        </p>
+
+                        <form onSubmit={handleSubmit}>
+                            {/* Email */}
+                            <div style={styles.field}>
+                                <label style={styles.label}>Email Address</label>
+                                <input
+                                    type="email"
+                                    required
+                                    placeholder="e.g. you@example.com"
+                                    style={styles.input}
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                                <span style={styles.helper}>Enter your email address</span>
+                            </div>
+
+                            {/* Password (not on reset) */}
+                            {authMode !== "reset" && (
+                                <div style={styles.field}>
+                                    <label style={styles.label}>Password</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        placeholder=""
+                                        style={styles.input}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                    />
+                                    <span style={styles.helper}>Enter your password</span>
+                                </div>
+                            )}
+
+                            {/* Terms checkbox (signup only) */}
+                            {authMode === "signup" && (
+                                <div style={styles.checkboxRow}>
+                                    <input
+                                        type="checkbox"
+                                        id="terms"
+                                        checked={agreed}
+                                        onChange={(e) => setAgreed(e.target.checked)}
+                                        style={styles.checkbox}
+                                    />
+                                    <label htmlFor="terms" style={styles.checkboxLabel}>
+                                        By clicking Register you confirm to have read in detail, understood and agreed to the{" "}
+                                        <span style={styles.highlight}>Terms and Conditions</span>, the{" "}
+                                        <span style={styles.highlight}>Privacy policy</span> and also that you are over 18 years of age.
+                                    </label>
+                                </div>
+                            )}
+
+                            {error && <div style={styles.error}>{error}</div>}
+                            {message && <div style={styles.success}>{message}</div>}
+
+                            <button type="submit" style={styles.primaryBtn} disabled={loading}>
+                                {loading ? (
+                                    <span className="spinner-border spinner-border-sm" />
+                                ) : authMode === "login" ? (
+                                    "Login"
+                                ) : authMode === "signup" ? (
+                                    "Register"
+                                ) : (
+                                    "Send Reset Link"
+                                )}
+                            </button>
+                        </form>
+
+                        <div style={styles.bottomLinks}>
+                            {authMode === "login" && (
+                                <button type="button" style={styles.linkBtn} onClick={() => switchMode("reset")}>
+                                    Forgot Password?
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                style={styles.linkBtn}
+                                onClick={() => switchMode(authMode === "login" ? "signup" : "login")}
+                            >
+                                {authMode === "login"
+                                    ? "New here? Create account"
+                                    : "Already have an account? Log in"}
+                            </button>
+                        </div>
+                    </>
                 )}
-              </div>
-              <div style={styles.bottomBorder}></div>
             </div>
-          </div>
         </div>
-      )}
-    </>
-  );
+    );
 }
 
 const styles = {
-  viewport: { 
-    backgroundColor: "#eef2f3", 
-    height: "100vh", 
-    width: "100vw", 
-    overflow: "hidden", 
-    position: "relative" 
-  },
-  introVideo: { 
-    position: "fixed", 
-    top: 0, 
-    left: 0, 
-    width: "100vw", 
-    height: "100vh", 
-    objectFit: "cover", 
-    zIndex: 9999 
-  },
-  bgOrange: { 
-    position: "absolute", 
-    width: "80%", 
-    height: "80%", 
-    top: "-10%", 
-    left: "-10%", 
-    backgroundColor: "#f7931e", 
-    clipPath: "polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)", 
-    opacity: 0.6, 
-    zIndex: 1 
-  },
-  bgTeal: { 
-    position: "absolute", 
-    width: "70%", 
-    height: "90%", 
-    bottom: "-10%", 
-    right: "-10%", 
-    backgroundColor: "#00b5ad", 
-    clipPath: "polygon(0% 15%, 85% 0%, 100% 85%, 15% 100%)", 
-    mixBlendMode: "multiply", 
-    opacity: 0.7, 
-    zIndex: 2 
-  },
-  bgNavy: { 
-    position: "absolute", 
-    width: "100%", 
-    height: "100%", 
-    backgroundColor: "rgba(10, 26, 68, 0.2)", 
-    zIndex: 3 
-  },
-  authCard: { 
-    position: "relative", 
-    zIndex: 10, 
-    width: "75%", 
-    maxWidth: "900px", 
-    minWidth: "320px", 
-    backgroundColor: "#0a1a44", 
-    borderRadius: "20px", 
-    overflow: "hidden", 
-    boxShadow: "0 30px 60px rgba(0,0,0,0.5)" 
-  },
-  langTabContainer: { 
-    position: "absolute", 
-    top: "20px", 
-    right: "25px", 
-    display: "flex", 
-    gap: "12px", 
-    alignItems: "center", 
-    zIndex: 11 
-  },
-  langBtn: { 
-    background: "none", 
-    border: "none", 
-    fontSize: "0.85rem", 
-    fontWeight: "bold", 
-    cursor: "pointer", 
-    transition: "0.3s" 
-  },
-  divider: { 
-    width: "2px", 
-    height: "20px", 
-    background: "white", 
-    opacity: 0.5 
-  },
-  inputField: { 
-    border: "1px solid rgba(255,255,255,0.2)", 
-    borderRadius: "12px", 
-    fontSize: "1rem", 
-    color: "white",
-    padding: "12px 16px",
-    transition: "all 0.3s"
-  },
-  linkBtn: { 
-    background: "none", 
-    border: "none", 
-    color: "white", 
-    fontSize: "0.9rem", 
-    opacity: 0.75, 
-    cursor: "pointer", 
-    textDecoration: "none",
-    transition: "all 0.3s",
-    padding: "8px"
-  },
-  bottomBorder: { 
-    height: "6px", 
-    width: "100%", 
-    background: "linear-gradient(90deg, #f7931e 0%, #00b5ad 50%, #f7931e 100%)" 
-  },
-  logoTitle: {
-    fontSize: "4rem",
-    fontWeight: "bold",
-    marginBottom: "0",
-    letterSpacing: "2px",
-    background: "linear-gradient(135deg, #f7931e 0%, #00b5ad 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    backgroundClip: "text"
-  },
-  spinnerContainer: {
-    height: "100vh", 
-    width: "100vw", 
-    display: "flex", 
-    justifyContent: "center", 
-    alignItems: "center",
-    backgroundColor: "#0a1a44"
-  },
-  centerContainer: {
-    height: "100vh",
-    width: "100vw",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0a1a44",
-    gap: "10px"
-  }
+    viewport: {
+        minHeight: "100vh",
+        width: "100%",
+        backgroundColor: "#0a0a0a",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        padding: "0",
+        boxSizing: "border-box",
+    },
+    container: {
+        width: "100%",
+        maxWidth: "420px",
+        padding: "16px 20px 40px",
+        boxSizing: "border-box",
+    },
+    topBar: {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "12px 0 8px",
+        marginBottom: "8px",
+    },
+    topTitle: {
+        color: "#fff",
+        fontSize: "1.05rem",
+        fontWeight: 500,
+    },
+    logoWrap: {
+        margin: "12px 0 28px",
+    },
+    logo: {
+        fontSize: "1.6rem",
+        fontWeight: 700,
+        color: "#f0c14b",
+        letterSpacing: "0.5px",
+    },
+    instruction: {
+        color: "#9a9a9a",
+        fontSize: "0.88rem",
+        lineHeight: 1.5,
+        marginBottom: "28px",
+    },
+    field: {
+        marginBottom: "22px",
+    },
+    label: {
+        display: "block",
+        color: "#fff",
+        fontSize: "0.95rem",
+        fontWeight: 500,
+        marginBottom: "8px",
+    },
+    input: {
+        width: "100%",
+        padding: "14px 14px",
+        fontSize: "1rem",
+        color: "#fff",
+        backgroundColor: "#1a1a1a",
+        border: "1px solid #2a2a2a",
+        borderRadius: "6px",
+        outline: "none",
+        boxSizing: "border-box",
+    },
+    helper: {
+        display: "block",
+        color: "#666",
+        fontSize: "0.8rem",
+        marginTop: "6px",
+    },
+    checkboxRow: {
+        display: "flex",
+        gap: "10px",
+        alignItems: "flex-start",
+        marginBottom: "24px",
+    },
+    checkbox: {
+        marginTop: "3px",
+        flexShrink: 0,
+        width: "16px",
+        height: "16px",
+        accentColor: "#f0c14b",
+    },
+    checkboxLabel: {
+        color: "#9a9a9a",
+        fontSize: "0.82rem",
+        lineHeight: 1.45,
+    },
+    highlight: {
+        color: "#f0c14b",
+    },
+    primaryBtn: {
+        width: "100%",
+        padding: "14px 16px",
+        fontSize: "1rem",
+        fontWeight: 600,
+        color: "#fff",
+        backgroundColor: "#1e3a5f",
+        border: "none",
+        borderRadius: "6px",
+        cursor: "pointer",
+        marginTop: "4px",
+    },
+    bottomLinks: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "14px",
+        marginTop: "28px",
+    },
+    linkBtn: {
+        background: "none",
+        border: "none",
+        color: "#aaa",
+        fontSize: "0.9rem",
+        cursor: "pointer",
+        padding: "4px",
+    },
+    error: {
+        backgroundColor: "rgba(185, 28, 28, 0.2)",
+        color: "#f87171",
+        padding: "10px 12px",
+        borderRadius: "6px",
+        fontSize: "0.875rem",
+        marginBottom: "14px",
+    },
+    success: {
+        backgroundColor: "rgba(22, 101, 52, 0.25)",
+        color: "#86efac",
+        padding: "10px 12px",
+        borderRadius: "6px",
+        fontSize: "0.875rem",
+        marginBottom: "14px",
+    },
 };
