@@ -66,6 +66,7 @@ const FootballTab: React.FC = () => {
     const [selectedTier, setSelectedTier] = useState<TierKey>(7);
     const [jackpotsMap, setJackpotsMap] = useState<Record<number, Jackpot>>({});
     const [loading, setLoading] = useState<boolean>(true);
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
     type TierKey = 5 | 6 | 7;
 
@@ -120,6 +121,11 @@ const FootballTab: React.FC = () => {
         fetchJackpots();
     }, [fetchJackpots]);
 
+    // Reset expanded when tier changes
+    useEffect(() => {
+        setExpandedIds(new Set());
+    }, [selectedTier]);
+
     const activeConfig = TIER_CONFIGS.find((t) => t.key === selectedTier)!;
     const activeJackpot = jackpotsMap[selectedTier];
     const currentMatches = activeJackpot?.jackpot_games || [];
@@ -131,6 +137,23 @@ const FootballTab: React.FC = () => {
             hour: '2-digit',
             minute: '2-digit',
         });
+    };
+
+    const toggleExpand = (id: string) => {
+        setExpandedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const expandAll = () => {
+        setExpandedIds(new Set(currentMatches.map((m) => m.id)));
+    };
+
+    const collapseAll = () => {
+        setExpandedIds(new Set());
     };
 
     if (loading) {
@@ -156,16 +179,15 @@ const FootballTab: React.FC = () => {
                 <div style={styles.heroSection}>
                     <div style={styles.heroContent}>
                         <h1 style={styles.heroTitle}>Contest Predictions</h1>
-                        <p style={styles.heroSubtitle}>Pick your tier and predict all fixtures</p>
+                        <p style={styles.heroSubtitle}>Pick your tier · Preview only</p>
                     </div>
                 </div>
 
                 <div style={styles.container}>
-                    {/* Tier Selection Cards - TILTED */}
+                    {/* Compact Tier Pills */}
                     <div style={styles.tierRow}>
-                        {TIER_CONFIGS.map((tier, index) => {
+                        {TIER_CONFIGS.map((tier) => {
                             const isActive = selectedTier === tier.key;
-                            const tiltDirection = index === 0 ? -3 : index === 1 ? 0 : 3;
                             return (
                                 <button
                                     key={tier.key}
@@ -174,172 +196,149 @@ const FootballTab: React.FC = () => {
                                         ...(isActive && {
                                             backgroundColor: tier.color,
                                             borderColor: tier.color,
-                                            transform: `rotate(${tiltDirection}deg) scale(1.05)`,
-                                            boxShadow: `0 20px 60px ${tier.color}40`,
-                                        }),
-                                        ...(!isActive && {
-                                            transform: `rotate(${tiltDirection}deg)`,
+                                            boxShadow: `0 8px 24px ${tier.color}40`,
                                         }),
                                     }}
                                     onClick={() => setSelectedTier(tier.key as TierKey)}
                                 >
-                                    <div style={styles.tierChipInner}>
-                                        <div style={{
-                                            ...styles.tierBadge,
-                                            backgroundColor: tier.badgeBg,
-                                            color: tier.color,
-                                        }}>
-                                            {tier.title}
-                                        </div>
-                                        <div style={styles.tierPrize}>
-                                            KSh {tier.prize.toLocaleString()}
-                                        </div>
-                                        <div style={styles.tierFee}>
-                                            Entry: KSh {tier.entryFee}
-                                        </div>
-                                        {isActive && (
-                                            <div style={styles.tierActiveIndicator}>
-                                                <i className="bi bi-check-circle-fill" style={{ marginRight: '4px' }}></i>
-                                                Active
-                                            </div>
-                                        )}
-                                    </div>
+                                    <span style={styles.tierTitle}>{tier.title}</span>
+                                    <span style={styles.tierPrize}>KSh {tier.prize.toLocaleString()}</span>
+                                    <span style={styles.tierFee}>KSh {tier.entryFee}</span>
                                 </button>
                             );
                         })}
                     </div>
 
-                    {/* Active Banner Header */}
+                    {/* Slim Banner */}
                     <div style={{
                         ...styles.bannerCard,
                         borderColor: activeConfig.color,
-                        background: `linear-gradient(135deg, #1E1B4B 0%, ${activeConfig.color}22 100%)`,
+                        background: `linear-gradient(90deg, #1E1B4B 0%, ${activeConfig.color}18 100%)`,
                     }}>
-                        <div style={styles.bannerHeader}>
-                            <div>
-                                <div style={{
-                                    ...styles.badgeContainer,
-                                    backgroundColor: activeConfig.badgeBg,
-                                }}>
-                                    <span style={{
-                                        ...styles.bannerBadge,
-                                        color: activeConfig.color,
-                                    }}>
-                                        {activeConfig.title}
-                                    </span>
-                                </div>
-                                <div style={styles.bannerTarget}>
-                                    <i className="bi bi-trophy-fill" style={{ marginRight: '8px', color: activeConfig.color }}></i>
-                                    KSh {activeConfig.prize.toLocaleString()}
-                                </div>
-                            </div>
-                            <div style={styles.entryBox}>
-                                <div style={styles.entryLabel}>Entry Fee</div>
-                                <div style={{
-                                    ...styles.entryPrice,
-                                    color: activeConfig.color,
-                                }}>
-                                    KSh {activeConfig.entryFee}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={styles.progressRow}>
-                            <div style={styles.progressText}>
-                                <i className="bi bi-list-ul" style={{ marginRight: '6px' }}></i>
-                                {currentMatches.length > 0 ? `${currentMatches.length} Fixtures` : 'No Fixtures'}
-                            </div>
-                            <div style={{
-                                ...styles.progressStatus,
+                        <div style={styles.bannerLeft}>
+                            <span style={{
+                                ...styles.bannerBadge,
+                                backgroundColor: activeConfig.badgeBg,
                                 color: activeConfig.color,
                             }}>
-                                {currentMatches.length === 0
-                                    ? 'No Fixtures Available'
-                                    : `${currentMatches.length} matches to predict`}
-                            </div>
+                                {activeConfig.title}
+                            </span>
+                            <span style={styles.bannerPrize}>
+                                <i className="bi bi-trophy-fill" style={{ marginRight: 6, color: activeConfig.color }} />
+                                KSh {activeConfig.prize.toLocaleString()}
+                            </span>
+                        </div>
+                        <div style={styles.bannerRight}>
+                            <span style={styles.bannerMeta}>
+                                {currentMatches.length} fixtures · Entry KSh {activeConfig.entryFee}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Match Fixtures Section */}
+                    {/* Section + Expand controls */}
                     <div style={styles.sectionHeader}>
                         <h3 style={styles.sectionTitle}>
-                            Predict All {activeConfig.key} Fixtures
+                            All {activeConfig.key} Fixtures
                         </h3>
+                        {currentMatches.length > 0 && (
+                            <div style={styles.expandControls}>
+                                <button type="button" style={styles.controlBtn} onClick={expandAll}>
+                                    Expand all
+                                </button>
+                                <button type="button" style={styles.controlBtn} onClick={collapseAll}>
+                                    Collapse
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Fixtures Display */}
+                    {/* Compact Fixtures List */}
                     <div style={styles.fixturesContainer}>
                         {currentMatches.length === 0 ? (
                             <div style={styles.emptyCard}>
                                 <div style={styles.emptyTitle}>No matches updated yet</div>
                                 <div style={styles.emptySubtext}>
-                                    There are currently no scheduled fixtures for {activeConfig.title}. Check back later.
+                                    No scheduled fixtures for {activeConfig.title}. Check back later.
                                 </div>
                             </div>
                         ) : (
                             <>
-                                {currentMatches.map((match) => (
-                                    <div key={match.id} style={styles.matchCard}>
-                                        <div style={styles.matchHeader}>
-                                            <span style={styles.matchIndex}>
-                                                <i className="bi bi-calendar-event" style={{ marginRight: '6px' }}></i>
-                                                Game {match.game_number}
-                                            </span>
-                                            <span style={styles.matchKickoff}>
-                                                <i className="bi bi-clock" style={{ marginRight: '4px' }}></i>
-                                                {formattedMatchTime(match.match_time)}
-                                            </span>
-                                        </div>
-
-                                        <div style={styles.teamsRow}>
-                                            <span style={styles.teamText}>{match.home_team}</span>
-                                            <span style={styles.vsBadge}>VS</span>
-                                            <span style={{ ...styles.teamText, textAlign: 'right' }}>
-                                                {match.away_team}
-                                            </span>
-                                        </div>
-
-                                        {/* 1 X 2 Selection Row - DISPLAY ONLY */}
-                                        <div style={styles.picksRow}>
-                                            {(['1', 'X', '2'] as PredictionChoice[]).map((choice) => (
-                                                <div
-                                                    key={choice}
-                                                    style={{
-                                                        ...styles.pickButton,
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                                                        borderColor: 'rgba(255, 255, 255, 0.08)',
-                                                    }}
+                                <div style={styles.matchList}>
+                                    {currentMatches.map((match) => {
+                                        const isOpen = expandedIds.has(match.id);
+                                        return (
+                                            <div
+                                                key={match.id}
+                                                style={{
+                                                    ...styles.matchRow,
+                                                    ...(isOpen && styles.matchRowOpen),
+                                                }}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    style={styles.matchRowBtn}
+                                                    onClick={() => toggleExpand(match.id)}
+                                                    aria-expanded={isOpen}
                                                 >
-                                                    <span style={styles.pickText}>
-                                                        {choice === '1' ? '1 (Home)' : choice === 'X' ? 'X (Draw)' : '2 (Away)'}
+                                                    <span style={styles.matchNum}>
+                                                        {match.game_number}
                                                     </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                                    <span style={styles.matchTeams}>
+                                                        <span style={styles.home}>{match.home_team}</span>
+                                                        <span style={styles.vs}>vs</span>
+                                                        <span style={styles.away}>{match.away_team}</span>
+                                                    </span>
+                                                    <span style={styles.matchTime}>
+                                                        {formattedMatchTime(match.match_time)}
+                                                    </span>
+                                                    <span style={styles.chevron}>
+                                                        <i className={`bi bi-chevron-${isOpen ? 'up' : 'down'}`} />
+                                                    </span>
+                                                </button>
 
-                                {/* Submit Button - DISPLAY ONLY */}
+                                                {isOpen && (
+                                                    <div style={styles.matchDetails}>
+                                                        <div style={styles.picksRow}>
+                                                            {(['1', 'X', '2'] as PredictionChoice[]).map((choice) => (
+                                                                <div
+                                                                    key={choice}
+                                                                    style={styles.pickButton}
+                                                                >
+                                                                    <span style={styles.pickText}>
+                                                                        {choice === '1' ? '1 (Home)' : choice === 'X' ? 'X (Draw)' : '2 (Away)'}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div style={styles.detailMeta}>
+                                                            <i className="bi bi-clock" style={{ marginRight: 4 }} />
+                                                            Kick-off: {formattedMatchTime(match.match_time) || 'TBD'} bel
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Preview CTA */}
                                 <div
                                     style={{
                                         ...styles.submitButton,
                                         backgroundColor: activeConfig.color,
-                                        opacity: 0.6,
+                                        opacity: 0.55,
                                         cursor: 'default',
                                     }}
                                 >
                                     <span style={styles.submitText}>
-                                        <i className="bi bi-send-fill" style={{ marginRight: '8px' }}></i>
-                                        {currentMatches.length > 0
-                                            ? `Submit ${activeConfig.title} (KSh ${activeConfig.entryFee})`
-                                            : `Complete All ${activeConfig.key} Picks`}
+                                        <i className="bi bi-send-fill" style={{ marginRight: 8 }} />
+                                        Submit {activeConfig.title} (KSh {activeConfig.entryFee})
                                     </span>
                                 </div>
 
-                                {/* Info Message */}
                                 <div style={styles.infoMessage}>
-                                    <i className="bi bi-info-circle-fill" style={{ marginRight: '8px' }}></i>
-                                    This is a preview only. To place predictions, please use the mobile app.
+                                    <i className="bi bi-info-circle-fill" style={{ marginRight: 8 }} />
+                                    Preview only · Place predictions in the mobile app
                                 </div>
                             </>
                         )}
@@ -350,10 +349,6 @@ const FootballTab: React.FC = () => {
                             0% { transform: rotate(0deg); }
                             100% { transform: rotate(360deg); }
                         }
-                        @keyframes float {
-                            0%, 100% { transform: translateY(0px); }
-                            50% { transform: translateY(-10px); }
-                        }
                     `}</style>
                 </div>
             </div>
@@ -361,7 +356,7 @@ const FootballTab: React.FC = () => {
     );
 };
 
-// Styles
+// Styles – compact & screenshot-friendly
 const styles: Record<string, React.CSSProperties> = {
     pageWrapper: {
         minHeight: '100vh',
@@ -369,9 +364,9 @@ const styles: Record<string, React.CSSProperties> = {
         paddingTop: '80px',
     },
     heroSection: {
-        background: 'linear-gradient(135deg, rgba(13, 110, 253, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%)',
+        background: 'linear-gradient(135deg, rgba(13, 110, 253, 0.12) 0%, rgba(236, 72, 153, 0.08) 100%)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        padding: '40px 20px 20px',
+        padding: '24px 16px 16px',
         textAlign: 'center',
     },
     heroContent: {
@@ -379,24 +374,24 @@ const styles: Record<string, React.CSSProperties> = {
         margin: '0 auto',
     },
     heroTitle: {
-        fontSize: '2.5rem',
+        fontSize: '1.75rem',
         fontWeight: '900',
         background: 'linear-gradient(135deg, #ffffff 30%, #60a5fa 70%, #fd7e14 100%)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         margin: 0,
-        letterSpacing: '-1px',
+        letterSpacing: '-0.5px',
     },
     heroSubtitle: {
-        fontSize: '1rem',
-        color: 'rgba(255, 255, 255, 0.6)',
-        marginTop: '8px',
+        fontSize: '0.875rem',
+        color: 'rgba(255, 255, 255, 0.55)',
+        marginTop: 4,
         fontWeight: '400',
     },
     container: {
-        maxWidth: '900px',
+        maxWidth: '720px',
         margin: '0 auto',
-        padding: '20px 16px 60px',
+        padding: '16px 12px 48px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     },
     centerContainer: {
@@ -407,273 +402,279 @@ const styles: Record<string, React.CSSProperties> = {
         background: '#030A1A',
     },
     spinner: {
-        width: '50px',
-        height: '50px',
-        border: '4px solid rgba(255, 255, 255, 0.1)',
-        borderTop: '4px solid #0EA5E9',
+        width: 44,
+        height: 44,
+        border: '3px solid rgba(255, 255, 255, 0.1)',
+        borderTop: '3px solid #0EA5E9',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
     },
-    sectionHeader: {
-        margin: '20px 0 12px',
-    },
-    sectionTitle: {
-        fontSize: '18px',
-        fontWeight: '700',
-        color: '#FFFFFF',
-        margin: 0,
-        letterSpacing: '0.5px',
-    },
+
+    // Tiers – compact pills
     tierRow: {
         display: 'flex',
-        gap: '20px',
-        padding: '30px 0',
+        gap: 10,
+        padding: '12px 0 16px',
         justifyContent: 'center',
         flexWrap: 'wrap',
-        perspective: '1000px',
     },
     tierChip: {
-        padding: '24px 20px',
-        borderRadius: '16px',
+        padding: '10px 14px',
+        borderRadius: 12,
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        border: '2px solid rgba(255, 255, 255, 0.1)',
-        minWidth: '180px',
-        flex: '0 1 auto',
+        border: '1.5px solid rgba(255, 255, 255, 0.1)',
+        minWidth: 110,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        gap: 2,
         cursor: 'pointer',
-        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        position: 'relative',
-        overflow: 'hidden',
+        transition: 'all 0.2s ease',
+        color: '#fff',
     },
-    tierChipInner: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px',
-        width: '100%',
-        zIndex: 1,
-    },
-    tierBadge: {
-        fontSize: '13px',
-        fontWeight: '800',
+    tierTitle: {
+        fontSize: 11,
+        fontWeight: 800,
         textTransform: 'uppercase',
-        padding: '4px 14px',
-        borderRadius: '20px',
-        letterSpacing: '0.5px',
+        letterSpacing: '0.4px',
+        opacity: 0.9,
     },
     tierPrize: {
-        fontSize: '28px',
-        fontWeight: '900',
-        color: '#FFFFFF',
-        letterSpacing: '-0.5px',
+        fontSize: 16,
+        fontWeight: 900,
+        letterSpacing: '-0.3px',
     },
     tierFee: {
-        fontSize: '13px',
-        color: 'rgba(255, 255, 255, 0.6)',
-        fontWeight: '500',
+        fontSize: 11,
+        opacity: 0.55,
+        fontWeight: 500,
     },
-    tierActiveIndicator: {
-        marginTop: '4px',
-        fontSize: '11px',
-        fontWeight: '700',
-        color: '#FFFFFF',
-        background: 'rgba(255, 255, 255, 0.15)',
-        padding: '4px 12px',
-        borderRadius: '12px',
-        display: 'flex',
-        alignItems: 'center',
-    },
+
+    // Banner – single line
     bannerCard: {
-        borderRadius: '20px',
-        padding: '24px',
-        margin: '10px 0 20px',
-        borderWidth: '2px',
+        borderRadius: 12,
+        padding: '12px 16px',
+        marginBottom: 14,
+        borderWidth: 1.5,
         borderStyle: 'solid',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-    },
-    bannerHeader: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '12px',
+        gap: 8,
     },
-    badgeContainer: {
-        alignSelf: 'flex-start',
-        padding: '4px 12px',
-        borderRadius: '8px',
-        marginBottom: '6px',
-        display: 'inline-block',
+    bannerLeft: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
     },
     bannerBadge: {
-        fontSize: '12px',
-        fontWeight: '800',
+        fontSize: 11,
+        fontWeight: 800,
         textTransform: 'uppercase',
-        letterSpacing: '0.5px',
+        letterSpacing: '0.4px',
+        padding: '3px 8px',
+        borderRadius: 6,
     },
-    bannerTarget: {
-        fontSize: '26px',
-        fontWeight: '900',
-        color: '#FFFFFF',
-        marginTop: '2px',
-        letterSpacing: '-0.5px',
+    bannerPrize: {
+        fontSize: 18,
+        fontWeight: 900,
+        color: '#fff',
         display: 'flex',
         alignItems: 'center',
     },
-    entryBox: {
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-        padding: '10px 16px',
-        borderRadius: '12px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
+    bannerRight: {
+        fontSize: 12,
+        color: 'rgba(255, 255, 255, 0.6)',
+        fontWeight: 600,
     },
-    entryLabel: {
-        fontSize: '10px',
-        color: 'rgba(255, 255, 255, 0.5)',
-        textTransform: 'uppercase',
-        letterSpacing: '1px',
-        fontWeight: '600',
+    bannerMeta: {
+        whiteSpace: 'nowrap',
     },
-    entryPrice: {
-        fontSize: '18px',
-        fontWeight: '800',
-    },
-    progressRow: {
+
+    // Section header + controls
+    sectionHeader: {
         display: 'flex',
         justifyContent: 'space-between',
-        marginTop: '18px',
-        paddingTop: '14px',
-        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-        flexWrap: 'wrap',
-        gap: '8px',
-    },
-    progressText: {
-        fontSize: '13px',
-        color: 'rgba(255, 255, 255, 0.7)',
-        fontWeight: '600',
-        display: 'flex',
         alignItems: 'center',
+        margin: '8px 0 10px',
+        gap: 12,
+        flexWrap: 'wrap',
     },
-    progressStatus: {
-        fontSize: '13px',
-        fontWeight: '700',
+    sectionTitle: {
+        fontSize: 15,
+        fontWeight: 700,
+        color: '#fff',
+        margin: 0,
+        letterSpacing: '0.3px',
     },
+    expandControls: {
+        display: 'flex',
+        gap: 6,
+    },
+    controlBtn: {
+        background: 'rgba(255, 255, 255, 0.06)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        color: 'rgba(255, 255, 255, 0.7)',
+        fontSize: 11,
+        fontWeight: 600,
+        padding: '4px 10px',
+        borderRadius: 8,
+        cursor: 'pointer',
+    },
+
     fixturesContainer: {
         width: '100%',
-        marginTop: '8px',
     },
     emptyCard: {
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        padding: '40px 24px',
-        borderRadius: '16px',
+        padding: '32px 20px',
+        borderRadius: 12,
         border: '1px solid rgba(255, 255, 255, 0.06)',
-        margin: '8px 0',
         textAlign: 'center',
     },
     emptyTitle: {
-        fontSize: '18px',
-        fontWeight: '700',
-        color: '#FFFFFF',
-        marginBottom: '8px',
+        fontSize: 16,
+        fontWeight: 700,
+        color: '#fff',
+        marginBottom: 6,
     },
     emptySubtext: {
-        fontSize: '14px',
+        fontSize: 13,
         color: 'rgba(255, 255, 255, 0.5)',
-        lineHeight: '22px',
+        lineHeight: 1.5,
     },
-    matchCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.06)',
-        borderRadius: '16px',
-        padding: '16px 18px',
-        marginBottom: '12px',
+
+    // Compact match list
+    matchList: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        marginBottom: 14,
+    },
+    matchRow: {
+        backgroundColor: 'rgba(255, 255, 255, 0.045)',
+        borderRadius: 10,
         border: '1px solid rgba(255, 255, 255, 0.06)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        transition: 'all 0.3s ease',
+        overflow: 'hidden',
+        transition: 'background 0.15s ease',
     },
-    matchHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: '10px',
+    matchRowOpen: {
+        backgroundColor: 'rgba(255, 255, 255, 0.07)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
-    matchIndex: {
-        fontSize: '12px',
-        fontWeight: '700',
-        color: 'rgba(255, 255, 255, 0.4)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
+    matchRowBtn: {
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
+        gap: 10,
+        padding: '10px 12px',
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        color: '#fff',
+        textAlign: 'left',
     },
-    matchKickoff: {
-        fontSize: '12px',
-        color: 'rgba(255, 255, 255, 0.4)',
-        fontWeight: '500',
+    matchNum: {
+        flexShrink: 0,
+        width: 22,
+        height: 22,
+        borderRadius: 6,
+        background: 'rgba(255, 255, 255, 0.08)',
+        fontSize: 11,
+        fontWeight: 800,
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
+        color: 'rgba(255, 255, 255, 0.7)',
     },
-    teamsRow: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '14px',
-    },
-    teamText: {
+    matchTeams: {
         flex: 1,
-        fontSize: '16px',
-        fontWeight: '700',
-        color: '#FFFFFF',
+        minWidth: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 13,
+        fontWeight: 600,
+        overflow: 'hidden',
+    },
+    home: {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
+        maxWidth: '42%',
     },
-    vsBadge: {
-        padding: '0 14px',
-        fontSize: '11px',
-        fontWeight: '800',
-        color: 'rgba(255, 255, 255, 0.2)',
-        letterSpacing: '1px',
+    vs: {
+        flexShrink: 0,
+        fontSize: 10,
+        fontWeight: 700,
+        color: 'rgba(255, 255, 255, 0.25)',
+        textTransform: 'uppercase',
+    },
+    away: {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        maxWidth: '42%',
+        textAlign: 'right',
+    },
+    matchTime: {
+        flexShrink: 0,
+        fontSize: 11,
+        color: 'rgba(255, 255, 255, 0.4)',
+        fontWeight: 500,
+        whiteSpace: 'nowrap',
+    },
+    chevron: {
+        flexShrink: 0,
+        fontSize: 12,
+        color: 'rgba(255, 255, 255, 0.35)',
+        marginLeft: 2,
+    },
+
+    // Expanded details
+    matchDetails: {
+        padding: '0 12px 12px',
+        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
     },
     picksRow: {
         display: 'flex',
-        gap: '8px',
+        gap: 6,
+        marginTop: 10,
     },
     pickButton: {
         flex: 1,
-        padding: '10px',
-        borderRadius: '10px',
+        padding: '8px 4px',
+        borderRadius: 8,
         border: '1px solid rgba(255, 255, 255, 0.08)',
         textAlign: 'center',
-        cursor: 'default',
         backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        cursor: 'default',
     },
     pickText: {
-        fontSize: '12px',
-        fontWeight: '600',
-        color: 'rgba(255, 255, 255, 0.5)',
+        fontSize: 11,
+        fontWeight: 600,
+        color: 'rgba(255, 255, 255, 0.45)',
     },
+    detailMeta: {
+        marginTop: 8,
+        fontSize: 11,
+        color: 'rgba(255, 255, 255, 0.4)',
+        display: 'flex',
+        alignItems: 'center',
+    },
+
+    // CTA + info
     submitButton: {
-        padding: '16px',
-        borderRadius: '16px',
+        padding: '12px',
+        borderRadius: 12,
         textAlign: 'center',
-        marginTop: '12px',
-        marginBottom: '16px',
-        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
+        marginBottom: 12,
     },
     submitText: {
-        color: '#FFFFFF',
-        fontSize: '16px',
-        fontWeight: '700',
-        letterSpacing: '0.3px',
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 700,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -681,12 +682,11 @@ const styles: Record<string, React.CSSProperties> = {
     infoMessage: {
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
         border: '1px solid rgba(245, 158, 11, 0.2)',
-        borderRadius: '12px',
-        padding: '14px 18px',
+        borderRadius: 10,
+        padding: '10px 14px',
         textAlign: 'center',
-        fontSize: '13px',
+        fontSize: 12,
         color: '#FBBF24',
-        marginTop: '12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
