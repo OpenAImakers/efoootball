@@ -250,22 +250,44 @@ export default function Auth() {
                             </button>
                         </form>
 
-                        <div style={styles.bottomLinks}>
-                            {authMode === "login" && (
-                                <button type="button" style={styles.linkBtn} onClick={() => switchMode("reset")}>
-                                    Forgot Password?
-                                </button>
-                            )}
-                            <button
-                                type="button"
-                                style={styles.linkBtn}
-                                onClick={() => switchMode(authMode === "login" ? "signup" : "login")}
-                            >
-                                {authMode === "login"
-                                    ? "New here? Create account"
-                                    : "Already have an account? Log in"}
-                            </button>
-                        </div>
+                       <div style={styles.bottomLinks}>
+    {authMode === "login" && (
+        <button type="button" style={styles.linkBtn} onClick={() => switchMode("reset")}>
+            Forgot Password?
+        </button>
+    )}
+
+    {authMode === "login" ? (
+        <>
+         
+            <p style={styles.switchModeHint}>
+                Don't have an account?{" "}
+               
+                   <button
+                type="button"
+                style={styles.switchModeCta}
+                onClick={() => switchMode("signup")}
+            >
+                Register Now
+            </button>
+            </p>
+        </>
+    ) : (
+        <>
+          <p style={styles.switchModeHint}>
+                Already have an account?{" "}
+            </p>
+            <button
+                type="button"
+                style={styles.switchModeCta}
+                onClick={() => switchMode("login")}
+            >
+                Log In Instead
+            </button>
+          
+        </>
+    )}
+</div>
                     </>
                 )}
             </div>
@@ -274,6 +296,35 @@ export default function Auth() {
 }
 
 const styles = {
+
+    switchModeCta: {
+    width: "100%",
+    padding: "14px 16px",
+    fontSize: "1rem",
+    fontWeight: 600,
+    color: "#f0c14b",
+    backgroundColor: "transparent",
+    border: "1.5px solid #f0c14b",
+    borderRadius: "6px",
+    cursor: "pointer",
+    marginTop: "8px",
+},
+switchModeHint: {
+    color: "#888",
+    fontSize: "0.85rem",
+    margin: 0,
+    textAlign: "center",
+},
+inlineLink: {
+    background: "none",
+    border: "none",
+    color: "#f0c14b",
+    fontSize: "0.85rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    padding: 0,
+    textDecoration: "underline",
+},
     viewport: {
         minHeight: "100vh",
         width: "100%",
