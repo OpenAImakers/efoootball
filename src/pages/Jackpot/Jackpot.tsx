@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../supabase';
 import Navbar from "../../components/ExternalHeader";
-import FootballTabSEO from './FootballTabSEO';
 
 export type PredictionChoice = '1' | 'X' | '2';
 
@@ -167,19 +166,12 @@ const FootballTab: React.FC = () => {
     return (
         <>
             <Navbar />
-            <FootballTabSEO
-                tier={selectedTier}
-                prize={activeConfig.prize}
-                entryFee={activeConfig.entryFee}
-                matchCount={currentMatches.length}
-                currentPath="/contests"
-                isPreview={true}
-            />
+
             <div style={styles.pageWrapper}>
                 <div style={styles.heroSection}>
                     <div style={styles.heroContent}>
                         <h1 style={styles.heroTitle}>Contest Predictions</h1>
-                        <p style={styles.heroSubtitle}>Pick your tier · Preview only</p>
+                        <p style={styles.heroSubtitle}>Only in Rankings App Now!</p>
                     </div>
                 </div>
 
@@ -331,14 +323,15 @@ const FootballTab: React.FC = () => {
                                     }}
                                 >
                                     <span style={styles.submitText}>
-                                        <i className="bi bi-send-fill" style={{ marginRight: 8 }} />
+                                       {/* download icon */}
+                                        <i className="bi bi-download" style={{ marginRight: 8 }} />
                                         Submit {activeConfig.title} (KSh {activeConfig.entryFee})
                                     </span>
                                 </div>
 
                                 <div style={styles.infoMessage}>
                                     <i className="bi bi-info-circle-fill" style={{ marginRight: 8 }} />
-                                    Preview only · Place predictions in the mobile app
+                                    Sponsored by Wonderbakes
                                 </div>
                             </>
                         )}
