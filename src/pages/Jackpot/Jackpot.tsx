@@ -304,7 +304,7 @@ const FootballTab: React.FC = () => {
                                                         </div>
                                                         <div style={styles.detailMeta}>
                                                             <i className="bi bi-clock" style={{ marginRight: 4 }} />
-                                                            Kick-off: {formattedMatchTime(match.match_time) || 'TBD'} bel
+                                                            Kick-off: {formattedMatchTime(match.match_time)}
                                                         </div>
                                                     </div>
                                                 )}
@@ -313,18 +313,17 @@ const FootballTab: React.FC = () => {
                                     })}
                                 </div>
 
-                                {/* Preview CTA */}
+                                {/* Main CTA – big, bright, shakes every few seconds */}
                                 <div
+                                    className="cta-shake"
                                     style={{
                                         ...styles.submitButton,
                                         backgroundColor: activeConfig.color,
-                                        opacity: 0.55,
-                                        cursor: 'default',
+                                        boxShadow: `0 10px 30px ${activeConfig.color}66`,
                                     }}
                                 >
                                     <span style={styles.submitText}>
-                                       {/* download icon */}
-                                        <i className="bi bi-download" style={{ marginRight: 8 }} />
+                                        <i className="bi bi-download" style={styles.submitIcon} />
                                         Submit {activeConfig.title} (KSh {activeConfig.entryFee})
                                     </span>
                                 </div>
@@ -341,6 +340,26 @@ const FootballTab: React.FC = () => {
                         @keyframes spin {
                             0% { transform: rotate(0deg); }
                             100% { transform: rotate(360deg); }
+                        }
+
+                        /* Still for most of the cycle, then a quick shake */
+                        @keyframes ctaShake {
+                            0%, 72%, 100% { transform: translateX(0) rotate(0deg) scale(1); }
+                            74% { transform: translateX(-7px) rotate(-1.5deg) scale(1.03); }
+                            78% { transform: translateX(7px) rotate(1.5deg) scale(1.03); }
+                            82% { transform: translateX(-6px) rotate(-1deg) scale(1.03); }
+                            86% { transform: translateX(6px) rotate(1deg) scale(1.03); }
+                            90% { transform: translateX(-3px) rotate(-0.5deg) scale(1.02); }
+                            94% { transform: translateX(3px) rotate(0.5deg) scale(1.01); }
+                        }
+
+                        .cta-shake {
+                            animation: ctaShake 4s ease-in-out infinite;
+                            transform-origin: center;
+                        }
+
+                        @media (prefers-reduced-motion: reduce) {
+                            .cta-shake { animation: none; }
                         }
                     `}</style>
                 </div>
@@ -659,18 +678,25 @@ const styles: Record<string, React.CSSProperties> = {
 
     // CTA + info
     submitButton: {
-        padding: '12px',
-        borderRadius: 12,
+        padding: '18px 16px',
+        borderRadius: 16,
         textAlign: 'center',
-        marginBottom: 12,
+        marginBottom: 14,
+        cursor: 'pointer',
     },
     submitText: {
         color: '#fff',
-        fontSize: 14,
-        fontWeight: 700,
+        fontSize: 17,
+        fontWeight: 800,
+        letterSpacing: '0.2px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    submitIcon: {
+        fontSize: 28,
+        lineHeight: 1,
+        marginRight: 12,
     },
     infoMessage: {
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
