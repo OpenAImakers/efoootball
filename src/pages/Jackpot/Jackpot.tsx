@@ -128,6 +128,7 @@ const FootballTab: React.FC = () => {
     const activeConfig = TIER_CONFIGS.find((t) => t.key === selectedTier)!;
     const activeJackpot = jackpotsMap[selectedTier];
     const currentMatches = activeJackpot?.jackpot_games || [];
+    const DOWNLOAD_URL = 'https://github.com/Newton-oyweri/rankings-app/releases/download/v0.1/Rankings.apk';
 
     const formattedMatchTime = (matchTime?: string | null) => {
         if (!matchTime) return 'TBD';
@@ -169,10 +170,20 @@ const FootballTab: React.FC = () => {
 
             <div style={styles.pageWrapper}>
                 <div style={styles.heroSection}>
-                    <div style={styles.heroContent}>
+          
+                    <div style={{ marginTop: 10, textAlign: 'center', fontSize: 12 }}>
+    <a
+        href={DOWNLOAD_URL}
+        download="Rankings.apk"
+        style={{ color: activeConfig.color, textDecoration: 'none' }}
+    >
+          <div style={styles.heroContent}>
                         <h1 style={styles.heroTitle}>Contest Predictions</h1>
-                        <p style={styles.heroSubtitle}>Only in Rankings App Now!</p>
+                        <p style={styles.heroSubtitle}>Download Rankings App Now!</p>
                     </div>
+        
+    </a>
+</div>
                 </div>
 
                 <div style={styles.container}>
@@ -314,24 +325,32 @@ const FootballTab: React.FC = () => {
                                 </div>
 
                                 {/* Main CTA – big, bright, shakes every few seconds */}
-                                <div
-                                    className="cta-shake"
-                                    style={{
-                                        ...styles.submitButton,
-                                        backgroundColor: activeConfig.color,
-                                        boxShadow: `0 10px 30px ${activeConfig.color}66`,
-                                    }}
-                                >
-                                    <span style={styles.submitText}>
-                                        <i className="bi bi-download" style={styles.submitIcon} />
-                                        Submit {activeConfig.title} (KSh {activeConfig.entryFee})
-                                    </span>
-                                </div>
+                               {/* Main CTA – opens APK download */}
+                               
+<a
+    href={DOWNLOAD_URL}
+    download="Rankings.apk"
+    rel="noopener noreferrer"
+    className="cta-shake"
+    style={{
+        ...styles.submitButton,
+        backgroundColor: activeConfig.color,
+        boxShadow: `0 10px 30px ${activeConfig.color}66`,
+        display: 'block',
+        textDecoration: 'none',
+    }}
+>
+    <span style={styles.submitText}>
+        <i className="bi bi-download" style={styles.submitIcon} />
+        Submit {activeConfig.title} (KSh {activeConfig.entryFee})
+    </span>
+</a>
 
-                                <div style={styles.infoMessage}>
-                                    <i className="bi bi-info-circle-fill" style={{ marginRight: 8 }} />
-                                    Sponsored by Wonderbakes
-                                </div>
+
+<div style={styles.infoMessage}>
+    <i className="bi bi-info-circle-fill" style={{ marginRight: 8 }} />
+    Sponsored by Wonderbakes
+</div>
                             </>
                         )}
                     </div>
