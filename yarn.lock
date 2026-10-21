@@ -1589,6 +1589,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@paystack/inline-js@^2.26.1":
+  version "2.26.1"
+  resolved "https://registry.npmjs.org/@paystack/inline-js/-/inline-js-2.26.1.tgz"
+  integrity sha512-oyE4g6SWBVWF/p1aJ6qiIK0vWsstWi4Y4ge1/Gs57OF5zYgMzsnUnCwqUFJ6m/ksyFscqGw/A7nhLdruQwT/+A==
+
 "@pmmmwh/react-refresh-webpack-plugin@^0.5.3":
   version "0.5.17"
   resolved "https://registry.npmjs.org/@pmmmwh/react-refresh-webpack-plugin/-/react-refresh-webpack-plugin-0.5.17.tgz"

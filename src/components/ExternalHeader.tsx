@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "../supabase";
 import LivelyFeed from "./LivelyFeed";
 
 export default function Navbar() {
@@ -64,13 +65,24 @@ export default function Navbar() {
     navigate("/auth");
   };
 
+  // Logged in -> /deposit, logged out -> /auth
+  const handleDeposit = async (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    navigate(session ? "/deposit" : "/auth");
+  };
+
   return (
     <header className={`fixed-top header-wrapper ${scrolled ? "header-scrolled" : ""}`}>
       {/* Top Glassmorphic Navigation Bar */}
       <nav className="navbar-container">
         <div className="container-fluid px-3 px-md-4 px-lg-5">
           <div className="d-flex align-items-center justify-content-between w-100 py-2 navbar-inner">
-            
+
             {/* Brand / Logo (Takes to Home) */}
             <Link to="/" className="navbar-brand-premium flex-shrink-0">
               <span className="brand-glow"></span>
@@ -79,23 +91,27 @@ export default function Navbar() {
 
             {/* Navigation Links */}
             <div className="nav-scroll-container mx-3">
-                <NavLink to="/efootball" label="Leaderboard" currentPath={location.pathname} />
+              <NavLink to="/efootball" label="Leaderboard" currentPath={location.pathname} />
               <NavLink to="/activetournaments" label="Tournaments" currentPath={location.pathname} />
               <NavLink to="/fie" label="FIE" currentPath={location.pathname} />
               <NavLink to="/register" label="Register" currentPath={location.pathname} />
-
-              {/* to fixtures
-               */}
               <NavLink to="/fixtures-and-results" label="Fixtures" currentPath={location.pathname} />
             </div>
 
-            {/* Manage Tournament / PWA Action CTA */}
-            {!isStandalone && (
-              <button className="cta-btn-glass text-nowrap" onClick={handleManageTournament}>
-                <i className="bi bi-trophy-fill me-2"></i>
-                <span>Manage Tournament</span>
+            {/* CTA Stack: Manage Tournament + Deposit, vertically aligned */}
+            <div className="cta-stack flex-shrink-0">
+              {!isStandalone && (
+                <button className="cta-btn-glass text-nowrap" onClick={handleManageTournament}>
+                  <i className="bi bi-trophy-fill me-2"></i>
+                  <span>Manage Tournament</span>
+                </button>
+              )}
+
+              <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit}>
+                <i className="bi bi-wallet2 me-2"></i>
+                <span>Deposit</span>
               </button>
-            )}
+            </div>
 
           </div>
         </div>
@@ -211,12 +227,26 @@ export default function Navbar() {
           box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15);
         }
 
+        /* Vertical CTA stack */
+        .cta-stack {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.35rem;
+          transition: gap 0.3s ease;
+        }
+
+        .header-scrolled .cta-stack {
+          gap: 0.2rem;
+        }
+
         .cta-btn-glass {
           display: inline-flex;
           align-items: center;
-          justify-content: center;
-          padding: 0.55rem 1.2rem;
-          font-size: 0.825rem;
+          justify-content: flex-start;
+          width: 100%;
+          padding: 0.4rem 1rem;
+          font-size: 0.8rem;
           font-weight: 700;
           color: #ffffff;
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
@@ -228,9 +258,16 @@ export default function Navbar() {
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
+        .cta-btn-glass i {
+          font-size: 0.95rem;
+          width: 1.1rem;
+          text-align: center;
+          color: #fbbf24;
+        }
+
         .header-scrolled .cta-btn-glass {
-          padding: 0.35rem 0.9rem;
-          font-size: 0.75rem;
+          padding: 0.25rem 0.8rem;
+          font-size: 0.72rem;
         }
 
         .cta-btn-glass:hover {
@@ -238,6 +275,22 @@ export default function Navbar() {
           border-color: rgba(56, 189, 248, 0.5);
           transform: translateY(-1px);
           box-shadow: 0 6px 20px rgba(13, 110, 253, 0.25);
+        }
+
+        /* Deposit variant: green accent */
+        .cta-btn-deposit {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.28), rgba(34, 197, 94, 0.08));
+          border-color: rgba(34, 197, 94, 0.45);
+        }
+
+        .cta-btn-deposit i {
+          color: #4ade80;
+        }
+
+        .cta-btn-deposit:hover {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.45), rgba(34, 197, 94, 0.15));
+          border-color: rgba(74, 222, 128, 0.7);
+          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
         }
 
         /* Lively Feed Smooth Collapse Animation */
@@ -264,7 +317,7 @@ export default function Navbar() {
           .brand-text { font-size: 1.5rem; }
           .header-scrolled .brand-text { font-size: 1.2rem; }
           .nav-link-premium { font-size: 0.75rem; padding: 0.45rem 0.8rem; }
-          .cta-btn-glass { font-size: 0.75rem; padding: 0.45rem 0.85rem; }
+          .cta-btn-glass { font-size: 0.72rem; padding: 0.35rem 0.7rem; }
         }
       `}</style>
     </header>

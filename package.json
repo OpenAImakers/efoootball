@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@g-loot/react-tournament-brackets": "^1.0.31-rc",
+    "@paystack/inline-js": "^2.26.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.91.1",
     "@testing-library/dom": "^10.4.1",
