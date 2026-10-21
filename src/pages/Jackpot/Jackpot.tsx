@@ -671,7 +671,7 @@ const styles: Record<string, React.CSSProperties> = {
     pageWrapper: {
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #030A1A 0%, #0A1A3A 50%, #1A0A2A 100%)',
-        paddingTop: '100px',
+        paddingTop: '150px',
     },
     heroSection: {
         background: 'linear-gradient(135deg, rgba(13, 110, 253, 0.12) 0%, rgba(236, 72, 153, 0.08) 100%)',
