@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import Navbar from "../../components/ExternalHeader";
+import FullScreenPanel from "./Games"; 
 
 export type PredictionChoice = '1' | 'X' | '2';
 type TierKey = 5 | 6 | 7;
@@ -605,6 +606,9 @@ const FootballTab: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+        
+<FullScreenPanel/>
 
             {/* Popup */}
             {popup.visible && (
