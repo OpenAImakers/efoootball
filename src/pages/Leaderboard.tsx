@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import Advert from "../components/ExternalHeader";
+import Advert from "../components/Navbar";
 import { supabase } from "../supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";

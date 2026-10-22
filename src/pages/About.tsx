@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import Navbar from "../components/ExternalHeader";
+import Navbar from "../components/Navbar";
 import RoundRobinLayout from "../TournamentView/RobinRound";
 import SingleEliminationLayout from "../TournamentView/SingleElimination";
 import DoubleEliminationLayout from "../TournamentView/DoubleElimination";

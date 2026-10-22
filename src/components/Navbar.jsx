@@ -4,18 +4,17 @@ import { supabase } from "../supabase";
 
 export default function Navbar() {
   const location = useLocation();
-  
+
   // Cache Keys
   const ROLE_CACHE_KEY = "efootball_user_role";
   const LANG_CACHE_KEY = "efootball_lang_fr";
 
-  // Initialize from cache if available
   const [, setIsAdmin] = useState(() => {
     return sessionStorage.getItem(ROLE_CACHE_KEY) === "admin";
   });
-  
+
   const [loading, setLoading] = useState(!sessionStorage.getItem(ROLE_CACHE_KEY));
-  
+
   const [isFrench, setIsFrench] = useState(() => {
     return sessionStorage.getItem(LANG_CACHE_KEY) === "true";
   });
@@ -60,7 +59,6 @@ export default function Navbar() {
       }
     };
 
-    // Run check regardless to ensure cache is fresh
     checkUserRole();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -85,7 +83,6 @@ export default function Navbar() {
           <div className="d-flex align-items-center w-100" style={{ height: '60px', overflow: 'hidden' }}>
             <div
               className="navbar-brand fw-black text-decoration-none me-4 me-lg-5 flex-shrink-0"
-        
               style={{
                 fontSize: '1.9rem',
                 letterSpacing: '-1px',
@@ -101,14 +98,14 @@ export default function Navbar() {
             </div>
 
             <div className="flex-grow-1 position-relative d-flex align-items-center h-100">
-              <img 
-                src="/ball.png" 
-                alt="..." 
+              <img
+                src="/ball.png"
+                alt="..."
                 className="moving-ball"
-                style={{ 
-                  width: '4.5rem', 
-                  height: '4.5rem', 
-                  objectFit: 'contain', 
+                style={{
+                  width: '4.5rem',
+                  height: '4.5rem',
+                  objectFit: 'contain',
                   borderRadius: '50%',
                   position: 'absolute'
                 }}
@@ -140,10 +137,9 @@ export default function Navbar() {
     <nav className="navbar fixed-top bg-black border-bottom border-primary shadow-lg" style={{ borderBottomWidth: '2px' }}>
       <div className="container-fluid px-3 px-md-4 px-lg-5">
         <div className="d-flex align-items-center w-100">
-          
+
           <div
             className="navbar-brand fw-black text-decoration-none me-3 me-lg-4 flex-shrink-0 brand-logo"
-           
             style={{
               fontSize: '1.9rem',
               letterSpacing: '-1px',
@@ -213,12 +209,18 @@ export default function Navbar() {
                 .nav-link { font-size: 0.85rem; padding: 0.4rem 0.9rem; }
               }
             `}</style>
+              <NavLink to="/activetournaments" label="Tournaments" currentPath={location.pathname} />
+            
+            <NavLink to="/efootball" label="Leaderboard" currentPath={location.pathname} />
+          <NavLink to="/fie" label="FIE" currentPath={location.pathname} />
+            <NavLink to="/register" label="Register" currentPath={location.pathname} />
+            <NavLink to="/fixtures-and-results" label="Fixtures" currentPath={location.pathname} />
             <NavLink to="/admin" label="Admin" currentPath={location.pathname} />
             <NavLink to="/account" label={isFrench ? "Compte" : "Account"} currentPath={location.pathname} />
           </div>
 
           <div className="ms-3 flex-shrink-0">
-            <button 
+            <button
               onClick={toggleLanguage}
               className="lang-toggle-btn text-uppercase"
               title={isFrench ? "Switch to English" : "Passer en Français"}

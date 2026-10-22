@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import Navbar from "../components/ExternalHeader";
+import Navbar from "../components/Navbar";
 import Tournaments from "./Tournaments";
 
 function Home() {
