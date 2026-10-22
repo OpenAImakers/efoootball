@@ -34,6 +34,7 @@ import About from "./pages/About.tsx";
 import JackpotAdmin from "./pages/JackpotAdmin"
 import Jackpot from "./pages/Jackpot/Jackpot"
 import Deposit from "./pages/Jackpot/Deposit"
+import MyBets from "./pages/MyBets"
 function App() {
   // Detect PWA vs browser
   const isStandalone =
@@ -52,6 +53,15 @@ useEffect(() => {
 }, []);
   return (
     <Routes>
+
+
+         <Route
+        path="/mybets"
+        element={
+            <MyBets/>
+        }
+      />
+  
          <Route
         path="/deposit"
         element={

@@ -1,13 +1,24 @@
-import React from "react";
+import React, { useState } from "react";
 
 export type StatusFilter = "ALL" | "UPCOMING" | "LIVE" | "FINISHED";
 
 interface StickyHeaderProps {
   statusFilter: StatusFilter;
   onStatusChange: (value: StatusFilter) => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  searchResultCount: number | null; // null = no search active
 }
 
-const StickyHeader: React.FC<StickyHeaderProps> = ({ statusFilter, onStatusChange }) => {
+const StickyHeader: React.FC<StickyHeaderProps> = ({
+  statusFilter,
+  onStatusChange,
+  searchQuery,
+  onSearchChange,
+  searchResultCount,
+}) => {
+  const [focused, setFocused] = useState(false);
+
   return (
     <div style={styles.topBar}>
       <div style={styles.titleWrap}>
@@ -16,6 +27,45 @@ const StickyHeader: React.FC<StickyHeaderProps> = ({ statusFilter, onStatusChang
           <span style={styles.titleAccent}>Games</span>
         </h1>
         <p style={styles.subtitle}>All your entries and fixtures in one place.</p>
+      </div>
+
+      <div style={styles.searchWrap}>
+        <div
+          style={{
+            ...styles.searchBox,
+            borderColor: focused ? "#38bdf8" : "rgba(255,255,255,0.08)",
+            boxShadow: focused ? "0 0 0 3px rgba(56,189,248,0.15)" : "none",
+          }}
+        >
+          <i className="bi bi-search" style={styles.searchIcon} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Search team or fixture..."
+            style={styles.searchInput}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange("")}
+              style={styles.clearBtn}
+              aria-label="Clear search"
+            >
+              <i className="bi bi-x-lg" style={{ fontSize: 11 }} />
+            </button>
+          )}
+        </div>
+
+        {searchQuery && searchResultCount !== null && (
+          <div style={styles.searchHint}>
+            {searchResultCount === 0
+              ? "That game isn't playing today."
+              : `${searchResultCount} match${searchResultCount === 1 ? "" : "es"} found`}
+          </div>
+        )}
       </div>
 
       <div style={styles.pillContainer}>
@@ -53,10 +103,7 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(12px)",
     WebkitBackdropFilter: "blur(12px)",
   },
-  titleWrap: {
-    textAlign: "center",
-    maxWidth: "100%",
-  },
+  titleWrap: { textAlign: "center", maxWidth: "100%" },
   title: {
     margin: 0,
     fontSize: "1.6rem",
@@ -86,6 +133,52 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.78rem",
     color: "rgba(255,255,255,0.55)",
     fontWeight: 400,
+  },
+  searchWrap: {
+    width: "100%",
+    maxWidth: 420,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 6,
+  },
+  searchBox: {
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid",
+    borderRadius: 10,
+    padding: "8px 12px",
+    gap: 8,
+    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+  },
+  searchIcon: { fontSize: 14, color: "#64748b" },
+  searchInput: {
+    flex: 1,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: 500,
+  },
+  clearBtn: {
+    background: "rgba(255,255,255,0.08)",
+    border: "none",
+    color: "#94a3b8",
+    borderRadius: 6,
+    width: 22,
+    height: 22,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+  },
+  searchHint: {
+    fontSize: 11,
+    color: "#94a3b8",
+    fontWeight: 500,
   },
   pillContainer: {
     display: "flex",

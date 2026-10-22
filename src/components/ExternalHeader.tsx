@@ -65,6 +65,16 @@ export default function Navbar() {
     navigate("/auth");
   };
 
+  const handleMybets = async (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    navigate(session ? "/mybets" : "/auth");
+  };
+
   // Logged in -> /deposit, logged out -> /auth
   const handleDeposit = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -111,6 +121,10 @@ export default function Navbar() {
                 <i className="bi bi-wallet2 me-2"></i>
                 <span>Deposit</span>
               </button>
+                          <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleMybets}>
+              <i className="bi bi-ticket-detailed-fill me-2"></i>
+              <span>My Bets</span>
+            </button>
             </div>
 
           </div>

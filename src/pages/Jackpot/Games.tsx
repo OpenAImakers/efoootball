@@ -1,6 +1,9 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import StickyHeader, { StatusFilter } from "../../components/GamesHeader";
-
+import BetSlip, { SlipSelection } from "../../components/BetSlip";
+import { supabase } from "../../supabase";
+import { withCache } from "../../Utils/cache";
 interface League {
   id: number;
   name: string;
@@ -30,6 +33,8 @@ interface Event {
 }
 
 const Games: React.FC = () => {
+  const navigate = useNavigate();
+
   const [events, setEvents] = useState<Event[]>([]);
   const [leaguesMap, setLeaguesMap] = useState<Record<number, League>>({});
   const [loading, setLoading] = useState(true);
@@ -37,101 +42,115 @@ const Games: React.FC = () => {
 
   const [selectedLeagueId, setSelectedLeagueId] = useState<number | "ALL">("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const [selections, setSelections] = useState<Record<number, SlipSelection>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(
+    null
+  );
 
-    const fetchData = async () => {
-      const token = process.env.REACT_APP_BZZOIRO_TOKEN;
-      if (!token) {
-        setError("API token missing in environment variables.");
-        setLoading(false);
-        return;
-      }
+useEffect(() => {
+  const controller = new AbortController();
 
-      const today = new Date().toISOString().split("T")[0];
+  const fetchData = async () => {
+    const token = process.env.REACT_APP_BZZOIRO_TOKEN;
+    if (!token) {
+      setError("API token missing in environment variables.");
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const [leaguesRes, eventsRes] = await Promise.all([
-          fetch(`https://sports.bzzoiro.com/api/v2/leagues/?limit=200`, {
-            headers: { Authorization: `Token ${token}` },
-            signal: controller.signal,
-          }),
-          fetch(`https://sports.bzzoiro.com/api/v2/events/?date=${today}`, {
-            headers: { Authorization: `Token ${token}` },
-            signal: controller.signal,
-          }),
-        ]);
+    const today = new Date().toISOString().split("T")[0];
 
-        if (!eventsRes.ok) throw new Error(`Failed to load matches (${eventsRes.status})`);
-
-        const eventsData = await eventsRes.json();
-        const rawEvents: Event[] = eventsData.results ?? [];
-
-        if (leaguesRes.ok) {
-          const leaguesData = await leaguesRes.json();
-          const map: Record<number, League> = {};
-          (leaguesData.results || leaguesData || []).forEach((l: League) => {
-            map[l.id] = l;
-          });
-          setLeaguesMap(map);
+    try {
+      // 1. Leagues — cached 24h
+      const leagues = await withCache<League[]>(
+        "games_leagues_v1",
+        24 * 60 * 60 * 1000,
+        async () => {
+          const res = await fetch(
+            `https://sports.bzzoiro.com/api/v2/leagues/?limit=200`,
+            { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+          );
+          if (!res.ok) return [];
+          const data = await res.json();
+          return data.results ?? [];
         }
+      );
 
-        const eventsNeedingOdds = rawEvents.filter(
-          (e) => e.status !== "finished" && e.status !== "postponed"
+      const map: Record<number, League> = {};
+      leagues.forEach((l) => {
+        map[l.id] = l;
+      });
+      setLeaguesMap(map);
+
+      // 2. Events — cached 2 min
+      const rawEvents = await withCache<Event[]>(
+        `games_events_${today}`,
+        2 * 60 * 1000,
+        async () => {
+          const res = await fetch(
+            `https://sports.bzzoiro.com/api/v2/events/?date=${today}`,
+            { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+          );
+          if (!res.ok) throw new Error(`Failed to load matches (${res.status})`);
+          const data = await res.json();
+          return data.results ?? [];
+        }
+      );
+
+      // 3. Odds per event — cached 5 min each
+      const eventsNeedingOdds = rawEvents.filter(
+        (e) => e.status !== "finished" && e.status !== "postponed"
+      );
+
+      const CONCURRENCY = 5;
+      const oddsMap: Record<number, Odds> = {};
+
+      for (let i = 0; i < eventsNeedingOdds.length; i += CONCURRENCY) {
+        const batch = eventsNeedingOdds.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(
+          batch.map(async (evt) => {
+            const odds = await withCache<Odds | null>(
+              `games_odds_${evt.id}`,
+              5 * 60 * 1000,
+              async () => {
+                const res = await fetch(
+                  `https://sports.bzzoiro.com/api/v2/events/${evt.id}/odds/`,
+                  { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+                );
+                if (!res.ok) return null;
+                const data = await res.json();
+                return data.odds ?? null;
+              }
+            );
+            return { id: evt.id, odds };
+          })
         );
 
-        const CONCURRENCY = 5;
-        const oddsMap: Record<number, Odds> = {};
-
-        for (let i = 0; i < eventsNeedingOdds.length; i += CONCURRENCY) {
-          const batch = eventsNeedingOdds.slice(i, i + CONCURRENCY);
-          const results = await Promise.allSettled(
-            batch.map(async (evt) => {
-              const res = await fetch(
-                `https://sports.bzzoiro.com/api/v2/events/${evt.id}/odds/`,
-                {
-                  headers: { Authorization: `Token ${token}` },
-                  signal: controller.signal,
-                }
-              );
-              if (!res.ok) return { id: evt.id, odds: null };
-              const data = await res.json();
-              return { id: evt.id, odds: data.odds ?? null };
-            })
-          );
-
-          results.forEach((r) => {
-            if (r.status === "fulfilled" && r.value.odds) {
-              oddsMap[r.value.id] = r.value.odds;
-            }
-          });
-        }
-
-        const mergedEvents = rawEvents.map((evt) => ({
-          ...evt,
-          odds: oddsMap[evt.id],
-        }));
-
-        setEvents(mergedEvents);
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          setError(err.message || "Failed to load matches");
-        }
-      } finally {
-        setLoading(false);
+        results.forEach((r) => {
+          if (r.status === "fulfilled" && r.value.odds) {
+            oddsMap[r.value.id] = r.value.odds;
+          }
+        });
       }
-    };
 
-    fetchData();
-    return () => controller.abort();
-  }, []);
+      setEvents(rawEvents.map((evt) => ({ ...evt, odds: oddsMap[evt.id] })));
+    } catch (err: any) {
+      if (err.name !== "AbortError") setError(err.message || "Failed to load matches");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+  return () => controller.abort();
+}, []);
 
   const activeLeagues = useMemo(() => {
     const counts = new Map<number, number>();
-    events.forEach((evt) => {
-      counts.set(evt.league_id, (counts.get(evt.league_id) || 0) + 1);
-    });
+    events.forEach((evt) => counts.set(evt.league_id, (counts.get(evt.league_id) || 0) + 1));
     return Array.from(counts.entries()).map(([leagueId, count]) => ({
       id: leagueId,
       name: leaguesMap[leagueId]?.name || `League #${leagueId}`,
@@ -141,14 +160,22 @@ const Games: React.FC = () => {
   }, [events, leaguesMap]);
 
   const filteredEvents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
     return events.filter((evt) => {
       if (selectedLeagueId !== "ALL" && evt.league_id !== selectedLeagueId) return false;
       if (statusFilter === "LIVE" && evt.status !== "inprogress") return false;
       if (statusFilter === "UPCOMING" && evt.status !== "notstarted") return false;
       if (statusFilter === "FINISHED" && evt.status !== "finished") return false;
+
+      if (q) {
+        const home = evt.home_team.toLowerCase();
+        const away = evt.away_team.toLowerCase();
+        if (!home.includes(q) && !away.includes(q)) return false;
+      }
       return true;
     });
-  }, [events, selectedLeagueId, statusFilter]);
+  }, [events, selectedLeagueId, statusFilter, searchQuery]);
 
   const groupedEvents = useMemo(() => {
     const groups: { [key: number]: Event[] } = {};
@@ -159,9 +186,146 @@ const Games: React.FC = () => {
     return groups;
   }, [filteredEvents]);
 
+  const searchResultCount =
+    searchQuery.trim() === "" ? null : filteredEvents.length;
+
+  const handlePick = useCallback(
+    (evt: Event, choice: "HOME" | "DRAW" | "AWAY") => {
+      if (evt.status === "finished" || evt.status === "postponed") return;
+
+      const oddsVal =
+        choice === "HOME"
+          ? evt.odds?.home_win
+          : choice === "DRAW"
+          ? evt.odds?.draw
+          : evt.odds?.away_win;
+
+      if (!oddsVal) return;
+
+      setSelections((prev) => {
+        const next = { ...prev };
+        if (next[evt.id]?.selection === choice) {
+          delete next[evt.id];
+        } else {
+          next[evt.id] = {
+            eventId: evt.id,
+            homeTeam: evt.home_team,
+            awayTeam: evt.away_team,
+            selection: choice,
+            odds: oddsVal,
+          };
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleRemove = useCallback((eventId: number) => {
+    setSelections((prev) => {
+      const next = { ...prev };
+      delete next[eventId];
+      return next;
+    });
+  }, []);
+
+  const handleClear = useCallback(() => setSelections({}), []);
+
+const handleSubmit = useCallback(
+  async (stake: number) => {
+    const selList = Object.values(selections);
+    if (selList.length === 0) return;
+
+    setSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      // Pre-flight balance check (UX only — the RPC is the source of truth)
+      const { data: wallet } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!wallet || Number(wallet.balance) < stake) {
+        setFeedback({
+          type: "error",
+          msg: "Insufficient balance. Top up your wallet to place this bet.",
+        });
+        navigate("/deposit");
+        return;
+      }
+
+      const totalOdds = selList.reduce((acc, s) => acc * s.odds, 1);
+      const potentialWin = Math.floor(stake * totalOdds);
+
+      const picks = selList.map((s) => ({
+        event_id: s.eventId,
+        selection: s.selection,
+        odds_at_pick: s.odds,
+      }));
+
+      const { data: slipId, error: rpcError } = await supabase.rpc("place_slip", {
+        p_stake: stake,
+        p_potential_win: potentialWin,
+        p_picks: picks,
+      });
+
+      if (rpcError) throw rpcError;
+      if (!slipId) throw new Error("Slip was not created");
+
+      setSelections({});
+      setFeedback({
+        type: "success",
+        msg: `Bet placed! ${selList.length} selection${selList.length === 1 ? "" : "s"} · KSh ${stake}`,
+      });
+    } catch (err: any) {
+      const msg = err?.message ?? "";
+
+      if (msg.includes("INSUFFICIENT_BALANCE")) {
+        setFeedback({
+          type: "error",
+          msg: "Insufficient balance. Redirecting to deposit...",
+        });
+        navigate("/deposit");
+      } else if (msg.includes("WALLET_NOT_FOUND")) {
+        setFeedback({
+          type: "error",
+          msg: "Wallet not found. Please sign out and back in, or contact support.",
+        });
+      } else if (msg.includes("NOT_AUTHENTICATED")) {
+        navigate("/auth");
+      } else {
+        setFeedback({
+          type: "error",
+          msg: msg || "Could not place bet. Try again.",
+        });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  },
+  [selections, navigate]
+);
+
   return (
     <div style={styles.wrapper}>
-      <StickyHeader statusFilter={statusFilter} onStatusChange={setStatusFilter} />
+      <StickyHeader
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchResultCount={searchResultCount}
+      />
 
       <div style={styles.container} className="games-container">
         <aside style={styles.sidebar} className="games-sidebar">
@@ -204,10 +368,25 @@ const Games: React.FC = () => {
         </aside>
 
         <main style={styles.mainContent}>
+          {feedback && (
+            <div
+              style={{
+                ...styles.feedbackBox,
+                ...(feedback.type === "success" ? styles.feedbackSuccess : styles.feedbackError),
+              }}
+            >
+              {feedback.msg}
+            </div>
+          )}
+
           {loading && <div style={styles.stateMessage}>Loading today's matches...</div>}
           {error && !loading && <div style={styles.errorMessage}>{error}</div>}
           {!loading && !error && filteredEvents.length === 0 && (
-            <div style={styles.stateMessage}>No matches match the current filter.</div>
+            <div style={styles.stateMessage}>
+              {searchQuery.trim()
+                ? "No matches for that search today."
+                : "No matches match the current filter."}
+            </div>
           )}
 
           {!loading &&
@@ -232,6 +411,8 @@ const Games: React.FC = () => {
                     {matches.map((evt) => {
                       const isLive = evt.status === "inprogress";
                       const o = evt.odds;
+                      const pick = selections[evt.id]?.selection;
+                      const locked = evt.status === "finished" || evt.status === "postponed";
 
                       return (
                         <div key={evt.id} style={styles.matchRow} className="games-match-row">
@@ -275,24 +456,48 @@ const Games: React.FC = () => {
                           </div>
 
                           <div style={styles.oddsCol} className="games-odds-col">
-                            <div style={styles.oddBtn}>
-                              <span style={styles.oddLabel}>1</span>
-                              <span style={styles.oddVal} className="games-odd-val">
-                                {o?.home_win ? o.home_win.toFixed(2) : "-"}
-                              </span>
-                            </div>
-                            <div style={styles.oddBtn}>
-                              <span style={styles.oddLabel}>X</span>
-                              <span style={styles.oddVal} className="games-odd-val">
-                                {o?.draw ? o.draw.toFixed(2) : "-"}
-                              </span>
-                            </div>
-                            <div style={styles.oddBtn}>
-                              <span style={styles.oddLabel}>2</span>
-                              <span style={styles.oddVal} className="games-odd-val">
-                                {o?.away_win ? o.away_win.toFixed(2) : "-"}
-                              </span>
-                            </div>
+                            {(
+                              [
+                                { key: "HOME", label: "1", val: o?.home_win },
+                                { key: "DRAW", label: "X", val: o?.draw },
+                                { key: "AWAY", label: "2", val: o?.away_win },
+                              ] as const
+                            ).map(({ key, label, val }) => {
+                              const active = pick === key;
+                              const disabled = !val || locked;
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() => handlePick(evt, key)}
+                                  style={{
+                                    ...styles.oddBtn,
+                                    ...(active ? styles.oddBtnActive : {}),
+                                    opacity: disabled ? 0.4 : 1,
+                                    cursor: disabled ? "not-allowed" : "pointer",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      ...styles.oddLabel,
+                                      ...(active ? styles.oddLabelActive : {}),
+                                    }}
+                                  >
+                                    {label}
+                                  </span>
+                                  <span
+                                    style={{
+                                      ...styles.oddVal,
+                                      ...(active ? styles.oddValActive : {}),
+                                    }}
+                                    className="games-odd-val"
+                                  >
+                                    {val ? val.toFixed(2) : "-"}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       );
@@ -303,6 +508,14 @@ const Games: React.FC = () => {
             })}
         </main>
       </div>
+
+      <BetSlip
+        selections={Object.values(selections)}
+        onRemove={handleRemove}
+        onClear={handleClear}
+        onSubmit={handleSubmit}
+        submitting={submitting}
+      />
 
       <style>{`
         @media (max-width: 768px) {
@@ -340,9 +553,7 @@ const Games: React.FC = () => {
             padding: 8px 10px !important;
             gap: 8px !important;
           }
-          .games-odds-col {
-            gap: 4px !important;
-          }
+          .games-odds-col { gap: 4px !important; }
         }
 
         @media (max-width: 400px) {
@@ -399,12 +610,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "2px 6px",
     borderRadius: 8,
   },
-  leagueList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    marginTop: 6,
-  },
+  leagueList: { display: "flex", flexDirection: "column", gap: 4, marginTop: 6 },
   leagueItem: {
     display: "flex",
     justifyContent: "space-between",
@@ -430,18 +636,8 @@ const styles: Record<string, React.CSSProperties> = {
     textOverflow: "ellipsis",
     maxWidth: 170,
   },
-  leagueCount: {
-    fontSize: 11,
-    opacity: 0.6,
-    marginLeft: 8,
-  },
-  mainContent: {
-    flex: 1,
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-  },
+  leagueCount: { fontSize: 11, opacity: 0.6, marginLeft: 8 },
+  mainContent: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12 },
   leagueCard: {
     background: "rgba(15, 23, 42, 0.6)",
     border: "1px solid rgba(255, 255, 255, 0.06)",
@@ -456,19 +652,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "center",
   },
-  leagueTitle: {
-    fontWeight: 700,
-    fontSize: 14,
-    color: "#38bdf8",
-  },
-  stageTitle: {
-    fontSize: 11,
-    color: "#64748b",
-  },
-  matchList: {
-    display: "flex",
-    flexDirection: "column",
-  },
+  leagueTitle: { fontWeight: 700, fontSize: 14, color: "#38bdf8" },
+  stageTitle: { fontSize: 11, color: "#64748b" },
+  matchList: { display: "flex", flexDirection: "column" },
   matchRow: {
     display: "grid",
     gridTemplateColumns: "80px 1fr 180px",
@@ -477,13 +663,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 12,
   },
-  timeCol: {
-    fontSize: 12,
-  },
-  timeText: {
-    color: "#e2e8f0",
-    fontWeight: 700,
-  },
+  timeCol: { fontSize: 12 },
+  timeText: { color: "#e2e8f0", fontWeight: 700 },
   liveBadge: {
     color: "#22c55e",
     fontWeight: 800,
@@ -491,33 +672,11 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 4,
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: "50%",
-    background: "#22c55e",
-  },
-  statusText: {
-    color: "#64748b",
-    fontSize: 11,
-    fontWeight: 700,
-  },
-  postponedText: {
-    color: "#f87171",
-    fontSize: 10,
-    fontWeight: 700,
-  },
-  teamsCol: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    minWidth: 0,
-  },
-  teamRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 6,
-  },
+  pulseDot: { width: 6, height: 6, borderRadius: "50%", background: "#22c55e" },
+  statusText: { color: "#64748b", fontSize: 11, fontWeight: 700 },
+  postponedText: { color: "#f87171", fontSize: 10, fontWeight: 700 },
+  teamsCol: { display: "flex", flexDirection: "column", gap: 4, minWidth: 0 },
+  teamRow: { display: "flex", justifyContent: "space-between", gap: 6 },
   teamName: {
     fontSize: 13,
     fontWeight: 600,
@@ -526,17 +685,8 @@ const styles: Record<string, React.CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  scoreText: {
-    fontSize: 13,
-    fontWeight: 800,
-    color: "#38bdf8",
-    flexShrink: 0,
-  },
-  oddsCol: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: 6,
-  },
+  scoreText: { fontSize: 13, fontWeight: 800, color: "#38bdf8", flexShrink: 0 },
+  oddsCol: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 },
   oddBtn: {
     background: "rgba(255, 255, 255, 0.04)",
     border: "1px solid rgba(255, 255, 255, 0.08)",
@@ -545,23 +695,18 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
   },
-  oddLabel: {
-    fontSize: 9,
-    color: "#64748b",
-    fontWeight: 700,
+  oddBtnActive: {
+    background: "#38bdf8",
+    borderColor: "#38bdf8",
   },
-  oddVal: {
-    fontSize: 12,
-    fontWeight: 700,
-    color: "#38bdf8",
-  },
-  stateMessage: {
-    textAlign: "center",
-    padding: 32,
-    color: "#64748b",
-    fontSize: 13,
-  },
+  oddLabel: { fontSize: 9, color: "#64748b", fontWeight: 700 },
+  oddLabelActive: { color: "rgba(15,23,42,0.75)" },
+  oddVal: { fontSize: 12, fontWeight: 700, color: "#38bdf8" },
+  oddValActive: { color: "#0f172a" },
+  stateMessage: { textAlign: "center", padding: 32, color: "#64748b", fontSize: 13 },
   errorMessage: {
     background: "rgba(239, 68, 68, 0.15)",
     color: "#f87171",
@@ -569,6 +714,17 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     textAlign: "center",
     fontSize: 13,
+  },
+  feedbackBox: { padding: "10px 14px", borderRadius: 10, fontSize: 12, fontWeight: 600 },
+  feedbackSuccess: {
+    background: "rgba(34, 197, 94, 0.12)",
+    color: "#4ade80",
+    border: "1px solid rgba(34, 197, 94, 0.3)",
+  },
+  feedbackError: {
+    background: "rgba(239, 68, 68, 0.12)",
+    color: "#f87171",
+    border: "1px solid rgba(239, 68, 68, 0.3)",
   },
 };
 
