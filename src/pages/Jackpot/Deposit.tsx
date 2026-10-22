@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PaystackPop from "@paystack/inline-js";
 import { supabase } from "../../supabase";
 import PageHeader from "../../components/DepositHeader";
-import Navbar from "../../components/Navbar";
+import Navbar from "../../components/ExternalHeader";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL ?? "";
 const MIN_WITHDRAWAL = 500;

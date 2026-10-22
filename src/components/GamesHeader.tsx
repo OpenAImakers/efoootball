@@ -23,8 +23,7 @@ const StickyHeader: React.FC<StickyHeaderProps> = ({
     <div style={styles.topBar}>
       <div style={styles.titleWrap}>
         <h1 style={styles.title}>
-          <span style={styles.titleMain}>Todays</span>{" "}
-          <span style={styles.titleAccent}>Games</span>
+          <span style={styles.titleMain}>efootball</span>
         </h1>
         <p style={styles.subtitle}>Today's games. Today's odds. Today's win.</p>
       </div>

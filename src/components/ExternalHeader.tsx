@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
-import LivelyFeed from "./LivelyFeed";
 
 export default function Navbar() {
-  const location = useLocation();
   const navigate = useNavigate();
 
   // Scroll position state
@@ -24,7 +22,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    // Safely cast navigator for non-standard iOS Safari property to satisfy TypeScript
     const nav = window.navigator as Navigator & { standalone?: boolean };
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -88,55 +85,38 @@ export default function Navbar() {
 
   return (
     <header className={`fixed-top header-wrapper ${scrolled ? "header-scrolled" : ""}`}>
-      {/* Top Glassmorphic Navigation Bar */}
       <nav className="navbar-container">
         <div className="container-fluid px-3 px-md-4 px-lg-5">
           <div className="d-flex align-items-center justify-content-between w-100 py-2 navbar-inner">
-
             {/* Brand / Logo (Takes to Home) */}
             <Link to="/" className="navbar-brand-premium flex-shrink-0">
               <span className="brand-glow"></span>
               <span className="brand-text">Rankings</span>
             </Link>
 
-            {/* Navigation Links */}
-            <div className="nav-scroll-container mx-3">
-              <NavLink to="/efootball" label="Leaderboard" currentPath={location.pathname} />
-              <NavLink to="/activetournaments" label="Tournaments" currentPath={location.pathname} />
-              <NavLink to="/fie" label="FIE" currentPath={location.pathname} />
-              <NavLink to="/register" label="Register" currentPath={location.pathname} />
-              <NavLink to="/fixtures-and-results" label="Fixtures" currentPath={location.pathname} />
-            </div>
-
-            {/* CTA Stack: Manage Tournament + Deposit, vertically aligned */}
+            {/* CTA Stack */}
             <div className="cta-stack flex-shrink-0">
               {!isStandalone && (
                 <button className="cta-btn-glass text-nowrap" onClick={handleManageTournament}>
                   <i className="bi bi-trophy-fill me-2"></i>
-                  <span>Manage Tournament</span>
+                  <span>efootball</span>
                 </button>
               )}
 
               <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit}>
                 <i className="bi bi-wallet2 me-2"></i>
-                <span>Deposit</span>
+                <span>My Wallet</span>
               </button>
-                          <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleMybets}>
-              <i className="bi bi-ticket-detailed-fill me-2"></i>
-              <span>My Bets</span>
-            </button>
-            </div>
 
+              <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleMybets}>
+                <i className="bi bi-ticket-detailed-fill me-2"></i>
+                <span>My Bets</span>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* Lively Feed Section - Smoothly hides on scroll */}
-      <div className="lively-feed-wrapper">
-        <LivelyFeed />
-      </div>
-
-      {/* High-End Styling */}
       <style>{`
         .header-wrapper {
           z-index: 1030;
@@ -195,57 +175,11 @@ export default function Navbar() {
           transform: translateY(-1px);
         }
 
-        .nav-scroll-container {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          overflow-x: auto;
-          white-space: nowrap;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-
-        .nav-scroll-container::-webkit-scrollbar {
-          display: none;
-        }
-
-        .nav-link-premium {
-          position: relative;
-          font-size: 0.825rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 1.2px;
-          padding: 0.55rem 1.1rem;
-          color: rgba(255, 255, 255, 0.65);
-          text-decoration: none;
-          border-radius: 12px;
-          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          border: 1px solid transparent;
-        }
-
-        .header-scrolled .nav-link-premium {
-          padding: 0.35rem 0.85rem;
-          font-size: 0.775rem;
-        }
-
-        .nav-link-premium:hover:not(.active) {
-          color: #ffffff;
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-link-premium.active {
-          color: #38bdf8;
-          background: rgba(56, 189, 248, 0.1);
-          border-color: rgba(56, 189, 248, 0.3);
-          box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15);
-        }
-
         /* Vertical CTA stack */
         .cta-stack {
           display: flex;
-          flex-direction: column;
-          align-items: stretch;
+          flex-direction: row;
+          align-items: center;
           gap: 0.35rem;
           transition: gap 0.3s ease;
         }
@@ -258,7 +192,6 @@ export default function Navbar() {
           display: inline-flex;
           align-items: center;
           justify-content: flex-start;
-          width: 100%;
           padding: 0.4rem 1rem;
           font-size: 0.8rem;
           font-weight: 700;
@@ -307,45 +240,17 @@ export default function Navbar() {
           box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
         }
 
-        /* Lively Feed Smooth Collapse Animation */
-        .lively-feed-wrapper {
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          background: rgba(0, 0, 0, 0.2);
-          max-height: 50px;
-          opacity: 1;
-          overflow: hidden;
-          transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                      opacity 0.25s ease,
-                      padding 0.35s ease;
-          padding: 6px 0;
-        }
-
-        .header-scrolled .lively-feed-wrapper {
-          max-height: 0;
-          opacity: 0;
-          padding: 0;
-          border-top-color: transparent;
-        }
-
         @media (max-width: 576px) {
           .brand-text { font-size: 1.5rem; }
           .header-scrolled .brand-text { font-size: 1.2rem; }
-          .nav-link-premium { font-size: 0.75rem; padding: 0.45rem 0.8rem; }
+          .cta-stack {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.25rem;
+          }
           .cta-btn-glass { font-size: 0.72rem; padding: 0.35rem 0.7rem; }
         }
       `}</style>
     </header>
-  );
-}
-
-function NavLink({ to, label, currentPath }: { to: string; label: string; currentPath: string }) {
-  const isActive = currentPath === to || (to !== "/" && currentPath.startsWith(to + "/"));
-  return (
-    <Link
-      to={to}
-      className={`nav-link-premium text-nowrap ${isActive ? "active" : ""}`}
-    >
-      {label}
-    </Link>
   );
 }
