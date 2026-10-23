@@ -4,6 +4,7 @@ import StickyHeader, { StatusFilter } from "../../components/GamesHeader";
 import BetSlip, { SlipSelection } from "../../components/BetSlip";
 import { supabase } from "../../supabase";
 import { withCache } from "../../Utils/cache";
+
 interface League {
   id: number;
   name: string;
@@ -20,10 +21,12 @@ interface Odds {
 interface Event {
   id: number;
   league_id: number;
+  league_name?: string;
   home_team: string;
   away_team: string;
   event_date: string;
   status: string;
+  period?: string | null;
   current_minute?: number | null;
   home_score: number | null;
   away_score: number | null;
@@ -50,123 +53,190 @@ const Games: React.FC = () => {
     null
   );
 
-useEffect(() => {
-  const controller = new AbortController();
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const fetchData = async () => {
-    const token = process.env.REACT_APP_BZZOIRO_TOKEN;
-    if (!token) {
-      setError("API token missing in environment variables.");
-      setLoading(false);
-      return;
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-
-    try {
-      // 1. Leagues — cached 24h
-      const leagues = await withCache<League[]>(
-        "games_leagues_v1",
-        24 * 60 * 60 * 1000,
-        async () => {
-          const res = await fetch(
-            `https://sports.bzzoiro.com/api/v2/leagues/?limit=200`,
-            { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
-          );
-          if (!res.ok) return [];
-          const data = await res.json();
-          return data.results ?? [];
-        }
-      );
-
-      const map: Record<number, League> = {};
-      leagues.forEach((l) => {
-        map[l.id] = l;
-      });
-      setLeaguesMap(map);
-
-      // 2. Events — cached 2 min
-      const rawEvents = await withCache<Event[]>(
-        `games_events_${today}`,
-        2 * 60 * 1000,
-        async () => {
-          const res = await fetch(
-            `https://sports.bzzoiro.com/api/v2/events/?date=${today}`,
-            { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
-          );
-          if (!res.ok) throw new Error(`Failed to load matches (${res.status})`);
-          const data = await res.json();
-          return data.results ?? [];
-        }
-      );
-
-      // 3. Odds per event — cached 5 min each
-      const eventsNeedingOdds = rawEvents.filter(
-        (e) => e.status !== "finished" && e.status !== "postponed"
-      );
-
-      const CONCURRENCY = 5;
-      const oddsMap: Record<number, Odds> = {};
-
-      for (let i = 0; i < eventsNeedingOdds.length; i += CONCURRENCY) {
-        const batch = eventsNeedingOdds.slice(i, i + CONCURRENCY);
-        const results = await Promise.allSettled(
-          batch.map(async (evt) => {
-            const odds = await withCache<Odds | null>(
-              `games_odds_${evt.id}`,
-              5 * 60 * 1000,
-              async () => {
-                const res = await fetch(
-                  `https://sports.bzzoiro.com/api/v2/events/${evt.id}/odds/`,
-                  { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
-                );
-                if (!res.ok) return null;
-                const data = await res.json();
-                return data.odds ?? null;
-              }
-            );
-            return { id: evt.id, odds };
-          })
-        );
-
-        results.forEach((r) => {
-          if (r.status === "fulfilled" && r.value.odds) {
-            oddsMap[r.value.id] = r.value.odds;
-          }
-        });
+    const fetchData = async () => {
+      const token = process.env.REACT_APP_BZZOIRO_TOKEN;
+      if (!token) {
+        setError("API token missing in environment variables.");
+        setLoading(false);
+        return;
       }
 
-      setEvents(rawEvents.map((evt) => ({ ...evt, odds: oddsMap[evt.id] })));
-    } catch (err: any) {
-      if (err.name !== "AbortError") setError(err.message || "Failed to load matches");
-    } finally {
-      setLoading(false);
-    }
-  };
+      const today = new Date().toISOString().split("T")[0];
 
-  fetchData();
-  return () => controller.abort();
-}, []);
+      try {
+        // 1. Leagues — cached 24h
+        const leagues = await withCache<League[]>(
+          "games_leagues_v1",
+          24 * 60 * 60 * 1000,
+          async () => {
+            const res = await fetch(
+              `https://sports.bzzoiro.com/api/v2/leagues/?limit=200`,
+              { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+            );
+            if (!res.ok) return [];
+            const data = await res.json();
+            return data.results ?? [];
+          }
+        );
+
+        const map: Record<number, League> = {};
+        leagues.forEach((l) => {
+          map[l.id] = l;
+        });
+        setLeaguesMap(map);
+
+        // 2. Today's events — cached 2 min
+        const rawEvents = await withCache<Event[]>(
+          `games_events_${today}`,
+          2 * 60 * 1000,
+          async () => {
+            const res = await fetch(
+              `https://sports.bzzoiro.com/api/v2/events/?date=${today}`,
+              { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+            );
+            if (!res.ok) throw new Error(`Failed to load matches (${res.status})`);
+            const data = await res.json();
+            return data.results ?? [];
+          }
+        );
+
+        // 3. Live events — NOT cached long (30s), so LIVE tab stays fresh
+        const liveEvents = await withCache<Event[]>(
+          `games_live_v1`,
+          30 * 1000,
+          async () => {
+            const res = await fetch(
+              `https://sports.bzzoiro.com/api/v2/events/live/`,
+              { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+            );
+            if (!res.ok) return [];
+            const data = await res.json();
+            // NOTE: live endpoint uses `events`, not `results`
+            return data.events ?? data.results ?? [];
+          }
+        );
+
+        // Merge: live data overrides date data for matching ids,
+        // and appends live-only matches missing from the date response.
+        const liveMap = new Map(liveEvents.map((e) => [e.id, e]));
+        const merged = rawEvents.map((evt) => {
+          const live = liveMap.get(evt.id);
+          if (!live) return evt;
+          return {
+            ...evt,
+            status: live.status ?? evt.status,
+            home_score: live.home_score ?? evt.home_score,
+            away_score: live.away_score ?? evt.away_score,
+            current_minute: live.current_minute ?? evt.current_minute,
+            period: live.period ?? null,
+            league_name: live.league_name ?? evt.league_name,
+          };
+        });
+        const dateIds = new Set(rawEvents.map((e) => e.id));
+        const liveOnly = liveEvents.filter((e) => !dateIds.has(e.id));
+        const allEvents = [...merged, ...liveOnly];
+
+        // 4. Odds — only for upcoming, NOT live, NOT finished
+        const eventsNeedingOdds = allEvents.filter(
+          (e) => e.status === "notstarted"
+        );
+
+        const CONCURRENCY = 5;
+        const oddsMap: Record<number, Odds> = {};
+
+        for (let i = 0; i < eventsNeedingOdds.length; i += CONCURRENCY) {
+          const batch = eventsNeedingOdds.slice(i, i + CONCURRENCY);
+          const results = await Promise.allSettled(
+            batch.map(async (evt) => {
+              const odds = await withCache<Odds | null>(
+                `games_odds_${evt.id}`,
+                5 * 60 * 1000,
+                async () => {
+                  const res = await fetch(
+                    `https://sports.bzzoiro.com/api/v2/events/${evt.id}/odds/`,
+                    { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+                  );
+                  if (!res.ok) return null;
+                  const data = await res.json();
+                  return data.odds ?? null;
+                }
+              );
+              return { id: evt.id, odds };
+            })
+          );
+
+          results.forEach((r) => {
+            if (r.status === "fulfilled" && r.value.odds) {
+              oddsMap[r.value.id] = r.value.odds;
+            }
+          });
+        }
+
+        setEvents(allEvents.map((evt) => ({ ...evt, odds: oddsMap[evt.id] })));
+      } catch (err: any) {
+        if (err.name !== "AbortError") setError(err.message || "Failed to load matches");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => controller.abort();
+  }, []);
 
   const activeLeagues = useMemo(() => {
     const counts = new Map<number, number>();
     events.forEach((evt) => counts.set(evt.league_id, (counts.get(evt.league_id) || 0) + 1));
     return Array.from(counts.entries()).map(([leagueId, count]) => ({
       id: leagueId,
-      name: leaguesMap[leagueId]?.name || `League #${leagueId}`,
+      name:
+        leaguesMap[leagueId]?.name ||
+        events.find((e) => e.league_id === leagueId)?.league_name ||
+        `League #${leagueId}`,
       country: leaguesMap[leagueId]?.country,
       count,
     }));
   }, [events, leaguesMap]);
+
+  // Normalised status helpers — tolerate case & multiple spellings
+  const isLiveStatus = (s?: string) => {
+    const v = (s || "").toLowerCase();
+    return v === "inprogress" || v === "live" || v === "1st_half" || v === "2nd_half";
+  };
+  const isUpcomingStatus = (s?: string) => {
+    const v = (s || "").toLowerCase();
+    return v === "notstarted" || v === "scheduled";
+  };
+  const isFinishedStatus = (s?: string) => {
+    const v = (s || "").toLowerCase();
+    return v === "finished" || v === "ft";
+  };
+  const isLocked = (s?: string) => {
+    const v = (s || "").toLowerCase();
+    return (
+      v === "inprogress" ||
+      v === "live" ||
+      v === "1st_half" ||
+      v === "2nd_half" ||
+      v === "finished" ||
+      v === "ft" ||
+      v === "postponed" ||
+      v === "cancelled"
+    );
+  };
 
   const filteredEvents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
     return events.filter((evt) => {
       if (selectedLeagueId !== "ALL" && evt.league_id !== selectedLeagueId) return false;
-      if (statusFilter === "LIVE" && evt.status !== "inprogress") return false;
-      if (statusFilter === "UPCOMING" && evt.status !== "notstarted") return false;
-      if (statusFilter === "FINISHED" && evt.status !== "finished") return false;
+
+      if (statusFilter === "LIVE" && !isLiveStatus(evt.status)) return false;
+      if (statusFilter === "UPCOMING" && !isUpcomingStatus(evt.status)) return false;
+      if (statusFilter === "FINISHED" && !isFinishedStatus(evt.status)) return false;
 
       if (q) {
         const home = evt.home_team.toLowerCase();
@@ -186,12 +256,12 @@ useEffect(() => {
     return groups;
   }, [filteredEvents]);
 
-  const searchResultCount =
-    searchQuery.trim() === "" ? null : filteredEvents.length;
+  const searchResultCount = searchQuery.trim() === "" ? null : filteredEvents.length;
 
   const handlePick = useCallback(
     (evt: Event, choice: "HOME" | "DRAW" | "AWAY") => {
-      if (evt.status === "finished" || evt.status === "postponed") return;
+      // Hard block: live, finished, postponed, cancelled — no bets
+      if (isLocked(evt.status)) return;
 
       const oddsVal =
         choice === "HOME"
@@ -231,91 +301,90 @@ useEffect(() => {
 
   const handleClear = useCallback(() => setSelections({}), []);
 
-const handleSubmit = useCallback(
-  async (stake: number) => {
-    const selList = Object.values(selections);
-    if (selList.length === 0) return;
+  const handleSubmit = useCallback(
+    async (stake: number) => {
+      const selList = Object.values(selections);
+      if (selList.length === 0) return;
 
-    setSubmitting(true);
-    setFeedback(null);
+      setSubmitting(true);
+      setFeedback(null);
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        navigate("/auth");
-        return;
+        if (!user) {
+          navigate("/auth");
+          return;
+        }
+
+        const { data: wallet } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!wallet || Number(wallet.balance) < stake) {
+          setFeedback({
+            type: "error",
+            msg: "Insufficient balance. Top up your wallet to place this bet.",
+          });
+          navigate("/deposit");
+          return;
+        }
+
+        const totalOdds = selList.reduce((acc, s) => acc * s.odds, 1);
+        const potentialWin = Math.floor(stake * totalOdds * 100) / 100;
+
+        const picks = selList.map((s) => ({
+          event_id: s.eventId,
+          selection: s.selection,
+          odds_at_pick: s.odds,
+        }));
+
+        const { data: slipId, error: rpcError } = await supabase.rpc("place_slip", {
+          p_stake: stake,
+          p_potential_win: potentialWin,
+          p_picks: picks,
+        });
+
+        if (rpcError) throw rpcError;
+        if (!slipId) throw new Error("Slip was not created");
+
+        setSelections({});
+        setFeedback({
+          type: "success",
+          msg: `Bet placed! ${selList.length} selection${selList.length === 1 ? "" : "s"} · KSh ${stake}`,
+        });
+      } catch (err: any) {
+        const msg = err?.message ?? "";
+
+        if (msg.includes("INSUFFICIENT_BALANCE")) {
+          setFeedback({
+            type: "error",
+            msg: "Insufficient balance. Redirecting to deposit...",
+          });
+          navigate("/deposit");
+        } else if (msg.includes("WALLET_NOT_FOUND")) {
+          setFeedback({
+            type: "error",
+            msg: "Wallet not found. Please sign out and back in, or contact support.",
+          });
+        } else if (msg.includes("NOT_AUTHENTICATED")) {
+          navigate("/auth");
+        } else {
+          setFeedback({
+            type: "error",
+            msg: msg || "Could not place bet. Try again.",
+          });
+        }
+      } finally {
+        setSubmitting(false);
       }
-
-      // Pre-flight balance check (UX only — the RPC is the source of truth)
-      const { data: wallet } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!wallet || Number(wallet.balance) < stake) {
-        setFeedback({
-          type: "error",
-          msg: "Insufficient balance. Top up your wallet to place this bet.",
-        });
-        navigate("/deposit");
-        return;
-      }
-
-      const totalOdds = selList.reduce((acc, s) => acc * s.odds, 1);
-      const potentialWin = Math.floor(stake * totalOdds);
-
-      const picks = selList.map((s) => ({
-        event_id: s.eventId,
-        selection: s.selection,
-        odds_at_pick: s.odds,
-      }));
-
-      const { data: slipId, error: rpcError } = await supabase.rpc("place_slip", {
-        p_stake: stake,
-        p_potential_win: potentialWin,
-        p_picks: picks,
-      });
-
-      if (rpcError) throw rpcError;
-      if (!slipId) throw new Error("Slip was not created");
-
-      setSelections({});
-      setFeedback({
-        type: "success",
-        msg: `Bet placed! ${selList.length} selection${selList.length === 1 ? "" : "s"} · KSh ${stake}`,
-      });
-    } catch (err: any) {
-      const msg = err?.message ?? "";
-
-      if (msg.includes("INSUFFICIENT_BALANCE")) {
-        setFeedback({
-          type: "error",
-          msg: "Insufficient balance. Redirecting to deposit...",
-        });
-        navigate("/deposit");
-      } else if (msg.includes("WALLET_NOT_FOUND")) {
-        setFeedback({
-          type: "error",
-          msg: "Wallet not found. Please sign out and back in, or contact support.",
-        });
-      } else if (msg.includes("NOT_AUTHENTICATED")) {
-        navigate("/auth");
-      } else {
-        setFeedback({
-          type: "error",
-          msg: msg || "Could not place bet. Try again.",
-        });
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  },
-  [selections, navigate]
-);
+    },
+    [selections, navigate]
+  );
 
   return (
     <div style={styles.wrapper}>
@@ -399,7 +468,9 @@ const handleSubmit = useCallback(
                 <div key={leagueId} style={styles.leagueCard}>
                   <div style={styles.leagueCardHeader}>
                     <span style={styles.leagueTitle}>
-                      {leagueInfo?.name || `League #${leagueId}`}
+                      {leagueInfo?.name ||
+                        matches[0]?.league_name ||
+                        `League #${leagueId}`}
                       {leagueInfo?.country ? ` • ${leagueInfo.country}` : ""}
                     </span>
                     <span style={styles.stageTitle}>
@@ -409,10 +480,10 @@ const handleSubmit = useCallback(
 
                   <div style={styles.matchList}>
                     {matches.map((evt) => {
-                      const isLive = evt.status === "inprogress";
+                      const isLive = isLiveStatus(evt.status);
                       const o = evt.odds;
                       const pick = selections[evt.id]?.selection;
-                      const locked = evt.status === "finished" || evt.status === "postponed";
+                      const locked = isLocked(evt.status);
 
                       return (
                         <div key={evt.id} style={styles.matchRow} className="games-match-row">
@@ -422,7 +493,7 @@ const handleSubmit = useCallback(
                                 <span style={styles.pulseDot} />
                                 {evt.current_minute ? `${evt.current_minute}'` : "LIVE"}
                               </div>
-                            ) : evt.status === "finished" ? (
+                            ) : isFinishedStatus(evt.status) ? (
                               <span style={styles.statusText}>FT</span>
                             ) : evt.status === "postponed" ? (
                               <span style={styles.postponedText}>POSTP</span>
@@ -471,6 +542,13 @@ const handleSubmit = useCallback(
                                   type="button"
                                   disabled={disabled}
                                   onClick={() => handlePick(evt, key)}
+                                  title={
+                                    locked
+                                      ? isLive
+                                        ? "Live match — no betting"
+                                        : "Match unavailable"
+                                      : undefined
+                                  }
                                   style={{
                                     ...styles.oddBtn,
                                     ...(active ? styles.oddBtnActive : {}),
