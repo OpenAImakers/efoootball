@@ -177,7 +177,7 @@ const MyBets: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => navigate("/games")}
+              onClick={() => navigate("/")}
               style={styles.emptyCta}
             >
               Browse today's games

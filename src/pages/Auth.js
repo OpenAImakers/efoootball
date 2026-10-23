@@ -47,7 +47,7 @@ export default function Auth() {
             setCheckingAuth(false);
             setReadyToRedirect(true);
         } else {
-            navigate("/admin", { replace: true });
+            navigate("/", { replace: true });
         }
     };
 
