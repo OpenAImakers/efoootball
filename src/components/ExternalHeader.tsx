@@ -64,6 +64,12 @@ export default function Navbar() {
   };
   
 
+  const handleSurvivor = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/survivor");
+  };
+
+  // Logged in -> /deposit, logged out -> /auth
   const handleDeposit = async (e: React.MouseEvent) => {
     e.preventDefault();
 
@@ -98,6 +104,11 @@ export default function Navbar() {
               <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/jackpot")} title="Jackpot">
                 <i className="bi bi-coin"></i>
                 <span className="cta-label">Jackpot</span>
+              </button>
+
+              <button className="cta-btn-glass cta-btn-survivor text-nowrap" onClick={handleSurvivor} title="Survivor">
+                <i className="bi bi-lightning-charge-fill"></i>
+                <span className="cta-label">Survivor</span>
               </button>
 
               
@@ -197,6 +208,22 @@ export default function Navbar() {
         .cta-btn-glass:hover {
           background: rgba(255, 255, 255, 0.15);
           border-color: rgba(56, 189, 248, 0.4);
+        }
+
+        /* Survivor variant: electric blue accent */
+        .cta-btn-survivor {
+          background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(56, 189, 248, 0.08));
+          border-color: rgba(56, 189, 248, 0.5);
+        }
+
+        .cta-btn-survivor i {
+          color: #38bdf8;
+        }
+
+        .cta-btn-survivor:hover {
+          background: linear-gradient(135deg, rgba(56, 189, 248, 0.5), rgba(56, 189, 248, 0.15));
+          border-color: rgba(56, 189, 248, 0.75);
+          box-shadow: 0 6px 20px rgba(56, 189, 248, 0.35);
         }
 
         /* Responsive tweaks for very small screens */

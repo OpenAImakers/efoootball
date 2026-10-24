@@ -36,6 +36,8 @@ import Jackpot from "./pages/Jackpot/Games"
 import Deposit from "./pages/Jackpot/Deposit"
 import MyBets from "./pages/MyBets"
 import JackpotGames from "./pages/Jackpot/Jackpot"
+import Survivor from "./pages/Survivor/Survivor"
+import SurvivorAdmin from "./pages/Survivor/SurvivorAdmin"
 function App() {
   // Detect PWA vs browser
   const isStandalone =
@@ -79,6 +81,22 @@ useEffect(() => {
         path="/jackpotadmin"
         element={
             <JackpotAdmin />
+        }
+      />
+
+      <Route
+        path="/survivor"
+        element={
+            <Survivor />
+        }
+      />
+
+      <Route
+        path="/survivoradmin"
+        element={
+          <ProtectedAdmin requiredRole="admin">
+            <SurvivorAdmin />
+          </ProtectedAdmin>
         }
       />
 
