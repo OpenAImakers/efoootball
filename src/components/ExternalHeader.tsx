@@ -51,16 +51,7 @@ export default function Navbar() {
     };
   }, []);
 
-  const handleManageTournament = async (e: React.MouseEvent) => {
-    e.preventDefault();
 
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-    }
-
-    navigate("/auth");
-  };
 
   const handleMybets = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -96,12 +87,12 @@ export default function Navbar() {
 
             {/* CTA Stack */}
             <div className="cta-stack flex-shrink-0">
-              {!isStandalone && (
-                <button className="cta-btn-glass text-nowrap" onClick={handleManageTournament} title="eFootball">
+              
+                <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/efootball")} title="eFootball">
                   <i className="bi bi-trophy-fill"></i>
                   <span className="cta-label">efootball</span>
                 </button>
-              )}
+              
 
               {/* route to /jackpot */}
               <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/jackpot")} title="Jackpot">
