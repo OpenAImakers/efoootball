@@ -90,7 +90,7 @@ const styles: Record<string, React.CSSProperties> = {
   topBar: {
     position: "sticky",
     top: 0,
-    zIndex: 1200,
+    zIndex: 0,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",

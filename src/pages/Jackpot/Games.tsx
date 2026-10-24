@@ -4,6 +4,7 @@ import StickyHeader, { StatusFilter } from "../../components/GamesHeader";
 import BetSlip, { SlipSelection } from "../../components/BetSlip";
 import { supabase } from "../../supabase";
 import { withCache } from "../../Utils/cache";
+import Navbar from "../../components/ExternalHeader";
 
 interface League {
   id: number;
@@ -388,6 +389,7 @@ const Games: React.FC = () => {
 
   return (
     <div style={styles.wrapper}>
+      <Navbar />
       <StickyHeader
         statusFilter={statusFilter}
         onStatusChange={setStatusFilter}

@@ -32,9 +32,10 @@ import SpecificClanRegistration from "./fie/components/SpecificClanRegistration"
 import Clans from "./fie/clans/ClanAdminForm";
 import About from "./pages/About.tsx";
 import JackpotAdmin from "./pages/JackpotAdmin"
-import Jackpot from "./pages/Jackpot/Jackpot"
+import Jackpot from "./pages/Jackpot/Games"
 import Deposit from "./pages/Jackpot/Deposit"
 import MyBets from "./pages/MyBets"
+import JackpotGames from "./pages/Jackpot/Jackpot"
 function App() {
   // Detect PWA vs browser
   const isStandalone =
@@ -54,6 +55,12 @@ useEffect(() => {
   return (
     <Routes>
 
+         <Route
+        path="/jackpot"
+        element={
+            <JackpotGames/>
+        }
+      />
 
          <Route
         path="/mybets"

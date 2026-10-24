@@ -71,6 +71,7 @@ export default function Navbar() {
 
     navigate(session ? "/mybets" : "/auth");
   };
+  
 
   const handleDeposit = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -102,6 +103,14 @@ export default function Navbar() {
                 </button>
               )}
 
+              {/* route to /jackpot */}
+              <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/jackpot")} title="Jackpot">
+                <i className="bi bi-coin"></i>
+                <span className="cta-label">Jackpot</span>
+              </button>
+
+              
+
               <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit} title="My Wallet">
                 <i className="bi bi-wallet2"></i>
                 <span className="cta-label">Wallet</span>
@@ -118,9 +127,6 @@ export default function Navbar() {
 
       <style>{`
         /* Ensure body content doesn't get hidden under fixed header */
-        body {
-          padding-top: 60px;
-        }
 
         .header-wrapper {
           z-index: 1030;
