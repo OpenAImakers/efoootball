@@ -72,7 +72,6 @@ export default function Navbar() {
     navigate(session ? "/mybets" : "/auth");
   };
 
-  // Logged in -> /deposit, logged out -> /auth
   const handleDeposit = async (e: React.MouseEvent) => {
     e.preventDefault();
 
@@ -86,9 +85,9 @@ export default function Navbar() {
   return (
     <header className={`fixed-top header-wrapper ${scrolled ? "header-scrolled" : ""}`}>
       <nav className="navbar-container">
-        <div className="container-fluid px-3 px-md-4 px-lg-5">
-          <div className="d-flex align-items-center justify-content-between w-100 py-2 navbar-inner">
-            {/* Brand / Logo (Takes to Home) */}
+        <div className="container-fluid px-2 px-md-4 px-lg-5">
+          <div className="d-flex align-items-center justify-content-between w-100 py-1 py-md-2 navbar-inner">
+            {/* Brand / Logo */}
             <Link to="/" className="navbar-brand-premium flex-shrink-0">
               <span className="brand-glow"></span>
               <span className="brand-text">Rankings</span>
@@ -97,20 +96,20 @@ export default function Navbar() {
             {/* CTA Stack */}
             <div className="cta-stack flex-shrink-0">
               {!isStandalone && (
-                <button className="cta-btn-glass text-nowrap" onClick={handleManageTournament}>
-                  <i className="bi bi-trophy-fill me-2"></i>
-                  <span>efootball</span>
+                <button className="cta-btn-glass text-nowrap" onClick={handleManageTournament} title="eFootball">
+                  <i className="bi bi-trophy-fill"></i>
+                  <span className="cta-label">efootball</span>
                 </button>
               )}
 
-              <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit}>
-                <i className="bi bi-wallet2 me-2"></i>
-                <span>My Wallet</span>
+              <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit} title="My Wallet">
+                <i className="bi bi-wallet2"></i>
+                <span className="cta-label">Wallet</span>
               </button>
 
-              <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleMybets}>
-                <i className="bi bi-ticket-detailed-fill me-2"></i>
-                <span>My Bets</span>
+              <button className="cta-btn-glass text-nowrap" onClick={handleMybets} title="My Bets">
+                <i className="bi bi-ticket-detailed-fill"></i>
+                <span className="cta-label">Bets</span>
               </button>
             </div>
           </div>
@@ -118,33 +117,29 @@ export default function Navbar() {
       </nav>
 
       <style>{`
+        /* Ensure body content doesn't get hidden under fixed header */
+        body {
+          padding-top: 60px;
+        }
+
         .header-wrapper {
           z-index: 1030;
-          background: rgba(3, 10, 26, 0.85);
+          background: rgba(3, 10, 26, 0.88);
           backdrop-filter: blur(16px) saturate(180%);
           -webkit-backdrop-filter: blur(16px) saturate(180%);
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          transition: all 0.3s ease;
         }
 
         .header-scrolled {
-          background: rgba(2, 6, 18, 0.95);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+          background: rgba(2, 6, 18, 0.96);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
         .navbar-container {
           position: relative;
-          background: radial-gradient(circle at 20% 0%, rgba(13, 110, 253, 0.15) 0%, transparent 50%);
-        }
-
-        .navbar-inner {
-          transition: padding 0.3s ease;
-        }
-
-        .header-scrolled .navbar-inner {
-          padding-top: 0.25rem !important;
-          padding-bottom: 0.25rem !important;
+          background: radial-gradient(circle at 20% 0%, rgba(13, 110, 253, 0.12) 0%, transparent 50%);
         }
 
         .navbar-brand-premium {
@@ -152,103 +147,73 @@ export default function Navbar() {
           display: inline-flex;
           align-items: center;
           text-decoration: none;
-          padding: 0.2rem 0;
         }
 
         .brand-text {
-          font-size: 1.8rem;
-          font-weight: 900;
-          letter-spacing: -0.8px;
+          font-size: 1.4rem;
+          font-weight: 800;
+          letter-spacing: -0.5px;
           text-transform: lowercase;
           background: linear-gradient(135deg, #ffffff 30%, #60a5fa 70%, #fd7e14 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          transition: all 0.3s ease;
         }
 
-        .header-scrolled .brand-text {
-          font-size: 1.4rem;
-        }
-
-        .navbar-brand-premium:hover .brand-text {
-          opacity: 0.9;
-          transform: translateY(-1px);
-        }
-
-        /* Vertical CTA stack */
+        /* Horizontal compact button row */
         .cta-stack {
           display: flex;
           flex-direction: row;
           align-items: center;
-          gap: 0.35rem;
-          transition: gap 0.3s ease;
-        }
-
-        .header-scrolled .cta-stack {
-          gap: 0.2rem;
+          gap: 6px;
         }
 
         .cta-btn-glass {
           display: inline-flex;
           align-items: center;
-          justify-content: flex-start;
-          padding: 0.4rem 1rem;
-          font-size: 0.8rem;
-          font-weight: 700;
+          justify-content: center;
+          padding: 0.35rem 0.65rem;
+          font-size: 0.75rem;
+          font-weight: 600;
           color: #ffffff;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          border-radius: 12px;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 8px;
           cursor: pointer;
-          backdrop-filter: blur(10px);
-          transition: all 0.25s ease;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          backdrop-filter: blur(8px);
+          transition: all 0.2s ease;
         }
 
         .cta-btn-glass i {
-          font-size: 0.95rem;
-          width: 1.1rem;
-          text-align: center;
+          font-size: 0.85rem;
           color: #fbbf24;
         }
 
-        .header-scrolled .cta-btn-glass {
-          padding: 0.25rem 0.8rem;
-          font-size: 0.72rem;
-        }
-
-        .cta-btn-glass:hover {
-          background: linear-gradient(135deg, rgba(13, 110, 253, 0.3), rgba(255, 255, 255, 0.1));
-          border-color: rgba(56, 189, 248, 0.5);
-          transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(13, 110, 253, 0.25);
-        }
-
-        /* Deposit variant: green accent */
         .cta-btn-deposit {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.28), rgba(34, 197, 94, 0.08));
-          border-color: rgba(34, 197, 94, 0.45);
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.06));
+          border-color: rgba(34, 197, 94, 0.35);
         }
 
         .cta-btn-deposit i {
           color: #4ade80;
         }
 
-        .cta-btn-deposit:hover {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.45), rgba(34, 197, 94, 0.15));
-          border-color: rgba(74, 222, 128, 0.7);
-          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
+        .cta-btn-glass:hover {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(56, 189, 248, 0.4);
         }
 
-        @media (max-width: 576px) {
-          .brand-text { font-size: 1.5rem; }
-          .header-scrolled .brand-text { font-size: 1.2rem; }
-          .cta-stack {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 0.25rem;
-          }
-          .cta-btn-glass { font-size: 0.72rem; padding: 0.35rem 0.7rem; }
+        /* Responsive tweaks for very small screens */
+        @media (max-width: 420px) {
+          .brand-text { font-size: 1.2rem; }
+          .cta-btn-glass { padding: 0.3rem 0.45rem; font-size: 0.7rem; gap: 4px; }
+          .cta-stack { gap: 4px; }
+        }
+
+        @media (max-width: 360px) {
+          /* On ultra-small screens, hide button text labels and show only icons to save space */
+          .cta-label { display: none; }
+          .cta-btn-glass { padding: 0.35rem 0.45rem; }
+          .cta-btn-glass i { font-size: 1rem; margin: 0; }
         }
       `}</style>
     </header>
