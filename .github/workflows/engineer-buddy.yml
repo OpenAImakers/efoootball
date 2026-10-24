@@ -24,7 +24,7 @@ jobs:
       github.event_name == 'pull_request' ||
       (
         github.event_name == 'issue_comment' &&
-        startsWith(github.event.comment.body, '@engineer-buddy') &&
+        startsWith(trim(github.event.comment.body), '@engineer-buddy') &&
         github.event.comment.user.type != 'Bot' &&
         github.event.comment.author_association != 'NONE' &&
         github.event.issue.pull_request != null
@@ -60,6 +60,7 @@ jobs:
           node-version: 22
 
       - name: Run review (keyless — no API keys anywhere)
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
