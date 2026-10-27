@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from '../../components/ExternalHeader';
 import FullScreenPanel from './Games';
+import SurvivorPromo from '../Survivor/SurvivorPromo';
 import {
   useFootballTab,
   TIER_CONFIGS,
@@ -75,6 +76,8 @@ const FootballTab: React.FC = () => {
             </div>
           </a>
         </div>
+
+        <SurvivorPromo />
 
         <div style={styles.container}>
           {/* Tier pills */}
