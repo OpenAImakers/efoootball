@@ -71,7 +71,10 @@ function mapError(rawMessage: string | undefined): AviatorError {
   const msg = (rawMessage ?? '').toLowerCase();
 
   if (msg.includes('not_authenticated'))
-    return new AviatorError('not_authenticated', 'Please sign in to play.');
+    return new AviatorError('not_authenticated', 
+
+        'Please sign in to play.'
+    );
   if (msg.includes('invalid_stake'))
     return new AviatorError('invalid_stake', 'Invalid stake.');
   if (msg.includes('invalid_game_name'))

@@ -1,7 +1,11 @@
 // AviatorEngine.js
 // Framework-agnostic Aviator game engine.
 // No React, no DOM — pure logic + an event emitter.
-// Swap the loop driver (RAF in browser, setInterval in tests/Node) via the `scheduler` option.
+// Swap the loop driver (RAF in browser, setInterval in tests/Node) via the scheduler helpers at the bottom.
+//
+// Rounds run continuously. A player can bet at ANY point while a round is flying.
+// If they join at 1.20x, their own multiplier starts at 1.00x from that moment
+// (see effectiveMultiplier) — so cashing out at 2.00x pays 1.80x.
 
 export const DEFAULT_CONFIG = {
   startBalance: 10_000,
@@ -12,19 +16,31 @@ export const DEFAULT_CONFIG = {
   crashPauseMs: 1200,
   historyLimit: 12,
 
-  // Async provider returning the crash point for the next round.
-  // Signature: () => Promise<{ sessionId: string, crashPoint: number }>
-  roundProvider: null,
+  // Async. Called when the player places a bet — open the server session here.
+  // Signature: () => Promise<{ sessionId: string }>
+  onBet: null,
 
-  // Called after the round settles so the host can persist it.
-  // Signature: (payload) => Promise<void>
+  // Called when a BET resolves (cashout or bust). Never called for rounds with no bet.
+  // Signature: ({ sessionId, crashPoint, cashoutAt, lostBet }) => Promise<void>
   onSettle: null,
+};
+
+/**
+ * Multiplier a player actually earns when they joined mid-flight.
+ * They "restart" at 1.00x from their entry point: 1 + (current - entry).
+ * Join at 1.20x, now at 2.00x  ->  1.80x.
+ *
+ * (Want strict ratio math instead? return current / entry. Same call site, one line.)
+ */
+export const effectiveMultiplier = (entry, current) => {
+  if (entry == null) return current;
+  return Math.max(1, 1 + (current - entry));
 };
 
 /**
  * Events emitted:
  *   'state'   -> full snapshot
- *   'round'   -> { sessionId, crashPoint }
+ *   'round'   -> { roundId }
  *   'cashout' -> { at, payout }
  *   'crash'   -> { sessionId, crashPoint, cashoutAt, lostBet }
  *   'error'   -> Error
@@ -37,13 +53,16 @@ export class AviatorEngine {
     this.balance = this.config.startBalance;
     this.multiplier = 1.0;
     this.crashPoint = this._generateCrashPoint();
-    this.phase = 'idle'; // 'idle' | 'starting' | 'running' | 'crashed'
+    this.phase = 'idle'; // 'idle' | 'running' | 'crashed'
     this.hasBet = false;
-    this.cashedOutAt = null;
+    this.betPending = false;
+    this.betEntry = null; // raw multiplier at the moment the bet was confirmed
+    this.cashedOutAt = null; // effective multiplier the player exited at
     this.autoCashout = null;
     this.sessionId = null;
     this.history = [];
 
+    this._roundId = 0;
     this._startTime = 0;
     this._rafId = null;
     this._pauseTimer = null;
@@ -103,15 +122,15 @@ export class AviatorEngine {
       crashPoint: this.crashPoint,
       phase: this.phase,
       hasBet: this.hasBet,
+      betPending: this.betPending,
+      betEntry: this.betEntry,
+      yourMultiplier: this._yourMultiplier(),
       cashedOutAt: this.cashedOutAt,
       autoCashout: this.autoCashout,
       sessionId: this.sessionId,
       history: this.history,
       potentialPayout: this._potentialPayout(),
-      canBet:
-        !this.hasBet &&
-        this.balance >= this.config.betAmount &&
-        this.phase === 'running',
+      canBet: this._canPlaceBet(),
     };
   }
 
@@ -122,11 +141,49 @@ export class AviatorEngine {
     this._emitState();
   }
 
-  placeBet() {
-    if (this.phase !== 'running') return false;
-    if (this.hasBet || this.balance < this.config.betAmount) return false;
+  /**
+   * Place a bet at any point while the round is flying.
+   * Opens a server session via config.onBet, then locks in the entry multiplier
+   * at the moment the server confirms (so slow networks can't buy a cheaper entry).
+   */
+  async placeBet() {
+    if (!this._canPlaceBet()) return false;
+
+    const roundId = this._roundId;
+    this.betPending = true;
+    this._emitState();
+
+    let sessionId = null;
+    try {
+      if (this.config.onBet) {
+        const res = await this.config.onBet();
+        sessionId = res?.sessionId ?? null;
+      }
+    } catch (err) {
+      this.betPending = false;
+      this._emit('error', err);
+      return false;
+    }
+
+    this.betPending = false;
+
+    // The round crashed while the server was opening the session.
+    // The session exists, so close it out as a lost bet.
+    if (roundId !== this._roundId || this.phase !== 'running') {
+      this._settle({
+        sessionId,
+        crashPoint: this.crashPoint,
+        cashoutAt: null,
+        lostBet: true,
+      });
+      this._emitState();
+      return false;
+    }
+
+    this.sessionId = sessionId;
     this.balance -= this.config.betAmount;
     this.hasBet = true;
+    this.betEntry = this.multiplier;
     this.cashedOutAt = null;
     this._emitState();
     return true;
@@ -136,60 +193,44 @@ export class AviatorEngine {
     if (!this.hasBet || this.cashedOutAt != null || this.phase !== 'running') {
       return null;
     }
-    const at = this.multiplier;
+    // Floor to 2dp so what the player sees == what the server pays.
+    const at = Math.floor(effectiveMultiplier(this.betEntry, this.multiplier) * 100) / 100;
     const payout = Math.round(this.config.betAmount * at);
     this.cashedOutAt = at;
     this.balance += payout;
-    this._pushHistory({ multiplier: this.crashPoint, cashout: at });
 
-    const payload = {
+    this._emit('cashout', { at, payout });
+    this._settle({
       sessionId: this.sessionId,
       crashPoint: this.crashPoint,
       cashoutAt: at,
       lostBet: false,
-    };
-    this._emit('cashout', { at, payout });
-
-    if (this.config.onSettle) {
-      Promise.resolve(this.config.onSettle(payload)).catch((e) =>
-        this._emit('error', e),
-      );
-    }
+    });
     return { at, payout };
   }
 
   // ---------- internals ----------
 
-  async _beginRound() {
-    this.crashPoint = 1.0;
+  _canPlaceBet() {
+    return (
+      this.phase === 'running' &&
+      !this.hasBet &&
+      !this.betPending &&
+      this.balance >= this.config.betAmount
+    );
+  }
+
+  _beginRound() {
+    this._roundId += 1;
+    this.crashPoint = this._generateCrashPoint();
     this.multiplier = 1.0;
-    this.phase = 'starting';
+    this.phase = 'running';
+    this.hasBet = false;
+    this.betEntry = null;
     this.cashedOutAt = null;
     this.sessionId = null;
-    this._emitState();
-
-    try {
-      if (this.config.roundProvider) {
-        const res = await this.config.roundProvider();
-        this.sessionId = res.sessionId;
-        this.crashPoint = res.crashPoint;
-      } else {
-        this.crashPoint = this._generateCrashPoint();
-      }
-    } catch (err) {
-      this.phase = 'idle';
-      this._emit('error', err);
-      this._emitState();
-      return;
-    }
-
-    this.phase = 'running';
     this._startTime = now();
-    this._emit('round', {
-      sessionId: this.sessionId,
-      crashPoint: this.crashPoint,
-    });
-    this._emitState();
+    this._emit('round', { roundId: this._roundId });
     this._scheduleTick();
   }
 
@@ -212,12 +253,13 @@ export class AviatorEngine {
 
     this.multiplier = clamped;
 
+    // Auto-cashout target is in the PLAYER's terms (their own multiplier).
     if (
       this.hasBet &&
       this.cashedOutAt == null &&
       this.autoCashout != null &&
-      clamped >= this.autoCashout &&
-      clamped < this.crashPoint
+      clamped < this.crashPoint &&
+      effectiveMultiplier(this.betEntry, clamped) >= this.autoCashout
     ) {
       this.cashOut();
     }
@@ -237,31 +279,38 @@ export class AviatorEngine {
     this.multiplier = this.crashPoint;
 
     const lostBet = this.hasBet && this.cashedOutAt == null;
-    if (lostBet) {
-      this._pushHistory({ multiplier: this.crashPoint, cashout: null });
-    }
-    this.hasBet = false;
-
     const payload = {
       sessionId: this.sessionId,
       crashPoint: this.crashPoint,
       cashoutAt: this.cashedOutAt,
       lostBet,
     };
-    this._emit('crash', payload);
-    this._emitState();
 
-    if (this.config.onSettle) {
-      Promise.resolve(this.config.onSettle(payload)).catch((e) =>
-        this._emit('error', e),
-      );
-    }
+    this._pushHistory({
+      multiplier: this.crashPoint,
+      cashout: this.cashedOutAt,
+      lost: lostBet,
+    });
+    this.hasBet = false;
+    this.betEntry = null;
+
+    this._emit('crash', payload);
+
+    // A cashout already settled itself. Only a lost bet needs settling here.
+    if (lostBet) this._settle(payload);
 
     this._pauseTimer = setTimeout(() => {
       this._pauseTimer = null;
       if (!this._running) return;
       this._beginRound();
     }, this.config.crashPauseMs);
+  }
+
+  _settle(payload) {
+    if (!this.config.onSettle) return;
+    Promise.resolve()
+      .then(() => this.config.onSettle(payload))
+      .catch((e) => this._emit('error', e));
   }
 
   _pushHistory(entry) {
@@ -271,9 +320,14 @@ export class AviatorEngine {
     ].slice(0, this.config.historyLimit);
   }
 
+  _yourMultiplier() {
+    if (!this.hasBet) return null;
+    return this.cashedOutAt ?? effectiveMultiplier(this.betEntry, this.multiplier);
+  }
+
   _potentialPayout() {
-    const mult = this.cashedOutAt ?? this.multiplier;
-    return Math.round(this.config.betAmount * mult);
+    const mine = this._yourMultiplier();
+    return mine == null ? 0 : Math.round(this.config.betAmount * mine);
   }
 
   _generateCrashPoint() {

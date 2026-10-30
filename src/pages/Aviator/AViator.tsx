@@ -1,9 +1,12 @@
 // AviatorTab.tsx
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/ExternalHeader';
-import { AviatorEngine, type AviatorEngine as Engine } from './AviatorEngine';
+import { supabase } from '../../supabase';
+import { AviatorEngine } from './AviatorEngine';
 import { startGame, settleGame, AviatorError, type SettleGameResult } from './aviator';
-type EngineState = ReturnType<Engine['getState']>;
+
+type EngineState = ReturnType<AviatorEngine['getState']>;
 
 type SettleState =
   | { status: 'idle' }
@@ -12,10 +15,10 @@ type SettleState =
   | { status: 'lost'; crashPoint: number }
   | { status: 'error'; message: string };
 
-// Local crash-point generator used ONLY for animation when the server
-// doesn't reveal the real one. Matches the old distribution so the
-// animation feels similar. The server's settle_game is what actually
-// decides win/loss.
+const BET_AMOUNT = 100;
+
+// Local crash point, used ONLY to drive the animation.
+// The server's settle_game is what actually decides win/loss.
 const localCrashPoint = (): number => {
   const HOUSE_EDGE = 0.03;
   const r = Math.random();
@@ -25,28 +28,47 @@ const localCrashPoint = (): number => {
 };
 
 const AviatorTab: React.FC = () => {
+  const navigate = useNavigate();
   const engineRef = useRef<AviatorEngine | null>(null);
   const [state, setState] = useState<EngineState | null>(null);
   const [settleState, setSettleState] = useState<SettleState>({ status: 'idle' });
   const [betError, setBetError] = useState<string | null>(null);
-  const settlingRef = useRef(false);
+  // null = still checking, so we don't flash "Sign in" at logged-in users
+  const [authed, setAuthed] = useState<boolean | null>(null);
 
-  // Create the engine once, subscribe, and start.
+  // ── Auth ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (alive) setAuthed(!!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      if (alive) setAuthed(!!session);
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  // ── Engine (runs for everyone so guests can watch) ─────────────────────
   useEffect(() => {
     const engine = new AviatorEngine({
-      roundProvider: async () => {
-        // Open a server-side session. The real crash point stays server-side.
-        const session = await startGame(100, 'aviator');
-        return {
-          sessionId: session.session_id,
-          // Local stand-in used only for the animation; server decides truth.
-          crashPoint: localCrashPoint(),
-        };
+      betAmount: BET_AMOUNT,
+
+      // Server session is opened ONLY when the player actually bets.
+      onBet: async () => {
+        const session = await startGame(BET_AMOUNT, 'aviator');
+        return { sessionId: session.session_id };
       },
-      onSettle: async (payload) => {
+
+      // Called ONLY for rounds where a bet was placed.
+      onSettle: async (payload: {
+        sessionId: string | null;
+        cashoutAt: number | null;
+        lostBet: boolean;
+      }) => {
         if (!payload.sessionId) return;
-        if (settlingRef.current) return;
-        settlingRef.current = true;
         setSettleState({ status: 'pending' });
         try {
           const result: SettleGameResult = await settleGame(
@@ -54,7 +76,6 @@ const AviatorTab: React.FC = () => {
             payload.lostBet ? 'bust' : 'cashout',
             payload.cashoutAt ?? undefined,
           );
-
           if (result.status === 'won') {
             setSettleState({
               status: 'won',
@@ -68,20 +89,26 @@ const AviatorTab: React.FC = () => {
         } catch (err) {
           const msg = err instanceof AviatorError ? err.message : 'Settlement failed.';
           setSettleState({ status: 'error', message: msg });
-        } finally {
-          // Reset the "one settle per round" guard after settlement completes.
-          // The next `_beginRound` will open a fresh session.
-          settlingRef.current = false;
         }
       },
     });
-    engineRef.current = engine;
 
+    // Give the engine its animation crash point per round.
+    // (Engine generates one itself; override it here so both stay in one place.)
+    engine.on('round', () => {
+      engine.crashPoint = localCrashPoint();
+    });
+
+    engineRef.current = engine;
     const unsub = engine.on('state', setState);
     const unsubErr = engine.on('error', (err: unknown) => {
-      const msg = err instanceof Error ? err.message : 'Engine error.';
-      setBetError(msg);
+      if (err instanceof AviatorError && err.code === 'not_authenticated') {
+        setBetError('Please sign in to play.');
+        return;
+      }
+      setBetError(err instanceof Error ? err.message : 'Engine error.');
     });
+
     setState(engine.getState());
     engine.start();
 
@@ -96,30 +123,142 @@ const AviatorTab: React.FC = () => {
   if (!state) return null;
 
   const {
-    balance, multiplier, phase,
-    hasBet, cashedOutAt, autoCashout, history, potentialPayout,
+    balance, multiplier, phase, hasBet, betPending, betEntry,
+    yourMultiplier, cashedOutAt, autoCashout, history, potentialPayout,
   } = state;
 
-  // --- derived view helpers (unchanged) ---
+  // ── View helpers ───────────────────────────────────────────────────────
   const svgWidth = 600;
   const svgHeight = 260;
   const progressX = Math.min((multiplier / 10) * svgWidth, svgWidth - 40);
   const progressY = Math.max(svgHeight - (multiplier / 10) * (svgHeight - 40), 20);
 
-  const placeBet = () => {
+  const placeBet = async () => {
     setBetError(null);
     setSettleState({ status: 'idle' });
-    engineRef.current?.placeBet();
+    await engineRef.current?.placeBet();
   };
   const manualCashOut = () => engineRef.current?.cashOut();
   const onAutoChange = (v: number | '') =>
     engineRef.current?.setAutoCashout(v === '' ? null : v);
 
-  // Show the settle overlay only when a round just settled.
-  const showSettleOverlay =
-    settleState.status === 'won' ||
-    settleState.status === 'lost' ||
-    settleState.status === 'error';
+  const canBet = phase === 'running' && balance >= BET_AMOUNT && !betPending;
+  const joinedMid = hasBet && betEntry != null && betEntry > 1.02;
+
+  // ── Action button ──────────────────────────────────────────────────────
+  const renderAction = () => {
+    if (authed === null) {
+      return (
+        <button type="button" disabled style={{ ...styles.bigBtn, backgroundColor: '#334155', opacity: 0.5, cursor: 'default' }}>
+          Checking session…
+        </button>
+      );
+    }
+
+    if (!authed) {
+      return (
+        <button
+          type="button"
+          onClick={() => navigate('/auth')}
+          style={{ ...styles.bigBtn, backgroundColor: '#2563EB', boxShadow: '0 10px 30px rgba(37,99,235,0.45)' }}
+        >
+          Sign in to play
+        </button>
+      );
+    }
+
+    if (!hasBet) {
+      const label = betPending
+        ? 'Placing bet…'
+        : phase === 'running'
+          ? `Place Bet · KSh ${BET_AMOUNT}${multiplier > 1.05 ? ` · joins at ${multiplier.toFixed(2)}x` : ''}`
+          : 'Next flight starting…';
+      return (
+        <button
+          type="button"
+          onClick={placeBet}
+          disabled={!canBet}
+          style={{
+            ...styles.bigBtn,
+            backgroundColor: '#16A34A',
+            boxShadow: '0 10px 30px rgba(22,163,74,0.4)',
+            opacity: canBet ? 1 : 0.4,
+            cursor: canBet ? 'pointer' : 'default',
+          }}
+        >
+          {label}
+        </button>
+      );
+    }
+
+    if (cashedOutAt == null) {
+      return (
+        <button
+          type="button"
+          onClick={manualCashOut}
+          disabled={phase !== 'running'}
+          style={{
+            ...styles.bigBtn,
+            backgroundColor: '#D97706',
+            boxShadow: '0 10px 35px rgba(245,158,11,0.6)',
+            opacity: phase === 'running' ? 1 : 0.5,
+          }}
+        >
+          CASH OUT · KSh {potentialPayout.toLocaleString()}
+        </button>
+      );
+    }
+
+    return (
+      <button type="button" disabled style={{ ...styles.bigBtn, backgroundColor: 'rgba(34,197,94,0.3)', cursor: 'default' }}>
+        Cashed out at {cashedOutAt.toFixed(2)}x · KSh {Math.round(BET_AMOUNT * cashedOutAt).toLocaleString()}
+      </button>
+    );
+  };
+
+  // ── Result card (below the game panel, not inside it) ──────────────────
+  const renderResult = () => {
+    if (settleState.status === 'idle') return null;
+
+    if (settleState.status === 'pending') {
+      return (
+        <div style={{ ...styles.resultCard, ...styles.resultPending }}>
+          <div style={styles.resultTitle}>Settling…</div>
+          <div style={styles.resultDetail}>Confirming your round with the server</div>
+        </div>
+      );
+    }
+
+    if (settleState.status === 'won') {
+      return (
+        <div style={{ ...styles.resultCard, ...styles.resultWon }}>
+          <div style={{ ...styles.resultTitle, color: '#22C55E' }}>YOU WON</div>
+          <div style={styles.resultPayout}>+KSh {settleState.payout.toLocaleString()}</div>
+          <div style={styles.resultDetail}>
+            Cashed out at {settleState.cashoutAt.toFixed(2)}x · Crash point {settleState.crashPoint.toFixed(2)}x
+          </div>
+        </div>
+      );
+    }
+
+    if (settleState.status === 'lost') {
+      return (
+        <div style={{ ...styles.resultCard, ...styles.resultLost }}>
+          <div style={{ ...styles.resultTitle, color: '#EF4444' }}>YOU LOST</div>
+          <div style={styles.resultDetail}>
+            Flew away at {settleState.crashPoint.toFixed(2)}x · −KSh {BET_AMOUNT}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ ...styles.resultCard, ...styles.resultError }}>
+        <div style={{ ...styles.resultTitle, color: '#FBBF24' }}>Couldn't confirm result</div>
+        <div style={styles.resultDetail}>{settleState.message}</div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -131,19 +270,24 @@ const AviatorTab: React.FC = () => {
             {history.length === 0 && (
               <span style={styles.historyEmpty}>Flight history will appear here as rounds conclude</span>
             )}
-            {history.map((h) => (
-              <span
-                key={h.id}
-                style={{
-                  ...styles.historyChip,
-                  backgroundColor: h.cashout != null ? 'rgba(34,197,94,0.18)' : 'rgba(239,68,68,0.18)',
-                  color: h.cashout != null ? '#22C55E' : '#EF4444',
-                  borderColor: h.cashout != null ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)',
-                }}
-              >
-                {h.cashout != null ? `${h.cashout.toFixed(2)}x` : `${h.multiplier.toFixed(2)}x`}
-              </span>
-            ))}
+            {history.map((h: any) => {
+              const won = h.cashout != null;
+              const lost = !!h.lost;
+              const tone = won ? 'green' : lost ? 'red' : 'grey';
+              const palette = {
+                green: ['rgba(34,197,94,0.18)', '#22C55E', 'rgba(34,197,94,0.4)'],
+                red: ['rgba(239,68,68,0.18)', '#EF4444', 'rgba(239,68,68,0.4)'],
+                grey: ['rgba(148,163,184,0.15)', '#94A3B8', 'rgba(148,163,184,0.35)'],
+              }[tone];
+              return (
+                <span
+                  key={h.id}
+                  style={{ ...styles.historyChip, backgroundColor: palette[0], color: palette[1], borderColor: palette[2] }}
+                >
+                  {won ? `${h.cashout.toFixed(2)}x` : `${h.multiplier.toFixed(2)}x`}
+                </span>
+              );
+            })}
           </div>
 
           {/* Game panel */}
@@ -176,18 +320,21 @@ const AviatorTab: React.FC = () => {
               {phase === 'running' ? (
                 <>
                   <div style={styles.multiplierRunning}>{multiplier.toFixed(2)}x</div>
-                  <div style={styles.flyingIndicator}>Flight in progress...</div>
+                  {hasBet && cashedOutAt == null && yourMultiplier != null ? (
+                    <div style={styles.yourPill}>
+                      You: {yourMultiplier.toFixed(2)}x{joinedMid ? ` (joined at ${betEntry!.toFixed(2)}x)` : ''}
+                    </div>
+                  ) : (
+                    <div style={styles.flyingIndicator}>Flight in progress…</div>
+                  )}
                 </>
-              ) : phase === 'starting' ? (
+              ) : phase === 'crashed' ? (
                 <>
-                  <div style={styles.multiplierRunning}>…</div>
-                  <div style={styles.flyingIndicator}>Opening session</div>
-                </>
-              ) : (
-                <>
-                  <div style={styles.crashTitle}>CRASHED</div>
+                  <div style={styles.crashTitle}>FLEW AWAY</div>
                   <div style={styles.multiplierCrashed}>{multiplier.toFixed(2)}x</div>
                 </>
+              ) : (
+                <div style={styles.multiplierRunning}>…</div>
               )}
             </div>
 
@@ -202,43 +349,12 @@ const AviatorTab: React.FC = () => {
                 <i className="bi bi-airplane-fill" style={styles.jetIconAnim} />
               </div>
             )}
-
-            {/* Settlement overlay: the server's verdict overrides the animation. */}
-            {showSettleOverlay && (
-              <div style={styles.settleOverlay}>
-                {settleState.status === 'won' && (
-                  <>
-                    <div style={styles.settleWon}>WON</div>
-                    <div style={styles.settleDetail}>
-                      Cashed out at {settleState.cashoutAt.toFixed(2)}x
-                    </div>
-                    <div style={styles.settlePayout}>
-                      +KSh {settleState.payout.toLocaleString()}
-                    </div>
-                    <div style={styles.settleCrash}>
-                      Crash point: {settleState.crashPoint.toFixed(2)}x
-                    </div>
-                  </>
-                )}
-                {settleState.status === 'lost' && (
-                  <>
-                    <div style={styles.settleLost}>LOST</div>
-                    <div style={styles.settleDetail}>
-                      Crash point: {settleState.crashPoint.toFixed(2)}x
-                    </div>
-                  </>
-                )}
-                {settleState.status === 'error' && (
-                  <>
-                    <div style={styles.settleLost}>SETTLE ERROR</div>
-                    <div style={styles.settleDetail}>{settleState.message}</div>
-                  </>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Auto-cashout input */}
+          {/* Result: below the screen */}
+          {renderResult()}
+
+          {/* Auto-cashout input (in YOUR multiplier, so mid-flight joiners get what they set) */}
           <div style={styles.autoRow}>
             <label style={styles.autoLabel}>
               Auto Cashout Target:
@@ -256,56 +372,14 @@ const AviatorTab: React.FC = () => {
           </div>
 
           {/* Action button */}
-          <div style={styles.actionRow}>
-            {!hasBet ? (
-              <button
-                type="button"
-                onClick={placeBet}
-                disabled={balance < 100 || phase !== 'running'}
-                style={{
-                  ...styles.bigBtn,
-                  backgroundColor: '#16A34A',
-                  boxShadow: '0 10px 30px rgba(22,163,74,0.4)',
-                  opacity: balance < 100 || phase !== 'running' ? 0.4 : 1,
-                }}
-              >
-                Place Bet · KSh 100
-              </button>
-            ) : cashedOutAt == null ? (
-              <button
-                type="button"
-                onClick={manualCashOut}
-                style={{
-                  ...styles.bigBtn,
-                  backgroundColor: '#D97706',
-                  boxShadow: '0 10px 35px rgba(245,158,11,0.6)',
-                }}
-              >
-                CASH OUT · KSh {potentialPayout.toLocaleString()}
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled
-                style={{
-                  ...styles.bigBtn,
-                  backgroundColor: 'rgba(34,197,94,0.3)',
-                  cursor: 'default',
-                }}
-              >
-                Cashed Out at {cashedOutAt.toFixed(2)}x (Won KSh {Math.round(100 * cashedOutAt)})
-              </button>
-            )}
-          </div>
+          <div style={styles.actionRow}>{renderAction()}</div>
 
-          {betError && (
-            <div style={styles.errorRow}>{betError}</div>
-          )}
+          {betError && <div style={styles.errorRow}>{betError}</div>}
 
           <div style={styles.hintRow}>
-            {settleState.status === 'pending'
-              ? 'Settling round with server…'
-              : 'Continuous flight engine active · Place bets anytime'}
+            {authed === false
+              ? 'You can watch the flights as a guest · Sign in to bet'
+              : 'Join any flight, anytime · Mid-flight bets start counting from 1.00x when you join'}
           </div>
         </div>
       </div>
@@ -318,13 +392,16 @@ const AviatorTab: React.FC = () => {
           60% { transform: translateX(-6px); }
           80% { transform: translateX(6px); }
         }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </>
   );
 };
 
 const styles: Record<string, React.CSSProperties> = {
-  /* ...unchanged from your file — keep every existing key... */
   page: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #020617 0%, #091a3a 50%, #1e1b4b 100%)',
@@ -350,7 +427,7 @@ const styles: Record<string, React.CSSProperties> = {
   gamePanel: {
     position: 'relative', borderRadius: 22, border: '2px solid', height: 300,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden', marginBottom: 16,
+    overflow: 'hidden', marginBottom: 14,
     boxShadow: 'inset 0 0 50px rgba(0,0,0,0.6)',
     transition: 'background 0.3s ease, border-color 0.3s ease',
   },
@@ -370,6 +447,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12, fontWeight: 700, color: '#93c5fd',
     background: 'rgba(59,130,246,0.15)', padding: '4px 10px', borderRadius: 99,
   },
+  yourPill: {
+    fontSize: 12, fontWeight: 800, color: '#fbbf24',
+    background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)',
+    padding: '4px 12px', borderRadius: 99,
+  },
   crashTitle: { fontSize: 16, fontWeight: 900, color: '#EF4444', letterSpacing: '1px' },
   multiplierCrashed: {
     fontSize: 44, fontWeight: 900, color: '#ef4444',
@@ -383,6 +465,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 30, color: '#93c5fd',
     filter: 'drop-shadow(0 0 10px rgba(59,130,246,0.8))',
   },
+
+  // Result card (below the panel)
+  resultCard: {
+    borderRadius: 16, padding: '14px 16px', marginBottom: 14,
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+    border: '1px solid', animation: 'fadeIn 0.25s ease',
+  },
+  resultWon: { background: 'rgba(34,197,94,0.10)', borderColor: 'rgba(34,197,94,0.4)' },
+  resultLost: { background: 'rgba(239,68,68,0.10)', borderColor: 'rgba(239,68,68,0.4)' },
+  resultPending: { background: 'rgba(59,130,246,0.10)', borderColor: 'rgba(59,130,246,0.35)' },
+  resultError: { background: 'rgba(245,158,11,0.10)', borderColor: 'rgba(245,158,11,0.4)' },
+  resultTitle: { fontSize: 18, fontWeight: 900, letterSpacing: '1px', color: '#93c5fd' },
+  resultPayout: { fontSize: 24, fontWeight: 900, color: '#fbbf24' },
+  resultDetail: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600, textAlign: 'center' },
+
   autoRow: { display: 'flex', justifyContent: 'center', marginBottom: 14 },
   autoLabel: {
     display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
@@ -408,18 +505,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12, color: '#fca5a5', textAlign: 'center',
     marginBottom: 10, fontWeight: 600,
   },
-  settleOverlay: {
-    position: 'absolute', inset: 0, display: 'flex',
-    flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    gap: 4, zIndex: 4,
-    background: 'rgba(2,6,23,0.72)', backdropFilter: 'blur(2px)',
-    animation: 'fadeIn 0.2s ease',
-  },
-  settleWon: { fontSize: 26, fontWeight: 900, color: '#22C55E', letterSpacing: '1px' },
-  settleLost: { fontSize: 26, fontWeight: 900, color: '#EF4444', letterSpacing: '1px' },
-  settleDetail: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 },
-  settlePayout: { fontSize: 22, fontWeight: 900, color: '#fbbf24' },
-  settleCrash: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 4 },
 };
 
 export default AviatorTab;
