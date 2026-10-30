@@ -8,10 +8,6 @@ export default function Navbar() {
   // Scroll position state
   const [scrolled, setScrolled] = useState(false);
 
-  // PWA / Standalone Installation Logic
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
-
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 30);
@@ -21,43 +17,11 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    const nav = window.navigator as Navigator & { standalone?: boolean };
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      nav.standalone === true;
-
-    if (standalone) {
-      setIsStandalone(true);
-      return;
-    }
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    const installedHandler = () => {
-      setIsStandalone(true);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", installedHandler);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("appinstalled", installedHandler);
-    };
-  }, []);
-
   const handleMybets = async (e: React.MouseEvent) => {
     e.preventDefault();
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
     navigate(session ? "/mybets" : "/auth");
   };
 
@@ -69,11 +33,9 @@ export default function Navbar() {
   // Logged in -> /deposit, logged out -> /auth
   const handleDeposit = async (e: React.MouseEvent) => {
     e.preventDefault();
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
     navigate(session ? "/deposit" : "/auth");
   };
 
@@ -83,38 +45,41 @@ export default function Navbar() {
         <div className="container-fluid px-2 px-md-4 px-lg-5">
           <div className="d-flex align-items-center justify-content-between w-100 py-1 py-md-2 navbar-inner position-relative">
             
-            {/* Brand / Logo (Sticky / Fixed on the left with background gradient to mask scrolling items) */}
+            {/* Brand / Logo */}
             <Link to="/" className="navbar-brand-premium flex-shrink-0 brand-sticky">
               <span className="brand-glow"></span>
               <span className="brand-text">Rankings</span>
             </Link>
 
-            {/* CTA Stack (Scrollable horizontally) */}
-            <div className="cta-scroll-wrapper flex-grow-1">
+            {/* CTA Stack (Scrollable horizontally without cutting off leftmost items) */}
+            <div className="cta-scroll-wrapper">
               <div className="cta-stack">
                 
-                {/* aviator */}
+                {/* Aviator */}
                 <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/aviator")} title="Aviator">
                   <i className="bi bi-airplane-engines"></i>
                   <span className="cta-label">Aviator</span>
                 </button>
                 
-                {/* route to /jackpot */}
+                {/* Jackpot */}
                 <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/jackpot")} title="Jackpot">
                   <i className="bi bi-coin"></i>
                   <span className="cta-label">Jackpot</span>
                 </button>
 
+                {/* Survivor */}
                 <button className="cta-btn-glass cta-btn-survivor text-nowrap" onClick={handleSurvivor} title="Survivor">
                   <i className="bi bi-lightning-charge-fill"></i>
                   <span className="cta-label">Survivor</span>
                 </button>
 
+                {/* Wallet */}
                 <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit} title="My Wallet">
                   <i className="bi bi-wallet2"></i>
                   <span className="cta-label">Wallet</span>
                 </button>
 
+                {/* Bets */}
                 <button className="cta-btn-glass text-nowrap" onClick={handleMybets} title="My Bets">
                   <i className="bi bi-ticket-detailed-fill"></i>
                   <span className="cta-label">Bets</span>
@@ -128,8 +93,6 @@ export default function Navbar() {
       </nav>
 
       <style>{`
-        /* Ensure body content doesn't get hidden under fixed header */
-
         .header-wrapper {
           z-index: 1030;
           background: rgba(3, 10, 26, 0.88);
@@ -150,17 +113,10 @@ export default function Navbar() {
           background: radial-gradient(circle at 20% 0%, rgba(13, 110, 253, 0.12) 0%, transparent 50%);
         }
 
-        /* Fixed Brand Setup */
         .brand-sticky {
           position: relative;
           z-index: 5;
-          background: linear-gradient(90deg, rgba(3, 10, 26, 0.95) 70%, rgba(3, 10, 26, 0));
-          padding-right: 15px;
           margin-right: 10px;
-        }
-
-        .header-scrolled .brand-sticky {
-          background: linear-gradient(90deg, rgba(2, 6, 18, 0.98) 70%, rgba(2, 6, 18, 0));
         }
 
         .navbar-brand-premium {
@@ -179,34 +135,39 @@ export default function Navbar() {
           -webkit-text-fill-color: transparent;
         }
 
-        /* Scrollable CTA Stack Container */
+        /* Scrollable container setup ensuring correct shrink behavior */
         .cta-scroll-wrapper {
           overflow-x: auto;
           overflow-y: hidden;
           -webkit-overflow-scrolling: touch;
-          scrollbar-width: none; /* Firefox */
-          -ms-overflow-style: none; /* IE / Edge */
+          scrollbar-width: none;
+          -ms-overflow-style: none;
           display: flex;
-          justify-content: flex-end;
+          min-width: 0;
+          flex-grow: 1;
         }
 
         .cta-scroll-wrapper::-webkit-scrollbar {
-          display: none; /* Chrome, Safari, Opera */
+          display: none;
         }
 
         /* Horizontal compact button row */
         .cta-stack {
           display: flex;
           flex-direction: row;
+          flex-wrap: nowrap;
+          flex-shrink: 0;
           align-items: center;
           gap: 6px;
           padding-left: 10px;
+          margin-left: auto;
         }
 
         .cta-btn-glass {
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          gap: 5px; /* Fixed tight desktop icon/label spacing */
           padding: 0.35rem 0.65rem;
           font-size: 0.75rem;
           font-weight: 600;
