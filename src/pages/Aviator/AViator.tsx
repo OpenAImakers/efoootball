@@ -12,10 +12,11 @@ type SettleState =
   | { status: 'idle' }
   | { status: 'pending' }
   | { status: 'won'; cashoutAt: number; payout: number; crashPoint: number }
-  | { status: 'lost'; crashPoint: number }
+  | { status: 'lost'; crashPoint: number; stake: number }
   | { status: 'error'; message: string };
 
-const BET_AMOUNT = 100;
+const QUICK_STAKES = [5, 20, 50, 100];
+const DEFAULT_STAKE = 100;
 
 // Local crash point, used ONLY to drive the animation.
 // The server's settle_game is what actually decides win/loss.
@@ -33,6 +34,8 @@ const AviatorTab: React.FC = () => {
   const [state, setState] = useState<EngineState | null>(null);
   const [settleState, setSettleState] = useState<SettleState>({ status: 'idle' });
   const [betError, setBetError] = useState<string | null>(null);
+  // Raw text of the manual stake box ('' when a chip is selected)
+  const [customStake, setCustomStake] = useState<string>('');
   // null = still checking, so we don't flash "Sign in" at logged-in users
   const [authed, setAuthed] = useState<boolean | null>(null);
 
@@ -54,17 +57,20 @@ const AviatorTab: React.FC = () => {
   // ── Engine (runs for everyone so guests can watch) ─────────────────────
   useEffect(() => {
     const engine = new AviatorEngine({
-      betAmount: BET_AMOUNT,
+      betAmount: DEFAULT_STAKE,
+      minBet: QUICK_STAKES[0],
+      maxBet: 10_000,
 
       // Server session is opened ONLY when the player actually bets.
-      onBet: async () => {
-        const session = await startGame(BET_AMOUNT, 'aviator');
+      onBet: async (stake: number) => {
+        const session = await startGame(stake, 'aviator');
         return { sessionId: session.session_id };
       },
 
       // Called ONLY for rounds where a bet was placed.
       onSettle: async (payload: {
         sessionId: string | null;
+        stake: number | null;
         cashoutAt: number | null;
         lostBet: boolean;
       }) => {
@@ -84,7 +90,11 @@ const AviatorTab: React.FC = () => {
               crashPoint: result.multiplier,
             });
           } else {
-            setSettleState({ status: 'lost', crashPoint: result.multiplier });
+            setSettleState({
+              status: 'lost',
+              crashPoint: result.multiplier,
+              stake: payload.stake ?? 0,
+            });
           }
         } catch (err) {
           const msg = err instanceof AviatorError ? err.message : 'Settlement failed.';
@@ -124,6 +134,7 @@ const AviatorTab: React.FC = () => {
 
   const {
     balance, multiplier, phase, hasBet, betPending, betEntry,
+    stake, betStake, minBet, maxBet,
     yourMultiplier, cashedOutAt, autoCashout, history, potentialPayout,
   } = state;
 
@@ -142,7 +153,28 @@ const AviatorTab: React.FC = () => {
   const onAutoChange = (v: number | '') =>
     engineRef.current?.setAutoCashout(v === '' ? null : v);
 
-  const canBet = phase === 'running' && balance >= BET_AMOUNT && !betPending;
+  const stakeValid = stake >= minBet && stake <= maxBet;
+  const stakeLocked = hasBet || betPending;
+  const canBet = phase === 'running' && stakeValid && balance >= stake && !betPending;
+
+  const pickChip = (v: number) => {
+    setCustomStake('');
+    setBetError(null);
+    engineRef.current?.setStake(v);
+  };
+  const onCustomChange = (raw: string) => {
+    // digits only — no decimals, no minus signs
+    const clean = raw.replace(/[^\d]/g, '').slice(0, 6);
+    setCustomStake(clean);
+    setBetError(null);
+    engineRef.current?.setStake(clean === '' ? 0 : parseInt(clean, 10));
+  };
+  const stakeHint =
+    !stakeValid && stake > 0 && stake < minBet ? `Minimum stake is KSh ${minBet}`
+    : stake > maxBet ? `Maximum stake is KSh ${maxBet.toLocaleString()}`
+    : stakeValid && balance < stake ? 'Not enough balance for this stake'
+    : null;
+
   const joinedMid = hasBet && betEntry != null && betEntry > 1.02;
 
   // ── Action button ──────────────────────────────────────────────────────
@@ -171,7 +203,7 @@ const AviatorTab: React.FC = () => {
       const label = betPending
         ? 'Placing bet…'
         : phase === 'running'
-          ? `Place Bet · KSh ${BET_AMOUNT}${multiplier > 1.05 ? ` · joins at ${multiplier.toFixed(2)}x` : ''}`
+          ? `Place Bet · KSh ${stake.toLocaleString()}${multiplier > 1.05 ? ` · joins at ${multiplier.toFixed(2)}x` : ''}`
           : 'Next flight starting…';
       return (
         <button
@@ -211,7 +243,7 @@ const AviatorTab: React.FC = () => {
 
     return (
       <button type="button" disabled style={{ ...styles.bigBtn, backgroundColor: 'rgba(34,197,94,0.3)', cursor: 'default' }}>
-        Cashed out at {cashedOutAt.toFixed(2)}x · KSh {Math.round(BET_AMOUNT * cashedOutAt).toLocaleString()}
+        Cashed out at {cashedOutAt.toFixed(2)}x · KSh {Math.round((betStake ?? stake) * cashedOutAt).toLocaleString()}
       </button>
     );
   };
@@ -246,7 +278,7 @@ const AviatorTab: React.FC = () => {
         <div style={{ ...styles.resultCard, ...styles.resultLost }}>
           <div style={{ ...styles.resultTitle, color: '#EF4444' }}>YOU LOST</div>
           <div style={styles.resultDetail}>
-            Flew away at {settleState.crashPoint.toFixed(2)}x · −KSh {BET_AMOUNT}
+            Flew away at {settleState.crashPoint.toFixed(2)}x · −KSh {settleState.stake.toLocaleString()}
           </div>
         </div>
       );
@@ -371,6 +403,49 @@ const AviatorTab: React.FC = () => {
             </label>
           </div>
 
+          {/* Stake picker: chips + manual input (locked while a bet is live) */}
+          {authed !== false && (
+            <div style={{ ...styles.stakeBox, opacity: stakeLocked ? 0.5 : 1 }}>
+              <div style={styles.stakeHeader}>
+                <span style={styles.stakeLabel}>Stake</span>
+                <span style={styles.balanceLabel}>Balance: KSh {balance.toLocaleString()}</span>
+              </div>
+              <div style={styles.chipRow}>
+                {QUICK_STAKES.map((v) => {
+                  const active = customStake === '' && stake === v;
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      disabled={stakeLocked}
+                      onClick={() => pickChip(v)}
+                      style={{
+                        ...styles.stakeChip,
+                        ...(active ? styles.stakeChipActive : {}),
+                        cursor: stakeLocked ? 'default' : 'pointer',
+                      }}
+                    >
+                      {v}
+                    </button>
+                  );
+                })}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Custom"
+                  disabled={stakeLocked}
+                  value={customStake}
+                  onChange={(e) => onCustomChange(e.target.value)}
+                  style={{
+                    ...styles.customInput,
+                    ...(customStake !== '' ? styles.stakeChipActive : {}),
+                  }}
+                />
+              </div>
+              {stakeHint && <div style={styles.stakeHint}>{stakeHint}</div>}
+            </div>
+          )}
+
           {/* Action button */}
           <div style={styles.actionRow}>{renderAction()}</div>
 
@@ -480,6 +555,35 @@ const styles: Record<string, React.CSSProperties> = {
   resultPayout: { fontSize: 24, fontWeight: 900, color: '#fbbf24' },
   resultDetail: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600, textAlign: 'center' },
 
+  stakeBox: {
+    borderRadius: 16, padding: '12px 14px', marginBottom: 14,
+    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+    transition: 'opacity 0.15s ease',
+  },
+  stakeHeader: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10,
+  },
+  stakeLabel: {
+    fontSize: 12, fontWeight: 800, letterSpacing: '0.8px',
+    textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)',
+  },
+  balanceLabel: { fontSize: 12, fontWeight: 700, color: '#fbbf24' },
+  chipRow: { display: 'flex', gap: 8, alignItems: 'stretch' },
+  stakeChip: {
+    flex: 1, padding: '10px 0', borderRadius: 12, fontSize: 15, fontWeight: 800,
+    color: 'rgba(255,255,255,0.85)', background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.15)', transition: 'all 0.12s ease',
+  },
+  stakeChipActive: {
+    background: 'rgba(34,197,94,0.2)', borderColor: '#22C55E', color: '#22C55E',
+  },
+  customInput: {
+    flex: 1.6, minWidth: 0, padding: '10px 10px', borderRadius: 12,
+    fontSize: 15, fontWeight: 800, textAlign: 'center', outline: 'none',
+    color: '#fff', background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.15)',
+  },
+  stakeHint: { marginTop: 8, fontSize: 12, fontWeight: 600, color: '#fca5a5', textAlign: 'center' },
   autoRow: { display: 'flex', justifyContent: 'center', marginBottom: 14 },
   autoLabel: {
     display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
