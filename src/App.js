@@ -81,7 +81,7 @@ useEffect(() => {
       />
   
          <Route
-        path="/deposit"
+        path="/profile"
         element={
             <Deposit/>
         }

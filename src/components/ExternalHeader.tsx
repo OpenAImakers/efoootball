@@ -72,17 +72,10 @@ export default function Navbar() {
                   <i className="bi bi-lightning-charge-fill"></i>
                   <span className="cta-label">Survivor</span>
                 </button>
-
-                {/* Wallet */}
-                <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit} title="My Wallet">
-                  <i className="bi bi-wallet2"></i>
-                  <span className="cta-label">Wallet</span>
-                </button>
-
-                {/* Bets */}
-                <button className="cta-btn-glass text-nowrap" onClick={handleMybets} title="My Bets">
-                  <i className="bi bi-ticket-detailed-fill"></i>
-                  <span className="cta-label">Bets</span>
+            {/* my profile */}
+                <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/profile")} title="Profile">
+                  <i className="bi bi-person-circle"></i>
+                  <span className="cta-label">Profile</span>
                 </button>
 
               </div>
