@@ -94,10 +94,11 @@ export default function Navbar() {
             {/* CTA Stack */}
             <div className="cta-stack flex-shrink-0">
               
-                <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/efootball")} title="eFootball">
-                  <i className="bi bi-trophy-fill"></i>
-                  <span className="cta-label">efootball</span>
-                </button>
+             {/* aviator */}
+             <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/aviator")} title="Aviator">
+                <i className="bi bi-airplane-engines"></i>
+                <span className="cta-label">Aviator</span>
+              </button>
               
 
               {/* route to /jackpot */}

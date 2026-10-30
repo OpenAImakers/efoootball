@@ -38,6 +38,7 @@ import MyBets from "./pages/MyBets"
 import JackpotGames from "./pages/Jackpot/Jackpot"
 import Survivor from "./pages/Survivor/Survivor"
 import SurvivorAdmin from "./pages/Survivor/SurvivorAdmin"
+import Aviator from "./pages/Aviator/AViator"
 function App() {
   // Detect PWA vs browser
   const isStandalone =
@@ -56,6 +57,14 @@ useEffect(() => {
 }, []);
   return (
     <Routes>
+
+      {/* aviator */}
+      <Route
+        path="/aviator"
+        element={
+            <Aviator/>
+        }
+      />
 
          <Route
         path="/jackpot"
