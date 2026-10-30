@@ -36,9 +36,9 @@ import Jackpot from "./pages/Jackpot/Games"
 import Deposit from "./pages/Jackpot/Deposit"
 import MyBets from "./pages/MyBets"
 import JackpotGames from "./pages/Jackpot/Jackpot"
-import Survivor from "./pages/Survivor/Survivor"
-import SurvivorAdmin from "./pages/Survivor/SurvivorAdmin"
-import Aviator from "./pages/Aviator/AViator"
+import Survivor from "./pages/Survivor/Survivor.tsx"
+import SurvivorAdmin from "./pages/Survivor/SurvivorAdmin.tsx"
+import Aviator from "./pages/Aviator/AViator.tsx"
 function App() {
   // Detect PWA vs browser
   const isStandalone =

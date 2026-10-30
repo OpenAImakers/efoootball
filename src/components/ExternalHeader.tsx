@@ -51,8 +51,6 @@ export default function Navbar() {
     };
   }, []);
 
-
-
   const handleMybets = async (e: React.MouseEvent) => {
     e.preventDefault();
 
@@ -62,7 +60,6 @@ export default function Navbar() {
 
     navigate(session ? "/mybets" : "/auth");
   };
-  
 
   const handleSurvivor = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -84,46 +81,48 @@ export default function Navbar() {
     <header className={`fixed-top header-wrapper ${scrolled ? "header-scrolled" : ""}`}>
       <nav className="navbar-container">
         <div className="container-fluid px-2 px-md-4 px-lg-5">
-          <div className="d-flex align-items-center justify-content-between w-100 py-1 py-md-2 navbar-inner">
-            {/* Brand / Logo */}
-            <Link to="/" className="navbar-brand-premium flex-shrink-0">
+          <div className="d-flex align-items-center justify-content-between w-100 py-1 py-md-2 navbar-inner position-relative">
+            
+            {/* Brand / Logo (Sticky / Fixed on the left with background gradient to mask scrolling items) */}
+            <Link to="/" className="navbar-brand-premium flex-shrink-0 brand-sticky">
               <span className="brand-glow"></span>
               <span className="brand-text">Rankings</span>
             </Link>
 
-            {/* CTA Stack */}
-            <div className="cta-stack flex-shrink-0">
-              
-             {/* aviator */}
-             <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/aviator")} title="Aviator">
-                <i className="bi bi-airplane-engines"></i>
-                <span className="cta-label">Aviator</span>
-              </button>
-              
+            {/* CTA Stack (Scrollable horizontally) */}
+            <div className="cta-scroll-wrapper flex-grow-1">
+              <div className="cta-stack">
+                
+                {/* aviator */}
+                <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/aviator")} title="Aviator">
+                  <i className="bi bi-airplane-engines"></i>
+                  <span className="cta-label">Aviator</span>
+                </button>
+                
+                {/* route to /jackpot */}
+                <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/jackpot")} title="Jackpot">
+                  <i className="bi bi-coin"></i>
+                  <span className="cta-label">Jackpot</span>
+                </button>
 
-              {/* route to /jackpot */}
-              <button className="cta-btn-glass text-nowrap" onClick={() => navigate("/jackpot")} title="Jackpot">
-                <i className="bi bi-coin"></i>
-                <span className="cta-label">Jackpot</span>
-              </button>
+                <button className="cta-btn-glass cta-btn-survivor text-nowrap" onClick={handleSurvivor} title="Survivor">
+                  <i className="bi bi-lightning-charge-fill"></i>
+                  <span className="cta-label">Survivor</span>
+                </button>
 
-              <button className="cta-btn-glass cta-btn-survivor text-nowrap" onClick={handleSurvivor} title="Survivor">
-                <i className="bi bi-lightning-charge-fill"></i>
-                <span className="cta-label">Survivor</span>
-              </button>
+                <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit} title="My Wallet">
+                  <i className="bi bi-wallet2"></i>
+                  <span className="cta-label">Wallet</span>
+                </button>
 
-              
+                <button className="cta-btn-glass text-nowrap" onClick={handleMybets} title="My Bets">
+                  <i className="bi bi-ticket-detailed-fill"></i>
+                  <span className="cta-label">Bets</span>
+                </button>
 
-              <button className="cta-btn-glass cta-btn-deposit text-nowrap" onClick={handleDeposit} title="My Wallet">
-                <i className="bi bi-wallet2"></i>
-                <span className="cta-label">Wallet</span>
-              </button>
-
-              <button className="cta-btn-glass text-nowrap" onClick={handleMybets} title="My Bets">
-                <i className="bi bi-ticket-detailed-fill"></i>
-                <span className="cta-label">Bets</span>
-              </button>
+              </div>
             </div>
+
           </div>
         </div>
       </nav>
@@ -151,8 +150,20 @@ export default function Navbar() {
           background: radial-gradient(circle at 20% 0%, rgba(13, 110, 253, 0.12) 0%, transparent 50%);
         }
 
-        .navbar-brand-premium {
+        /* Fixed Brand Setup */
+        .brand-sticky {
           position: relative;
+          z-index: 5;
+          background: linear-gradient(90deg, rgba(3, 10, 26, 0.95) 70%, rgba(3, 10, 26, 0));
+          padding-right: 15px;
+          margin-right: 10px;
+        }
+
+        .header-scrolled .brand-sticky {
+          background: linear-gradient(90deg, rgba(2, 6, 18, 0.98) 70%, rgba(2, 6, 18, 0));
+        }
+
+        .navbar-brand-premium {
           display: inline-flex;
           align-items: center;
           text-decoration: none;
@@ -168,12 +179,28 @@ export default function Navbar() {
           -webkit-text-fill-color: transparent;
         }
 
+        /* Scrollable CTA Stack Container */
+        .cta-scroll-wrapper {
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* IE / Edge */
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .cta-scroll-wrapper::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, Opera */
+        }
+
         /* Horizontal compact button row */
         .cta-stack {
           display: flex;
           flex-direction: row;
           align-items: center;
           gap: 6px;
+          padding-left: 10px;
         }
 
         .cta-btn-glass {
@@ -235,8 +262,6 @@ export default function Navbar() {
         }
 
         @media (max-width: 360px) {
-          /* On ultra-small screens, hide button text labels and show only icons to save space */
-          .cta-label { display: none; }
           .cta-btn-glass { padding: 0.35rem 0.45rem; }
           .cta-btn-glass i { font-size: 1rem; margin: 0; }
         }
