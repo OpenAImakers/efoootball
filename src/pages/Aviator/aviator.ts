@@ -1,9 +1,17 @@
 // src/pages/Aviator/aviator.ts
 // Supabase wrapper for the Aviator game.
-// No game logic here — just RPC calls, error mapping, and types.
-// The game loop lives in AviatorEngine.js; the UI lives in AVIator.tsx.
+// No game logic here — just RPC calls, wallet reads, error mapping, and types.
+// The game loop lives in AviatorEngine.js; the UI lives in AviatorTab.tsx.
 
 import { supabase } from '../../supabase';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wallet table config — change these 3 if your schema differs
+// ─────────────────────────────────────────────────────────────────────────────
+
+const WALLET_TABLE = 'wallets';
+const WALLET_USER_COL = 'user_id';
+const WALLET_BALANCE_COL = 'balance';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -26,7 +34,7 @@ export type SettleGameResult = {
   multiplier: number;
   /** Multiplier the player actually exited at (NULL on bust). */
   cashout_at: number | null;
-  /** Authoritative payout for the row: stake * cashout_at. Not a wallet credit. */
+  /** Authoritative payout for the row: stake * cashout_at. Already credited to the wallet. */
   payout: number;
 };
 
@@ -53,6 +61,7 @@ export class AviatorError extends Error {
     | 'invalid_action'
     | 'session_not_found'
     | 'already_settled'
+    | 'insufficient_funds'
     | 'network'
     | 'unknown';
 
@@ -71,10 +80,7 @@ function mapError(rawMessage: string | undefined): AviatorError {
   const msg = (rawMessage ?? '').toLowerCase();
 
   if (msg.includes('not_authenticated'))
-    return new AviatorError('not_authenticated', 
-
-        'Please sign in to play.'
-    );
+    return new AviatorError('not_authenticated', 'Please sign in to play.');
   if (msg.includes('invalid_stake'))
     return new AviatorError('invalid_stake', 'Invalid stake.');
   if (msg.includes('invalid_game_name'))
@@ -85,10 +91,73 @@ function mapError(rawMessage: string | undefined): AviatorError {
     return new AviatorError('session_not_found', 'Game session not found.');
   if (msg.includes('already_settled'))
     return new AviatorError('already_settled', 'This game has already been settled.');
+  // modify_wallet_balance throws when the balance would go negative
+  if (msg.includes('insufficient') || msg.includes('balance'))
+    return new AviatorError('insufficient_funds', 'Not enough balance for this stake.');
   if (msg.includes('fetch') || msg.includes('network'))
     return new AviatorError('network', 'Network error. Please try again.');
 
   return new AviatorError('unknown', 'Something went wrong. Please try again.');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wallet: live balance
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Read the signed-in user's wallet balance. */
+export async function fetchWalletBalance(): Promise<number> {
+  const { data: s } = await supabase.auth.getSession();
+  const uid = s.session?.user.id;
+  if (!uid) throw new AviatorError('not_authenticated', 'Please sign in to play.');
+
+  const { data, error } = await supabase
+    .from(WALLET_TABLE)
+    .select('*')
+    .eq(WALLET_USER_COL, uid)
+    .maybeSingle();
+
+  console.log('[aviator] wallet row:', data, 'error:', error);
+
+  if (error) throw mapError(error.message);
+  if (!data) throw new AviatorError('unknown', 'No wallet row found (table/column name or RLS?).');
+
+  const raw = (data as Record<string, unknown>)[WALLET_BALANCE_COL];
+  if (raw === undefined) {
+    throw new AviatorError('unknown', `Column "${WALLET_BALANCE_COL}" not on wallet row.`);
+  }
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Push wallet changes (bets, payouts, deposits from M-Pesa, anything) to `onChange`.
+ * Needs Realtime enabled on the wallet table + an RLS SELECT policy for the owner.
+ * Returns an unsubscribe function.
+ */
+export function subscribeWalletBalance(
+  userId: string,
+  onChange: (balance: number) => void,
+): () => void {
+  const channel = supabase
+    .channel(`wallet:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: WALLET_TABLE,
+        filter: `${WALLET_USER_COL}=eq.${userId}`,
+      },
+      (payload: { new?: Record<string, unknown> }) => {
+        const next = Number(payload.new?.[WALLET_BALANCE_COL]);
+        if (Number.isFinite(next)) onChange(next);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -99,8 +168,8 @@ function mapError(rawMessage: string | undefined): AviatorError {
  * Start a new game round.
  *
  * Calls `public.start_game(p_stake, p_game_name)`.
- * Server generates and stores the multiplier but does NOT return it —
- * the client never sees the crash point until settlement.
+ * Server deducts the stake from the wallet, generates and stores the multiplier,
+ * but does NOT return it — the client never sees the crash point until settlement.
  */
 export async function startGame(
   stake: number,
@@ -133,7 +202,7 @@ export async function startGame(
 /**
  * Settle an active game round.
  *
- * - `cashout` reveals the crash point and clamps `claimed` to it server-side.
+ * - `cashout` reveals the crash point and validates `claimed` against it server-side.
  * - `bust` marks the round lost with zero payout.
  *
  * Idempotent: re-calling on a settled session returns the original result.

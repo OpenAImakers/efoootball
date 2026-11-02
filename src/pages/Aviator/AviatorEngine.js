@@ -6,9 +6,13 @@
 // Rounds run continuously. A player can bet at ANY point while a round is flying.
 // If they join at 1.20x, their own multiplier starts at 1.00x from that moment
 // (see effectiveMultiplier) — so cashing out at 2.00x pays 1.80x.
+//
+// BALANCE: the engine never touches money. The wallet lives on the server;
+// the host pushes the live number in via setBalance(). Until it does,
+// balance is null and betting is disabled.
 
 export const DEFAULT_CONFIG = {
-  startBalance: 10_000,
+  startBalance: null, // null = "not loaded yet"; host calls setBalance()
   betAmount: 100, // default stake
   minBet: 5,
   maxBet: 10_000,
@@ -19,11 +23,13 @@ export const DEFAULT_CONFIG = {
   historyLimit: 12,
 
   // Async. Called when the player places a bet — open the server session here.
+  // The server deducts the stake from the wallet.
   // Signature: (stake: number) => Promise<{ sessionId: string }>
   onBet: null,
 
   // Called when a BET resolves (cashout or bust). Never called for rounds with no bet.
-  // Signature: ({ sessionId, crashPoint, cashoutAt, lostBet }) => Promise<void>
+  // The server credits any payout to the wallet.
+  // Signature: ({ sessionId, stake, crashPoint, cashoutAt, lostBet }) => Promise<void>
   onSettle: null,
 };
 
@@ -43,7 +49,7 @@ export const effectiveMultiplier = (entry, current) => {
  * Events emitted:
  *   'state'   -> full snapshot
  *   'round'   -> { roundId }
- *   'cashout' -> { at, payout }
+ *   'cashout' -> { at, payout }   (payout is an estimate; the server's settle result is the truth)
  *   'crash'   -> { sessionId, crashPoint, cashoutAt, lostBet }
  *   'error'   -> Error
  */
@@ -52,7 +58,7 @@ export class AviatorEngine {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this._listeners = new Map();
 
-    this.balance = this.config.startBalance;
+    this.balance = this.config.startBalance; // live wallet mirror (number | null)
     this.multiplier = 1.0;
     this.crashPoint = this._generateCrashPoint();
     this.phase = 'idle'; // 'idle' | 'running' | 'crashed'
@@ -144,6 +150,14 @@ export class AviatorEngine {
 
   // ---------- player actions ----------
 
+  /** Push the live wallet balance in from the host (fetch / realtime). */
+  setBalance(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return;
+    this.balance = n;
+    this._emitState();
+  }
+
   setAutoCashout(value) {
     this.autoCashout = typeof value === 'number' && value > 1 ? value : null;
     this._emitState();
@@ -169,8 +183,9 @@ export class AviatorEngine {
 
   /**
    * Place a bet at any point while the round is flying.
-   * Opens a server session via config.onBet, then locks in the entry multiplier
-   * at the moment the server confirms (so slow networks can't buy a cheaper entry).
+   * Opens a server session via config.onBet (server deducts the stake),
+   * then locks in the entry multiplier at the moment the server confirms
+   * (so slow networks can't buy a cheaper entry).
    */
   async placeBet() {
     if (!this._canPlaceBet()) return false;
@@ -195,7 +210,7 @@ export class AviatorEngine {
     this.betPending = false;
 
     // The round crashed while the server was opening the session.
-    // The session exists, so close it out as a lost bet.
+    // The session exists (and the stake is gone), so close it out as a lost bet.
     if (roundId !== this._roundId || this.phase !== 'running') {
       this._settle({
         sessionId,
@@ -209,7 +224,6 @@ export class AviatorEngine {
     }
 
     this.sessionId = sessionId;
-    this.balance -= stake;
     this.betStake = stake;
     this.hasBet = true;
     this.betEntry = this.multiplier;
@@ -222,11 +236,10 @@ export class AviatorEngine {
     if (!this.hasBet || this.cashedOutAt != null || this.phase !== 'running') {
       return null;
     }
-    // Floor to 2dp so what the player sees == what the server pays.
+    // Floor to 2dp so what the player sees == what the server is asked to pay.
     const at = Math.floor(effectiveMultiplier(this.betEntry, this.multiplier) * 100) / 100;
     const payout = Math.round(this.betStake * at);
     this.cashedOutAt = at;
-    this.balance += payout;
 
     this._emit('cashout', { at, payout });
     this._settle({
@@ -247,6 +260,7 @@ export class AviatorEngine {
       !this.hasBet &&
       !this.betPending &&
       this._stakeValid() &&
+      this.balance != null &&
       this.balance >= this.stake
     );
   }

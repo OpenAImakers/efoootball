@@ -1,10 +1,17 @@
 // AviatorTab.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/ExternalHeader';
 import { supabase } from '../../supabase';
 import { AviatorEngine } from './AviatorEngine';
-import { startGame, settleGame, AviatorError, type SettleGameResult } from './aviator';
+import {
+  startGame,
+  settleGame,
+  fetchWalletBalance,
+  subscribeWalletBalance,
+  AviatorError,
+  type SettleGameResult,
+} from './aviator';
 
 type EngineState = ReturnType<AviatorEngine['getState']>;
 
@@ -17,6 +24,8 @@ type SettleState =
 
 const QUICK_STAKES = [5, 20, 50, 100];
 const DEFAULT_STAKE = 100;
+
+const fmtMoney = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 // Local crash point, used ONLY to drive the animation.
 // The server's settle_game is what actually decides win/loss.
@@ -38,15 +47,20 @@ const AviatorTab: React.FC = () => {
   const [customStake, setCustomStake] = useState<string>('');
   // null = still checking, so we don't flash "Sign in" at logged-in users
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // ── Auth ───────────────────────────────────────────────────────────────
   useEffect(() => {
     let alive = true;
     supabase.auth.getSession().then(({ data }) => {
-      if (alive) setAuthed(!!data.session);
+      if (!alive) return;
+      setAuthed(!!data.session);
+      setUserId(data.session?.user.id ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      if (alive) setAuthed(!!session);
+      if (!alive) return;
+      setAuthed(!!session);
+      setUserId(session?.user.id ?? null);
     });
     return () => {
       alive = false;
@@ -54,16 +68,53 @@ const AviatorTab: React.FC = () => {
     };
   }, []);
 
+  // ── Live wallet balance ────────────────────────────────────────────────
+  // Pulls the real balance and pushes it into the engine (engine never owns money).
+  const refreshBalance = useCallback(async () => {
+    try {
+      const b = await fetchWalletBalance();
+      engineRef.current?.setBalance(b);
+    } catch {
+      // keep last known balance; realtime / next refresh will fix it
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authed === null) return;
+
+    if (!authed || !userId) {
+      engineRef.current?.setBalance(0);
+      return;
+    }
+
+    refreshBalance();
+    const unsub = subscribeWalletBalance(userId, (b) => engineRef.current?.setBalance(b));
+
+    // Realtime sockets sleep on mobile — re-sync when the tab comes back.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshBalance();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      unsub();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [authed, userId, refreshBalance]);
+
   // ── Engine (runs for everyone so guests can watch) ─────────────────────
   useEffect(() => {
     const engine = new AviatorEngine({
+      startBalance: null, // real balance arrives via setBalance()
       betAmount: DEFAULT_STAKE,
       minBet: QUICK_STAKES[0],
       maxBet: 10_000,
 
       // Server session is opened ONLY when the player actually bets.
+      // start_game deducts the stake from the wallet server-side.
       onBet: async (stake: number) => {
         const session = await startGame(stake, 'aviator');
+        void refreshBalance(); // show the deduction right away
         return { sessionId: session.session_id };
       },
 
@@ -99,6 +150,8 @@ const AviatorTab: React.FC = () => {
         } catch (err) {
           const msg = err instanceof AviatorError ? err.message : 'Settlement failed.';
           setSettleState({ status: 'error', message: msg });
+        } finally {
+          void refreshBalance(); // payout (if any) is now in the wallet
         }
       },
     });
@@ -117,6 +170,7 @@ const AviatorTab: React.FC = () => {
         return;
       }
       setBetError(err instanceof Error ? err.message : 'Engine error.');
+      void refreshBalance(); // a failed bet may still have moved money; re-sync
     });
 
     setState(engine.getState());
@@ -128,7 +182,7 @@ const AviatorTab: React.FC = () => {
       engine.destroy();
       engineRef.current = null;
     };
-  }, []);
+  }, [refreshBalance]);
 
   if (!state) return null;
 
@@ -153,9 +207,11 @@ const AviatorTab: React.FC = () => {
   const onAutoChange = (v: number | '') =>
     engineRef.current?.setAutoCashout(v === '' ? null : v);
 
+  const balanceReady = balance != null;
   const stakeValid = stake >= minBet && stake <= maxBet;
   const stakeLocked = hasBet || betPending;
-  const canBet = phase === 'running' && stakeValid && balance >= stake && !betPending;
+  const canBet =
+    phase === 'running' && stakeValid && balanceReady && balance >= stake && !betPending;
 
   const pickChip = (v: number) => {
     setCustomStake('');
@@ -172,7 +228,7 @@ const AviatorTab: React.FC = () => {
   const stakeHint =
     !stakeValid && stake > 0 && stake < minBet ? `Minimum stake is KSh ${minBet}`
     : stake > maxBet ? `Maximum stake is KSh ${maxBet.toLocaleString()}`
-    : stakeValid && balance < stake ? 'Not enough balance for this stake'
+    : stakeValid && balanceReady && balance < stake ? 'Not enough balance for this stake'
     : null;
 
   const joinedMid = hasBet && betEntry != null && betEntry > 1.02;
@@ -202,9 +258,11 @@ const AviatorTab: React.FC = () => {
     if (!hasBet) {
       const label = betPending
         ? 'Placing bet…'
-        : phase === 'running'
-          ? `Place Bet · KSh ${stake.toLocaleString()}${multiplier > 1.05 ? ` · joins at ${multiplier.toFixed(2)}x` : ''}`
-          : 'Next flight starting…';
+        : !balanceReady
+          ? 'Loading balance…'
+          : phase === 'running'
+            ? `Place Bet · KSh ${stake.toLocaleString()}${multiplier > 1.05 ? ` · joins at ${multiplier.toFixed(2)}x` : ''}`
+            : 'Next flight starting…';
       return (
         <button
           type="button"
@@ -241,9 +299,11 @@ const AviatorTab: React.FC = () => {
       );
     }
 
+    // Payout shown here comes from the server's settle result, not local math.
+    const confirmed = settleState.status === 'won' ? ` · KSh ${fmtMoney(settleState.payout)}` : '';
     return (
       <button type="button" disabled style={{ ...styles.bigBtn, backgroundColor: 'rgba(34,197,94,0.3)', cursor: 'default' }}>
-        Cashed out at {cashedOutAt.toFixed(2)}x · KSh {Math.round((betStake ?? stake) * cashedOutAt).toLocaleString()}
+        Cashed out at {cashedOutAt.toFixed(2)}x{confirmed}
       </button>
     );
   };
@@ -265,7 +325,7 @@ const AviatorTab: React.FC = () => {
       return (
         <div style={{ ...styles.resultCard, ...styles.resultWon }}>
           <div style={{ ...styles.resultTitle, color: '#22C55E' }}>YOU WON</div>
-          <div style={styles.resultPayout}>+KSh {settleState.payout.toLocaleString()}</div>
+          <div style={styles.resultPayout}>+KSh {fmtMoney(settleState.payout)}</div>
           <div style={styles.resultDetail}>
             Cashed out at {settleState.cashoutAt.toFixed(2)}x · Crash point {settleState.crashPoint.toFixed(2)}x
           </div>
@@ -278,7 +338,7 @@ const AviatorTab: React.FC = () => {
         <div style={{ ...styles.resultCard, ...styles.resultLost }}>
           <div style={{ ...styles.resultTitle, color: '#EF4444' }}>YOU LOST</div>
           <div style={styles.resultDetail}>
-            Flew away at {settleState.crashPoint.toFixed(2)}x · −KSh {settleState.stake.toLocaleString()}
+            Flew away at {settleState.crashPoint.toFixed(2)}x · −KSh {fmtMoney(settleState.stake)}
           </div>
         </div>
       );
@@ -408,7 +468,9 @@ const AviatorTab: React.FC = () => {
             <div style={{ ...styles.stakeBox, opacity: stakeLocked ? 0.5 : 1 }}>
               <div style={styles.stakeHeader}>
                 <span style={styles.stakeLabel}>Stake</span>
-                <span style={styles.balanceLabel}>Balance: KSh {balance.toLocaleString()}</span>
+                <span style={styles.balanceLabel}>
+                  Balance: KSh {balanceReady ? fmtMoney(balance) : '…'}
+                </span>
               </div>
               <div style={styles.chipRow}>
                 {QUICK_STAKES.map((v) => {
