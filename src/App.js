@@ -33,7 +33,7 @@ import Clans from "./fie/clans/ClanAdminForm";
 import About from "./pages/About.tsx";
 import JackpotAdmin from "./pages/JackpotAdmin"
 import Jackpot from "./pages/Jackpot/Games"
-import Deposit from "./pages/Jackpot/Deposit"
+import Profile from "./pages/profile/Profile"
 import MyBets from "./pages/MyBets"
 import JackpotGames from "./pages/Jackpot/Jackpot"
 import Survivor from "./pages/Survivor/Survivor.tsx"
@@ -83,7 +83,7 @@ useEffect(() => {
          <Route
         path="/profile"
         element={
-            <Deposit/>
+            <Profile/>
         }
       />
      <Route
