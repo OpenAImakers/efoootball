@@ -331,7 +331,7 @@ const Games: React.FC = () => {
             type: "error",
             msg: "Insufficient balance. Top up your wallet to place this bet.",
           });
-          navigate("/deposit");
+          navigate("/profile");
           return;
         }
 
