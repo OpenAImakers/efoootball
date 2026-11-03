@@ -1,6 +1,28 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 
 export type StatusFilter = "ALL" | "UPCOMING" | "LIVE" | "FINISHED";
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Local (device) date as YYYY-MM-DD. Do NOT use toISOString() for this, it's UTC. */
+export const toLocalYMD = (d: Date) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+export const addDays = (ymd: string, n: number) => {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return toLocalYMD(new Date(y, m - 1, d + n));
+};
+
+const parseYMD = (ymd: string) => {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
+const shortDayLabel = (ymd: string) =>
+  parseYMD(ymd).toLocaleDateString([], { weekday: "short", day: "numeric" });
+
+const customDayLabel = (ymd: string) =>
+  parseYMD(ymd).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
 
 interface StickyHeaderProps {
   statusFilter: StatusFilter;
@@ -8,6 +30,8 @@ interface StickyHeaderProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   searchResultCount: number | null; // null = no search active
+  selectedDay: string; // YYYY-MM-DD (local)
+  onDayChange: (value: string) => void;
 }
 
 const StickyHeader: React.FC<StickyHeaderProps> = ({
@@ -16,16 +40,48 @@ const StickyHeader: React.FC<StickyHeaderProps> = ({
   searchQuery,
   onSearchChange,
   searchResultCount,
+  selectedDay,
+  onDayChange,
 }) => {
   const [focused, setFocused] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const today = toLocalYMD(new Date());
+  const dayPills = [
+    { value: today, label: "Today" },
+    { value: addDays(today, 1), label: "Tomorrow" },
+    ...[2, 3, 4, 5, 6].map((n) => {
+      const v = addDays(today, n);
+      return { value: v, label: shortDayLabel(v) };
+    }),
+  ];
+  const customActive = !dayPills.some((p) => p.value === selectedDay);
+
+  const openPicker = () => {
+    const el = dateInputRef.current;
+    if (!el) return;
+    try {
+      if (typeof (el as any).showPicker === "function") {
+        (el as any).showPicker();
+      } else {
+        el.focus();
+        el.click();
+      }
+    } catch {
+      el.focus();
+      el.click();
+    }
+  };
 
   return (
     <div style={styles.topBar}>
+      <style>{`.gh-scroll::-webkit-scrollbar { display: none; }`}</style>
+
       <div style={styles.titleWrap}>
         <h1 style={styles.title}>
           <span style={styles.titleMain}>Football</span>
         </h1>
-        <p style={styles.subtitle}>Today's games. Today's odds. Today's win.</p>
+        <p style={styles.subtitle}>Pick a day. Find your odds. Take the win.</p>
       </div>
 
       <div style={styles.searchWrap}>
@@ -61,12 +117,60 @@ const StickyHeader: React.FC<StickyHeaderProps> = ({
         {searchQuery && searchResultCount !== null && (
           <div style={styles.searchHint}>
             {searchResultCount === 0
-              ? "That game isn't playing today."
+              ? "No match like that on this day."
               : `${searchResultCount} match${searchResultCount === 1 ? "" : "es"} found`}
           </div>
         )}
       </div>
 
+      {/* Day selector */}
+      <div style={styles.dayScroll} className="gh-scroll">
+        <div style={styles.dayRow}>
+          {dayPills.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => onDayChange(p.value)}
+              style={{
+                ...styles.pill,
+                ...(selectedDay === p.value ? styles.pillActive : {}),
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+
+          <span style={{ position: "relative", flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={openPicker}
+              style={{
+                ...styles.pill,
+                ...(customActive ? styles.pillActive : {}),
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <i className="bi bi-calendar3" style={{ fontSize: 11 }} />
+              {customActive ? customDayLabel(selectedDay) : "Pick date"}
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={selectedDay}
+              onChange={(e) => {
+                if (e.target.value) onDayChange(e.target.value);
+              }}
+              tabIndex={-1}
+              aria-hidden="true"
+              style={styles.hiddenDateInput}
+            />
+          </span>
+        </div>
+      </div>
+
+      {/* Status filter */}
       <div style={styles.pillContainer}>
         {(["ALL", "UPCOMING", "LIVE", "FINISHED"] as const).map((st) => (
           <button
@@ -90,7 +194,7 @@ const styles: Record<string, React.CSSProperties> = {
   topBar: {
     position: "sticky",
     top: 0,
-    zIndex: 0,
+    zIndex: 10,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -117,12 +221,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   titleMain: {
     background: "linear-gradient(135deg, #ffffff 30%, #60a5fa 70%, #fd7e14 100%)",
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-  },
-  titleAccent: {
-    background: "linear-gradient(135deg, #0EA5E9 0%, #10B981 50%, #EC4899 100%)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     WebkitTextFillColor: "transparent",
@@ -179,6 +277,29 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#94a3b8",
     fontWeight: 500,
   },
+  dayScroll: {
+    width: "100%",
+    overflowX: "auto",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+  },
+  dayRow: {
+    display: "flex",
+    gap: 6,
+    width: "max-content",
+    margin: "0 auto",
+    padding: "0 2px",
+  },
+  hiddenDateInput: {
+    position: "absolute",
+    left: 0,
+    bottom: 0,
+    width: 1,
+    height: 1,
+    opacity: 0,
+    pointerEvents: "none",
+    colorScheme: "dark",
+  },
   pillContainer: {
     display: "flex",
     gap: 6,
@@ -195,6 +316,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     letterSpacing: "0.3px",
     cursor: "pointer",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   pillActive: {
     background: "#38bdf8",

@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import StickyHeader, { StatusFilter } from "../../components/GamesHeader";
+import StickyHeader, { StatusFilter, toLocalYMD, addDays } from "../../components/GamesHeader";
 import BetSlip, { SlipSelection } from "../../components/BetSlip";
 import { supabase } from "../../supabase";
 import { withCache } from "../../Utils/cache";
 import Navbar from "../../components/ExternalHeader";
+
+const BASE = "https://sports.bzzoiro.com/api/v2";
 
 interface League {
   id: number;
@@ -36,6 +38,31 @@ interface Event {
   odds?: Odds;
 }
 
+// Follows the API's `next` links so we never silently drop page 2+.
+async function fetchAllPages<T>(
+  url: string,
+  token: string,
+  signal: AbortSignal,
+  maxPages = 10
+): Promise<T[]> {
+  const out: T[] = [];
+  let next: string | null = url;
+  let pages = 0;
+
+  while (next && pages < maxPages) {
+    const res: Response = await fetch(next, {
+      headers: { Authorization: `Token ${token}` },
+      signal,
+    });
+    if (!res.ok) throw new Error(`Failed to load matches (${res.status})`);
+    const data = await res.json();
+    out.push(...((data.results ?? []) as T[]));
+    next = data.next ?? null;
+    pages++;
+  }
+  return out;
+}
+
 const Games: React.FC = () => {
   const navigate = useNavigate();
 
@@ -44,6 +71,7 @@ const Games: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedDay, setSelectedDay] = useState<string>(() => toLocalYMD(new Date()));
   const [selectedLeagueId, setSelectedLeagueId] = useState<number | "ALL">("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,6 +82,38 @@ const Games: React.FC = () => {
     null
   );
 
+  const handleDayChange = useCallback((day: string) => {
+    setSelectedDay(day);
+    setSelectedLeagueId("ALL"); // the league might not exist on the new day
+  }, []);
+
+  // Leagues — once, cached 24h
+  useEffect(() => {
+    const token = process.env.REACT_APP_BZZOIRO_TOKEN;
+    if (!token) return;
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const leagues = await withCache<League[]>(
+          "games_leagues_v2",
+          24 * 60 * 60 * 1000,
+          () => fetchAllPages<League>(`${BASE}/leagues/?limit=200`, token, controller.signal)
+        );
+        const map: Record<number, League> = {};
+        leagues.forEach((l) => {
+          map[l.id] = l;
+        });
+        setLeaguesMap(map);
+      } catch {
+        /* league names fall back to event.league_name */
+      }
+    })();
+
+    return () => controller.abort();
+  }, []);
+
+  // Events for the selected local day (re-runs whenever the day changes)
   useEffect(() => {
     const controller = new AbortController();
 
@@ -65,60 +125,44 @@ const Games: React.FC = () => {
         return;
       }
 
-      const today = new Date().toISOString().split("T")[0];
+      setLoading(true);
+      setError(null);
+      setEvents([]);
+
+      const day = selectedDay;
+      const isToday = day === toLocalYMD(new Date());
 
       try {
-        // 1. Leagues — cached 24h
-        const leagues = await withCache<League[]>(
-          "games_leagues_v1",
-          24 * 60 * 60 * 1000,
-          async () => {
-            const res = await fetch(
-              `https://sports.bzzoiro.com/api/v2/leagues/?limit=200`,
-              { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
-            );
-            if (!res.ok) return [];
-            const data = await res.json();
-            return data.results ?? [];
-          }
-        );
-
-        const map: Record<number, League> = {};
-        leagues.forEach((l) => {
-          map[l.id] = l;
-        });
-        setLeaguesMap(map);
-
-        // 2. Today's events — cached 2 min
+        // event_date is UTC. A Nairobi day (UTC+3) starts at 21:00Z the day before,
+        // so pull [day-1, day] and keep only what falls on the LOCAL date.
+        const from = addDays(day, -1);
         const rawEvents = await withCache<Event[]>(
-          `games_events_${today}`,
+          `games_events_${day}`,
           2 * 60 * 1000,
           async () => {
-            const res = await fetch(
-              `https://sports.bzzoiro.com/api/v2/events/?date=${today}`,
-              { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
+            const all = await fetchAllPages<Event>(
+              `${BASE}/events/?date_from=${from}&date_to=${day}&limit=200`,
+              token,
+              controller.signal
             );
-            if (!res.ok) throw new Error(`Failed to load matches (${res.status})`);
-            const data = await res.json();
-            return data.results ?? [];
+            return all.filter((e) => toLocalYMD(new Date(e.event_date)) === day);
           }
         );
 
-        // 3. Live events — NOT cached long (30s), so LIVE tab stays fresh
-        const liveEvents = await withCache<Event[]>(
-          `games_live_v1`,
-          30 * 1000,
-          async () => {
-            const res = await fetch(
-              `https://sports.bzzoiro.com/api/v2/events/live/`,
-              { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
-            );
+        // Live events only matter for today's view (30s cache keeps LIVE fresh)
+        let liveEvents: Event[] = [];
+        if (isToday) {
+          liveEvents = await withCache<Event[]>("games_live_v1", 30 * 1000, async () => {
+            const res = await fetch(`${BASE}/events/live/`, {
+              headers: { Authorization: `Token ${token}` },
+              signal: controller.signal,
+            });
             if (!res.ok) return [];
             const data = await res.json();
             // NOTE: live endpoint uses `events`, not `results`
             return data.events ?? data.results ?? [];
-          }
-        );
+          });
+        }
 
         // Merge: live data overrides date data for matching ids,
         // and appends live-only matches missing from the date response.
@@ -140,15 +184,17 @@ const Games: React.FC = () => {
         const liveOnly = liveEvents.filter((e) => !dateIds.has(e.id));
         const allEvents = [...merged, ...liveOnly];
 
-        // 4. Odds — only for upcoming, NOT live, NOT finished
-        const eventsNeedingOdds = allEvents.filter(
-          (e) => e.status === "notstarted"
-        );
+        // Show matches immediately, odds stream in afterwards
+        setEvents(allEvents);
+        setLoading(false);
 
+        // Odds — only for upcoming, NOT live, NOT finished
+        const eventsNeedingOdds = allEvents.filter((e) => e.status === "notstarted");
         const CONCURRENCY = 5;
-        const oddsMap: Record<number, Odds> = {};
 
         for (let i = 0; i < eventsNeedingOdds.length; i += CONCURRENCY) {
+          if (controller.signal.aborted) return;
+
           const batch = eventsNeedingOdds.slice(i, i + CONCURRENCY);
           const results = await Promise.allSettled(
             batch.map(async (evt) => {
@@ -156,10 +202,10 @@ const Games: React.FC = () => {
                 `games_odds_${evt.id}`,
                 5 * 60 * 1000,
                 async () => {
-                  const res = await fetch(
-                    `https://sports.bzzoiro.com/api/v2/events/${evt.id}/odds/`,
-                    { headers: { Authorization: `Token ${token}` }, signal: controller.signal }
-                  );
+                  const res = await fetch(`${BASE}/events/${evt.id}/odds/`, {
+                    headers: { Authorization: `Token ${token}` },
+                    signal: controller.signal,
+                  });
                   if (!res.ok) return null;
                   const data = await res.json();
                   return data.odds ?? null;
@@ -169,24 +215,31 @@ const Games: React.FC = () => {
             })
           );
 
+          if (controller.signal.aborted) return;
+
+          const oddsMap: Record<number, Odds> = {};
           results.forEach((r) => {
             if (r.status === "fulfilled" && r.value.odds) {
               oddsMap[r.value.id] = r.value.odds;
             }
           });
-        }
 
-        setEvents(allEvents.map((evt) => ({ ...evt, odds: oddsMap[evt.id] })));
+          if (Object.keys(oddsMap).length > 0) {
+            setEvents((prev) =>
+              prev.map((e) => (oddsMap[e.id] ? { ...e, odds: oddsMap[e.id] } : e))
+            );
+          }
+        }
       } catch (err: any) {
         if (err.name !== "AbortError") setError(err.message || "Failed to load matches");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     fetchData();
     return () => controller.abort();
-  }, []);
+  }, [selectedDay]);
 
   const activeLeagues = useMemo(() => {
     const counts = new Map<number, number>();
@@ -232,29 +285,33 @@ const Games: React.FC = () => {
   const filteredEvents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
-    return events.filter((evt) => {
-      if (selectedLeagueId !== "ALL" && evt.league_id !== selectedLeagueId) return false;
+    return events
+      .filter((evt) => {
+        if (selectedLeagueId !== "ALL" && evt.league_id !== selectedLeagueId) return false;
 
-      if (statusFilter === "LIVE" && !isLiveStatus(evt.status)) return false;
-      if (statusFilter === "UPCOMING" && !isUpcomingStatus(evt.status)) return false;
-      if (statusFilter === "FINISHED" && !isFinishedStatus(evt.status)) return false;
+        if (statusFilter === "LIVE" && !isLiveStatus(evt.status)) return false;
+        if (statusFilter === "UPCOMING" && !isUpcomingStatus(evt.status)) return false;
+        if (statusFilter === "FINISHED" && !isFinishedStatus(evt.status)) return false;
 
-      if (q) {
-        const home = evt.home_team.toLowerCase();
-        const away = evt.away_team.toLowerCase();
-        if (!home.includes(q) && !away.includes(q)) return false;
-      }
-      return true;
-    });
+        if (q) {
+          const home = evt.home_team.toLowerCase();
+          const away = evt.away_team.toLowerCase();
+          if (!home.includes(q) && !away.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => Date.parse(a.event_date) - Date.parse(b.event_date));
   }, [events, selectedLeagueId, statusFilter, searchQuery]);
 
+  // Map keeps insertion order, so leagues are ordered by their earliest kickoff
   const groupedEvents = useMemo(() => {
-    const groups: { [key: number]: Event[] } = {};
+    const groups = new Map<number, Event[]>();
     filteredEvents.forEach((evt) => {
-      if (!groups[evt.league_id]) groups[evt.league_id] = [];
-      groups[evt.league_id].push(evt);
+      const list = groups.get(evt.league_id);
+      if (list) list.push(evt);
+      else groups.set(evt.league_id, [evt]);
     });
-    return groups;
+    return Array.from(groups.entries());
   }, [filteredEvents]);
 
   const searchResultCount = searchQuery.trim() === "" ? null : filteredEvents.length;
@@ -366,7 +423,7 @@ const Games: React.FC = () => {
             type: "error",
             msg: "Insufficient balance. Redirecting to deposit...",
           });
-          navigate("/deposit");
+          navigate("/profile");
         } else if (msg.includes("WALLET_NOT_FOUND")) {
           setFeedback({
             type: "error",
@@ -396,6 +453,8 @@ const Games: React.FC = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResultCount={searchResultCount}
+        selectedDay={selectedDay}
+        onDayChange={handleDayChange}
       />
 
       <div style={styles.container} className="games-container">
@@ -450,20 +509,21 @@ const Games: React.FC = () => {
             </div>
           )}
 
-          {loading && <div style={styles.stateMessage}>Loading today's matches...</div>}
+          {loading && <div style={styles.stateMessage}>Loading matches...</div>}
           {error && !loading && <div style={styles.errorMessage}>{error}</div>}
           {!loading && !error && filteredEvents.length === 0 && (
             <div style={styles.stateMessage}>
-              {searchQuery.trim()
-                ? "No matches for that search today."
+              {events.length === 0
+                ? "No matches scheduled for this day."
+                : searchQuery.trim()
+                ? "No matches for that search on this day."
                 : "No matches match the current filter."}
             </div>
           )}
 
           {!loading &&
             !error &&
-            Object.entries(groupedEvents).map(([leagueIdNum, matches]) => {
-              const leagueId = Number(leagueIdNum);
+            groupedEvents.map(([leagueId, matches]) => {
               const leagueInfo = leaguesMap[leagueId];
 
               return (
